@@ -8,13 +8,14 @@
 
 class QGImage {
 public:
-	QGImage(int N);
+	QGImage(int sampleRate, int N);
 	~QGImage();
 	
 	void drawLine(const std::complex<double> *fft, const int lineNumber);
 	void save(const std::string &fileName);
 	
 private:
+	int _sampleRate;
 	int N;
 	gdImagePtr _im;
 	int *_c;

@@ -3,12 +3,13 @@
 #include <math.h>
 #include <stdlib.h>
 
-int S = 2000; // Sample rate
+int S = 1000000; // Sample rate
 
 inline double genI(double t) {
 	double v;
 	
-	v = sin(2. * M_PI * 10 * t) + .7 * sin(2. * M_PI * 30 * t) + .5 * sin(2. * M_PI * 70 * t);
+	//v = sin(2. * M_PI * 10 * t) + .7 * sin(2. * M_PI * 30 * t) + .5 * sin(2. * M_PI * 70 * t);
+	v = sin(2. * M_PI * 100 * t);
 	
 	// Hard clip result
 	if (v > 1.0) v = 1.0;
@@ -18,13 +19,14 @@ inline double genI(double t) {
 }
 
 inline double genQ(double t) {
-	return 0. * t;
+	t;
+	return 0.;
 }
 
 int main(int argc, char *argv[]) {
 	srand((unsigned) time(NULL));
 	
-	int numSeconds = 120;
+	int numSeconds = 10;
 	
 	for (double t = 0.; t < numSeconds; t += 1./S) {
 		//double r = (double)rand()/RAND_MAX - .5;

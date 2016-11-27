@@ -11,7 +11,7 @@
 
 
 int N = 4096; // FFT size
-//int S = 2000; // Sample rate
+int S = 1000; // Sample rate
 
 // S / N => Herz per bucket: .5
 
@@ -25,24 +25,27 @@ int main(int argc, char *argv[]) {
 	srand((unsigned) time(NULL));
 	
 	fft = new QGFft(N);
-	im = new QGImage(N);
+	im = new QGImage(S, N);
 	
 	std::complex<double> *in = fft->getInputBuffer();
 	std::complex<double> *out = fft->getOutputBuffer();
 	
 	for (int i = 0; i < N/2; i++) {
 		hannW[i] = .5 * (1 - cos((2 * M_PI * i) / (N / 2 - 1)));
-		//hannW[i] = 1;
+//		hannW[i] = 1;
 	}
 	
 	//std::cin >> std::noskipws;
 	int idx = 0;
 	int y = 0;
 	int p = 0;
+	int resampleCounter = 0;
+	int resampleValue = 1;
 	unsigned char i, q;
 	
 	while (std::cin >> i >> q) {
-		using namespace std::complex_literals;
+		//using namespace std::complex_literals;
+		if (resampleCounter == 0) {
 		in[idx].real((2. * i / 255 - 1) * hannW[idx/2]);
 		in[idx].imag((2 * q / 255 - 1) * hannW[idx/2]);
 		idx++;
@@ -59,6 +62,10 @@ int main(int argc, char *argv[]) {
 			im->save(s + std::to_string(p++) + ".png");
 			y = 0;
 		}
+		}
+		
+		resampleCounter++;
+		if (resampleCounter == resampleValue) resampleCounter = 0;
 	}
 	
 	im->save(s + std::to_string(p++) + ".png");
