@@ -6,10 +6,11 @@ add_definitions(-std=c++14)
 
 include_directories("${PROJECT_BINARY_DIR}")
 
-add_executable (QrssPiG QrssPiG.cpp QGFft.cpp QGImage.cpp)
+add_executable (QrssPiG QrssPiG.cpp QGFft.cpp QGImage.cpp QGUploader.cpp)
 target_link_libraries(QrssPiG boost_program_options)
 target_link_libraries(QrssPiG fftw3)
 target_link_libraries(QrssPiG gd)
+target_link_libraries(QrssPiG ssh)
 
 add_executable (IQGen IQGen.cpp)
 target_link_libraries(IQGen boost_program_options)
