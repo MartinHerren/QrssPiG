@@ -23,7 +23,7 @@ int main(int argc, char *argv[]) {
 			("format,F", value<std::string>()->default_value("rtlsdr"), "Format, 'rtlsdr' or 'hackrf'")
 			("samplerate,s", value<int>()->default_value(2000), "Samplerate in S/s")
 			("duration,d", value<int>()->default_value(2), "Duration in seconds")
-			("frequency,f", value<double>()->default_value(100000.), "Frequency in Hz")
+			("frequency,f", value<double>()->default_value(500.), "Frequency in Hz")
 			("amplitude,a", value<double>()->default_value(.1), "Amplitude");
 		
 		variables_map vm;
