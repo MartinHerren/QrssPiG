@@ -78,7 +78,7 @@ int main(int argc, char *argv[]) {
 		double iqAbs = abs(iq);
 		if (iqAbs > 1) iq /= iqAbs;
 
-		// Shift I/Q to [0,2] interval for unsigned output
+		// Shift I/Q from [-1,1] to [0,2] interval for unsigned output
 		if (unsignedIQ) iq += std::complex<double>(1., 1.);
 		
 		unsigned char i = ((unsigned char)trunc(127 * iq.real())) & 0xff;
