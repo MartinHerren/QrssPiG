@@ -5,6 +5,7 @@
 
 #include "QGFft.h"
 #include "QGImage.h"
+#include "QGUploader.h"
 
 int N = 2048; // FFT size
 
@@ -16,6 +17,8 @@ double hannW[8000];
 int main(int argc, char *argv[]) {
 	bool unsignedIQ;
 	int sampleRate;
+
+	QGUploader *scp;
 
 	std::string s("test");
 	srand((unsigned) time(NULL));
@@ -61,6 +64,7 @@ int main(int argc, char *argv[]) {
 	
 	fft = new QGFft(N);
 	im = new QGImage(sampleRate, N);
+	scp = new QGUploader();
 	
 	std::complex<double> *in = fft->getInputBuffer();
 	std::complex<double> *out = fft->getOutputBuffer();
@@ -96,7 +100,10 @@ int main(int argc, char *argv[]) {
 		}
 			
 		if (y > 2000) {
-			im->save(s + std::to_string(p++) + ".png");
+			im->save(s + std::to_string(p) + ".png");
+			scp->pushFile(s + std::to_string(p) + ".png");
+
+			p++;
 			y = 0;
 		}
 		
@@ -105,7 +112,8 @@ int main(int argc, char *argv[]) {
 		}
 	}
 	
-	im->save(s + std::to_string(p++) + ".png");
+	im->save(s + std::to_string(p) + ".png");
+	scp->pushFile(s + std::to_string(p) + ".png");
 	
 	delete im;
 	delete fft;
