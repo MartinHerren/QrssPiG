@@ -5,6 +5,9 @@
 QGImage::QGImage(int sampleRate, int N): _sampleRate(sampleRate), N(N) {
 	_im = gdImageCreate(N, 10 + 2000);
 	
+	_imBuffer = nullptr;
+	_imBufferSize = 0;
+	
 	_cd = 256;
 	_c = new int[_cd];
 	
@@ -31,6 +34,7 @@ QGImage::QGImage(int sampleRate, int N): _sampleRate(sampleRate), N(N) {
 
 QGImage::~QGImage() {
 	delete [] _c;
+	if (_imBuffer) gdFree(_imBuffer);
 	gdImageDestroy(_im);
 }
 
@@ -66,6 +70,12 @@ void QGImage::drawLine(const std::complex<double> *fft, const int lineNumber) {
 		//gdImageSetPixel(_im, i, 10 + lineNumber, _c[v]);
 	}
 		std::cout << min << " " << max << " " << maxv << std::endl;
+}
+
+void QGImage::save2Buffer() {
+	if (_imBuffer) gdFree(_imBuffer);
+	
+	_imBuffer = (char *)gdImagePngPtr(_im, &_imBufferSize);
 }
 
 void QGImage::save(const std::string &fileName) {
