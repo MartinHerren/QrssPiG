@@ -8,14 +8,13 @@ QGUploader::QGUploader() {
 QGUploader::~QGUploader() {
 }
 
-void QGUploader::pushFile(const std::string &fileName) {
+void QGUploader::pushFile(const std::string &fileName, const char *data, int dataSize) {
 	ssh_session ssh;
 	
 	std::string host("localhost");
 	int port = 11235;
 	//std::string user("user");
 	int verbosity = SSH_LOG_PROTOCOL;
-	char b[100];
 	int rc;
 
 	ssh = ssh_new();
@@ -24,8 +23,6 @@ void QGUploader::pushFile(const std::string &fileName) {
 		// Throw
 		return;
 	}
-	
-std::cout << "ssh created" << std::endl;
 
 	ssh_options_set(ssh, SSH_OPTIONS_HOST, host.c_str());
 	ssh_options_set(ssh, SSH_OPTIONS_PORT, &port);
@@ -49,8 +46,6 @@ std::cout << "ssh created" << std::endl;
 	
 	// Todo: improve user auth
 	ssh_userauth_publickey_auto(ssh, NULL, NULL);
-	
-std::cout << "ssh connected" << std::endl;
 
 	ssh_scp scp = ssh_scp_new(ssh, SSH_SCP_WRITE, ".");
 
@@ -60,12 +55,10 @@ std::cout << "ssh connected" << std::endl;
 		ssh_free(ssh);
 		return;
 	}
-std::cout << "scp created" << std::endl;
 
 	rc = ssh_scp_init(scp);
 
 	if (rc != SSH_OK) {
-std::cout << "scp init failed: " << ssh_get_error(ssh) << std::endl;
 		// Throw
 		ssh_scp_free(scp);
 		ssh_disconnect(ssh);
@@ -74,7 +67,7 @@ std::cout << "scp init failed: " << ssh_get_error(ssh) << std::endl;
 	}
 std::cout << "scp initialized" << std::endl;
 
-	rc = ssh_scp_push_file(scp, fileName.c_str(), 100, 0644);
+	rc = ssh_scp_push_file(scp, fileName.c_str(), dataSize, 0644);
 
 	if (rc != SSH_OK) {
 		// Throw
@@ -86,7 +79,7 @@ std::cout << "scp initialized" << std::endl;
 	}
 std::cout << "scp pushed" << std::endl;
 
-	rc = ssh_scp_write(scp, b, 100);
+	rc = ssh_scp_write(scp, data, dataSize);
 
 	if (rc != SSH_OK) {
 		// Throw

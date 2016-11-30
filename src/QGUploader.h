@@ -8,7 +8,7 @@ public:
 	QGUploader();
 	~QGUploader();
 	
-	void pushFile(const std::string &fileName);
+	void pushFile(const std::string &fileName, const char *data, int dataSize);
 	
 private:
 };

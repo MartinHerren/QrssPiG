@@ -100,8 +100,9 @@ int main(int argc, char *argv[]) {
 		}
 			
 		if (y > 2000) {
-			im->save(s + std::to_string(p) + ".png");
-			scp->pushFile(s + std::to_string(p) + ".png");
+			//im->save(s + std::to_string(p) + ".png");
+			im->save2Buffer();
+			scp->pushFile(s + std::to_string(p) + ".png", im->getBuffer(), im->getBufferSize());
 
 			p++;
 			y = 0;
@@ -112,8 +113,9 @@ int main(int argc, char *argv[]) {
 		}
 	}
 	
-	im->save(s + std::to_string(p) + ".png");
-	scp->pushFile(s + std::to_string(p) + ".png");
+	//im->save(s + std::to_string(p) + ".png");
+	im->save2Buffer();
+	scp->pushFile(s + std::to_string(p) + ".png", im->getBuffer(), im->getBufferSize());
 	
 	delete im;
 	delete fft;
