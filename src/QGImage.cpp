@@ -41,7 +41,7 @@ void QGImage::drawLine(const std::complex<double> *fft, const int lineNumber) {
 	int maxv = 0;
 	
 	// Get extrem values
-	for (int i = 1; i < N/2; i++) {
+	for (int i = 1; i < N; i++) {
 		double n = 10*log10(abs(fft[i]) / N);
 		
 		if (n > max) max = n;
@@ -50,7 +50,7 @@ void QGImage::drawLine(const std::complex<double> *fft, const int lineNumber) {
 	
 	double delta = max - min;
 		
-	for (int i = 1; i < N/2; i++) {
+	for (int i = 1; i < N; i++) {
 		// Get normalized value with DC centered
 		double n = 10*log10(abs(fft[i]) / N);
 		
@@ -62,8 +62,8 @@ void QGImage::drawLine(const std::complex<double> *fft, const int lineNumber) {
 		if (v > maxv) maxv = v;
 		
 //		std::cout << v << std::endl;
-		//gdImageSetPixel(_im, (i + N/2) % N, 10 + lineNumber, _c[v]);
-		gdImageSetPixel(_im, i, 10 + lineNumber, _c[v]);
+		gdImageSetPixel(_im, (i + N/2) % N, 10 + lineNumber, _c[v]);
+		//gdImageSetPixel(_im, i, 10 + lineNumber, _c[v]);
 	}
 		std::cout << min << " " << max << " " << maxv << std::endl;
 }
