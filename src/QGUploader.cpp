@@ -1,8 +1,10 @@
 #include "QGUploader.h"
 
 #include <iostream>
+#include <libssh/libssh.h>
+//#include <libssh/libsshpp.hpp> // Not available in debian jessie, available in stretch
 
-QGUploader::QGUploader() {
+QGUploader::QGUploader(const std::string &sshHost, const std::string &sshUser, int sshPort): _sshHost(sshHost), _sshUser(sshUser), _sshPort(sshPort) {
 }
 
 QGUploader::~QGUploader() {
@@ -11,9 +13,6 @@ QGUploader::~QGUploader() {
 void QGUploader::pushFile(const std::string &fileName, const char *data, int dataSize) {
 	ssh_session ssh;
 	
-	std::string host("localhost");
-	int port = 11235;
-	//std::string user("user");
 	int verbosity = SSH_LOG_PROTOCOL;
 	int rc;
 
@@ -24,10 +23,10 @@ void QGUploader::pushFile(const std::string &fileName, const char *data, int dat
 		return;
 	}
 
-	ssh_options_set(ssh, SSH_OPTIONS_HOST, host.c_str());
-	ssh_options_set(ssh, SSH_OPTIONS_PORT, &port);
-	//ssh_options_set(ssh, SSH_OPTIONS_USER, user.c_str());
-	ssh_options_set(ssh, SSH_OPTIONS_LOG_VERBOSITY, &verbosity);
+	ssh_options_set(ssh, SSH_OPTIONS_HOST, _sshHost.c_str());
+	if (_sshUser.length() > 0) ssh_options_set(ssh, SSH_OPTIONS_USER, _sshUser.c_str());
+	if (_sshPort > 0) ssh_options_set(ssh, SSH_OPTIONS_PORT, &_sshPort);
+	//ssh_options_set(ssh, SSH_OPTIONS_LOG_VERBOSITY, &verbosity);
 	
 	rc = ssh_connect(ssh);
 
