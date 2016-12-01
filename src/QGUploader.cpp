@@ -4,7 +4,7 @@
 #include <libssh/libssh.h>
 //#include <libssh/libsshpp.hpp> // Not available in debian jessie, available in stretch
 
-QGUploader::QGUploader(const std::string &sshHost, const std::string &sshUser, int sshPort): _sshHost(sshHost), _sshUser(sshUser), _sshPort(sshPort) {
+QGUploader::QGUploader(const std::string &sshHost, const std::string &sshUser, const std::string &sshDir, int sshPort): _sshHost(sshHost), _sshUser(sshUser), _sshDir(sshDir), _sshPort(sshPort) {
 }
 
 QGUploader::~QGUploader() {
@@ -46,7 +46,7 @@ void QGUploader::pushFile(const std::string &fileName, const char *data, int dat
 	// Todo: improve user auth
 	ssh_userauth_publickey_auto(ssh, NULL, NULL);
 
-	ssh_scp scp = ssh_scp_new(ssh, SSH_SCP_WRITE, ".");
+	ssh_scp scp = ssh_scp_new(ssh, SSH_SCP_WRITE, _sshDir.c_str());
 
 	if (scp == NULL) {
 		// Throw

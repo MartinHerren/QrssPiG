@@ -17,8 +17,12 @@ double hannW[8000];
 int main(int argc, char *argv[]) {
 	bool unsignedIQ;
 	int sampleRate;
+	std::string sshHost;
+	std::string sshUser;
+	std::string sshDir;
+	int sshPort;
 
-	QGUploader *scp;
+	QGUploader *scp = nullptr;
 
 	std::string s("test");
 	srand((unsigned) time(NULL));
@@ -30,7 +34,11 @@ int main(int argc, char *argv[]) {
 		desc.add_options()
 			("help,h", "Help screen")
 			("format,F", value<std::string>()->default_value("rtlsdr"), "Format, 'rtlsdr' or 'hackrf'")
-			("samplerate,s", value<int>()->default_value(2000), "Samplerate in S/s");
+			("samplerate,s", value<int>()->default_value(2000), "Samplerate in S/s")
+			("sshhost,o", value<std::string>()->default_value(""), "Ssh host")
+			("sshuser,u", value<std::string>()->default_value(""), "Ssh user")
+			("sshdir,d", value<std::string>()->default_value("."), "Ssh directory")
+			("sshport,p", value<int>()->default_value(0), "Ssh port");
 
 		variables_map vm;
 		store(parse_command_line(argc, argv, desc), vm);
@@ -57,6 +65,22 @@ int main(int argc, char *argv[]) {
 		if (vm.count("samplerate")) {
 			sampleRate = vm["samplerate"].as<int>();
 		}
+
+		if (vm.count("sshhost")) {
+			sshHost = vm["sshhost"].as<std::string>();
+		}
+
+		if (vm.count("sshuser")) {
+			sshUser = vm["sshuser"].as<std::string>();
+		}
+
+		if (vm.count("sshdir")) {
+			sshDir = vm["sshdir"].as<std::string>();
+		}
+
+		if (vm.count("sshport")) {
+			sshPort = vm["sshport"].as<int>();
+		}
 	} catch (const boost::program_options::error &ex) {
 		std::cerr << ex.what() << std::endl;
 		exit(-1);
@@ -64,7 +88,7 @@ int main(int argc, char *argv[]) {
 	
 	fft = new QGFft(N);
 	im = new QGImage(sampleRate, N);
-	scp = new QGUploader();
+	if (sshHost.length()) scp = new QGUploader(sshHost, sshUser, sshDir, sshPort);
 	
 	std::complex<double> *in = fft->getInputBuffer();
 	std::complex<double> *out = fft->getOutputBuffer();
@@ -102,7 +126,7 @@ int main(int argc, char *argv[]) {
 		if (y > 2000) {
 			//im->save(s + std::to_string(p) + ".png");
 			im->save2Buffer();
-			scp->pushFile(s + std::to_string(p) + ".png", im->getBuffer(), im->getBufferSize());
+			if (scp) scp->pushFile(s + std::to_string(p) + ".png", im->getBuffer(), im->getBufferSize());
 
 			p++;
 			y = 0;
@@ -115,7 +139,7 @@ int main(int argc, char *argv[]) {
 	
 	//im->save(s + std::to_string(p) + ".png");
 	im->save2Buffer();
-	scp->pushFile(s + std::to_string(p) + ".png", im->getBuffer(), im->getBufferSize());
+	if (scp) scp->pushFile(s + std::to_string(p) + ".png", im->getBuffer(), im->getBufferSize());
 	
 	delete im;
 	delete fft;
