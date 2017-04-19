@@ -13,3 +13,18 @@ If i find one working for my needs I might well using the existing one and stop 
  - Generate pretty horizontal waterfall graphs, aka curtain
  - Upload them via scp
  - Optionally upload them wia (s)ftp
+
+## Build
+To build QrssPiG you need cmake
+
+It depends on following dev libs:
+ - libboost-program-options-dev
+ - libgd-dev
+ - libssh-dev
+ - libfftw3-dev
+
+To build:
+ `mkdir build`
+ `cd build`
+ `cmake ..`
+ `make`
