@@ -24,7 +24,9 @@ It depends on following dev libs:
  - libfftw3-dev
 
 To build:
- `mkdir build`
- `cd build`
- `cmake ..`
- `make`
+```
+$ mkdir build
+$ cd build
+$ cmake ..
+$ make
+```
