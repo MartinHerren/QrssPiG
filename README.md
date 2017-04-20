@@ -22,6 +22,7 @@ It depends on following dev libs:
  - libgd-dev
  - libssh-dev
  - libfftw3-dev
+ - (librtlsdr-dev)
 
 To build:
 ```
@@ -30,3 +31,13 @@ $ cd build
 $ cmake ..
 $ make
 ```
+
+## Run
+### Piping from rtl_sdr
+You need rtl_sdr installed. From your build directory
+```
+rtl_sdr -f 100000000 -s 2000 - | ./src/QrssPiG -o localhost
+```
+
+### Piping from hackrf
+TODO
