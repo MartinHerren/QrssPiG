@@ -7,15 +7,15 @@ class QGFft {
 public:
 	QGFft(int N);
 	~QGFft();
-	
+
 	std::complex<double> *getInputBuffer() { return _in; };
 	std::complex<double> *getOutputBuffer() { return _out; };
-	
+
 	void process();
-	
+
 private:
 	int N;
-	
+
 	fftw_plan _p;
 	std::complex<double> *_in;
 	std::complex<double> *_out;

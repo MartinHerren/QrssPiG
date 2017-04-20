@@ -13,30 +13,30 @@ int main(int argc, char *argv[]) {
 	int numSeconds;
 	double frequency;
 	double amplitude;
-	
+
 	try {
 		using namespace boost::program_options;
-		
+
 		options_description desc{"Options"};
 		desc.add_options()
-			("help,h", "Help screen")
-			("format,F", value<std::string>()->default_value("rtlsdr"), "Format, 'rtlsdr' or 'hackrf'")
-			("samplerate,s", value<int>()->default_value(2000), "Samplerate in S/s")
-			("duration,d", value<int>()->default_value(2), "Duration in seconds")
-			("frequency,f", value<double>()->default_value(500.), "Frequency in Hz")
-			("amplitude,a", value<double>()->default_value(.1), "Amplitude");
-		
+		("help,h", "Help screen")
+		("format,F", value<std::string>()->default_value("rtlsdr"), "Format, 'rtlsdr' or 'hackrf'")
+		("samplerate,s", value<int>()->default_value(2000), "Samplerate in S/s")
+		("duration,d", value<int>()->default_value(2), "Duration in seconds")
+		("frequency,f", value<double>()->default_value(500.), "Frequency in Hz")
+		("amplitude,a", value<double>()->default_value(.1), "Amplitude");
+
 		variables_map vm;
 		store(parse_command_line(argc, argv, desc), vm);
-		
+
 		if (vm.count("help")) {
 			std::cout << desc << std::endl;
 			exit(0);
 		}
-		
+
 		if (vm.count("format")) {
 			std::string f = vm["format"].as<std::string>();
-			
+
 			if (f.compare("rtlsdr") == 0) {
 				unsignedIQ = true;
 			} else if (f.compare("hackrf") == 0) {
@@ -47,19 +47,19 @@ int main(int argc, char *argv[]) {
 				exit(-1);
 			}
 		}
-		
+
 		if (vm.count("samplerate")) {
 			sampleRate = vm["samplerate"].as<int>();
 		}
-		
+
 		if (vm.count("duration")) {
 			numSeconds = vm["duration"].as<int>();
 		}
-		
+
 		if (vm.count("frequency")) {
 			frequency = vm["frequency"].as<double>();
 		}
-		
+
 		if (vm.count("amplitude")) {
 			amplitude = vm["amplitude"].as<double>();
 		}
@@ -69,7 +69,7 @@ int main(int argc, char *argv[]) {
 	}
 
 	//srand((unsigned) time(NULL));
-	
+
 	for (double t = 0.; t < numSeconds; t += 1./sampleRate) {
 		//double r = (double)rand()/RAND_MAX - .5;
 		std::complex<double> iq = amplitude * genIQ(frequency, t);
@@ -80,10 +80,10 @@ int main(int argc, char *argv[]) {
 
 		// Shift I/Q from [-1,1] to [0,2] interval for unsigned output
 		if (unsignedIQ) iq += std::complex<double>(1., 1.);
-		
+
 		unsigned char i = ((unsigned char)trunc(127 * iq.real())) & 0xff;
 		unsigned char q = ((unsigned char)trunc(127 * iq.imag())) & 0xff;
-		
+
 		std::cout << i << q;
 	}
 

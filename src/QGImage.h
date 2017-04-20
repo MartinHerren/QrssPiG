@@ -10,14 +10,14 @@ class QGImage {
 public:
 	QGImage(int sampleRate, int N);
 	~QGImage();
-	
+
 	void drawLine(const std::complex<double> *fft, const int lineNumber);
 	void save2Buffer();
 	void save(const std::string &fileName);
-	
+
 	char *getBuffer() { return _imBuffer; };
 	int getBufferSize() { return _imBufferSize;} ;
-	
+
 private:
 	int _sampleRate;
 	int N;

@@ -12,7 +12,7 @@ QGUploader::~QGUploader() {
 
 void QGUploader::pushFile(const std::string &fileName, const char *data, int dataSize) {
 	ssh_session ssh;
-	
+
 	int verbosity = SSH_LOG_PROTOCOL;
 	int rc;
 
@@ -27,7 +27,7 @@ void QGUploader::pushFile(const std::string &fileName, const char *data, int dat
 	if (_sshUser.length() > 0) ssh_options_set(ssh, SSH_OPTIONS_USER, _sshUser.c_str());
 	if (_sshPort > 0) ssh_options_set(ssh, SSH_OPTIONS_PORT, &_sshPort);
 	//ssh_options_set(ssh, SSH_OPTIONS_LOG_VERBOSITY, &verbosity);
-	
+
 	rc = ssh_connect(ssh);
 
 	if (rc != SSH_OK) {
@@ -36,13 +36,13 @@ void QGUploader::pushFile(const std::string &fileName, const char *data, int dat
 		ssh_free(ssh);
 		return;
 	}
-	
+
 	// Todo: improve auth host
 	ssh_is_server_known(ssh);
 	unsigned char *hash = NULL;
 	ssh_get_pubkey_hash(ssh, &hash);
 	ssh_write_knownhost(ssh);
-	
+
 	// Todo: improve user auth
 	ssh_userauth_publickey_auto(ssh, NULL, NULL);
 
@@ -93,7 +93,7 @@ std::cout << "scp written" << std::endl;
 	ssh_scp_close(scp);
 
 	ssh_scp_free(scp);
-	
+
 	ssh_disconnect(ssh);
 	ssh_free(ssh);
 }
