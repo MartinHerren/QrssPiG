@@ -14,4 +14,5 @@ private:
 	std::string _sshUser;
 	std::string _sshDir;
 	int _sshPort;
+	int _fileMode;
 };

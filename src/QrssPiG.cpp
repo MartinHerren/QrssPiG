@@ -124,10 +124,12 @@ int main(int argc, char *argv[]) {
 			}
 
 			if (y > 2000) {
-				//im->save(s + std::to_string(p) + ".png");
-				im->save2Buffer();
-				if (scp) scp->pushFile(s + std::to_string(p) + ".png", im->getBuffer(), im->getBufferSize());
-
+				try {
+					im->save2Buffer();
+					if (scp) scp->pushFile(s + std::to_string(p) + ".png", im->getBuffer(), im->getBufferSize());
+				} catch (const std::exception &e) {
+					std::cerr << "Error pushing file: " << e.what() << std::endl;
+				}
 				p++;
 				y = 0;
 			}
@@ -137,9 +139,13 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
-	//im->save(s + std::to_string(p) + ".png");
-	im->save2Buffer();
-	if (scp) scp->pushFile(s + std::to_string(p) + ".png", im->getBuffer(), im->getBufferSize());
+	try {
+		im->save2Buffer();
+		if (scp) scp->pushFile(s + std::to_string(p) + ".png", im->getBuffer(), im->getBufferSize());
+	} catch (const std::exception &e) {
+		std::cerr << "Error pushing file: " << e.what() << std::endl;
+	}
+	std::cout << "Saved " << p << std::endl;
 
 	delete im;
 	delete fft;
