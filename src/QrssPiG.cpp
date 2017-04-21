@@ -1,16 +1,50 @@
+#include "QrssPiG.h"
+
 #include <boost/program_options.hpp>
-#include <complex>
-#include <iostream>
 #include <string>
 
-#include "QGFft.h"
-#include "QGImage.h"
-#include "QGUploader.h"
+QrssPiG::QrssPiG(bool unsignedIQ, int sampleRate, int N) :
+	_unsignedIQ(unsignedIQ),
+	_sampleRate(sampleRate),
+	_N(N) {
+	_fft = new QGFft(N);
+	_fftIn = _fft->getInputBuffer();
+	_fftOut = _fft->getOutputBuffer();
 
-int N = 2048; // FFT size
+	_im = new QGImage(sampleRate, N);
+	_up = nullptr;
+}
 
-QGFft *fft;
-QGImage *im;
+QrssPiG::~QrssPiG() {
+	push();
+
+	if (_fft) delete _fft;
+	if (_im) delete _im;
+	if (_up) delete _up;
+}
+
+void QrssPiG::addUploader(const std::string &sshHost, const std::string &sshUser, const std::string &sshDir, int sshPort) {
+	if (_up) delete _up;
+	_up = new QGUploader(sshHost, sshUser, sshDir, sshPort);
+}
+
+void QrssPiG::fft(int y) {
+	_fft->process();
+	_im->drawLine(_fftOut, y);
+}
+
+void QrssPiG::push() {
+	std::string s("test");
+	int p = 0;
+
+	try {
+		_im->save2Buffer();
+		if (_up) _up->pushFile(s + std::to_string(p) + ".png", _im->getBuffer(), _im->getBufferSize());
+	} catch (const std::exception &e) {
+		std::cerr << "Error pushing file: " << e.what() << std::endl;
+	}
+	p++;
+}
 
 double hannW[8000];
 
@@ -22,9 +56,6 @@ int main(int argc, char *argv[]) {
 	std::string sshDir;
 	int sshPort;
 
-	QGUploader *scp = nullptr;
-
-	std::string s("test");
 	srand((unsigned) time(NULL));
 
 	try {
@@ -86,12 +117,11 @@ int main(int argc, char *argv[]) {
 		exit(-1);
 	}
 
-	fft = new QGFft(N);
-	im = new QGImage(sampleRate, N);
-	if (sshHost.length()) scp = new QGUploader(sshHost, sshUser, sshDir, sshPort);
+	QrssPiG *pig = new QrssPiG(unsignedIQ, sampleRate);
+	if (sshHost.length()) pig->addUploader(sshHost, sshUser, sshDir, sshPort);
 
-	std::complex<double> *in = fft->getInputBuffer();
-	std::complex<double> *out = fft->getOutputBuffer();
+  // TODO remove N... put hann filter into class
+	int N = 2048;
 
 	for (int i = 0; i < N/2; i++) {
 		hannW[i] = .5 * (1 - cos((2 * M_PI * i) / (N / 2 - 1)));
@@ -100,38 +130,31 @@ int main(int argc, char *argv[]) {
 	//	std::cin >> std::noskipws;
 	int idx = 0;
 	int y = 0;
-	int p = 0;
 	int resampleCounter = 0;
 	int resampleValue = 0;
 	unsigned char i, q;
 
 	while (std::cin >> i >> q) {
 		if (resampleCounter == 0) {
-			in[idx].real(i / 127.);
-			in[idx].imag(q / 127.);
+			pig->_fftIn[idx].real(i / 127.);
+			pig->_fftIn[idx].imag(q / 127.);
 
 			// Shift I/Q from [0,2] to [-1,1} interval for unsigned input
-			if (unsignedIQ) in[idx] -= std::complex<double>(-1.,-1);
+			if (unsignedIQ) pig->_fftIn[idx] -= std::complex<double>(-1.,-1);
 
-			in[idx] *= hannW[idx/2];
+			pig->_fftIn[idx] *= hannW[idx/2];
 
 			idx++;
 
 			if (idx >= N) {
-				fft->process();
-				im->drawLine(out, y++);
-				idx = 0;
-			}
+				pig->fft(y++);
 
-			if (y > 2000) {
-				try {
-					im->save2Buffer();
-					if (scp) scp->pushFile(s + std::to_string(p) + ".png", im->getBuffer(), im->getBufferSize());
-				} catch (const std::exception &e) {
-					std::cerr << "Error pushing file: " << e.what() << std::endl;
+				if (y >= 2000) {
+					pig->push();
+					y = 0;
 				}
-				p++;
-				y = 0;
+
+				idx = 0;
 			}
 
 			resampleCounter++;
@@ -139,16 +162,7 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
-	try {
-		im->save2Buffer();
-		if (scp) scp->pushFile(s + std::to_string(p) + ".png", im->getBuffer(), im->getBufferSize());
-	} catch (const std::exception &e) {
-		std::cerr << "Error pushing file: " << e.what() << std::endl;
-	}
-	std::cout << "Saved " << p << std::endl;
-
-	delete im;
-	delete fft;
+	delete pig;
 
 	return 0;
 }
