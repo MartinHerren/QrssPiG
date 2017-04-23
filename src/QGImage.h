@@ -11,7 +11,7 @@ public:
 	QGImage(int sampleRate, int N);
 	~QGImage();
 
-	void drawLine(const std::complex<double> *fft, const int lineNumber);
+	void drawLine(const std::complex<double> *fft, int lineNumber);
 	void save2Buffer();
 	void save(const std::string &fileName);
 

@@ -38,7 +38,7 @@ QGImage::~QGImage() {
 	gdImageDestroy(_im);
 }
 
-void QGImage::drawLine(const std::complex<double> *fft, const int lineNumber) {
+void QGImage::drawLine(const std::complex<double> *fft, int lineNumber) {
 	int v;
 
 	double min = 1, max = 0;
