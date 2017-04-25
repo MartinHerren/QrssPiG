@@ -2,8 +2,8 @@
 
 #include "math.h"
 
-QGImage::QGImage(int sampleRate, int N): _sampleRate(sampleRate), N(N) {
-	_im = gdImageCreate(N, 10 + 2000);
+QGImage::QGImage(int size, int sampleRate, int N): _sampleRate(sampleRate), N(N) {
+	_im = gdImageCreate(N, 10 + size);
 
 	_imBuffer = nullptr;
 	_imBufferSize = 0;
@@ -45,21 +45,24 @@ void QGImage::drawLine(const std::complex<double> *fft, int lineNumber) {
 	int maxv = 0;
 
 	// Get extrem values
-	for (int i = 1; i < N; i++) {
+	for (int i = 2; i < N - 2; i++) {
 		double n = 10*log10(abs(fft[i]) / N);
+		//double n = abs(fft[i]) / N;
 
 		if (n > max) max = n;
 		if (n < min) min = n;
 	}
 
 	double delta = max - min;
-
-	for (int i = 1; i < N; i++) {
+//std::cout << std::endl;
+	for (int i = 2; i < N - 2; i++) {
 		// Get normalized value with DC centered
 		double n = 10*log10(abs(fft[i]) / N);
+		//double n = abs(fft[i]) / N;
 
 		v = (int)trunc((_cd - 1) * (n - min) / delta);
 		//		std::cout << n << ": " << v << std::endl;
+	//	std::cout << (abs(fft[i]) / N) << " " << n << " " << v << std::endl;
 
 		// Clip maximum value
 		if (v >= _cd) v = _cd - 1;
@@ -69,7 +72,8 @@ void QGImage::drawLine(const std::complex<double> *fft, int lineNumber) {
 		gdImageSetPixel(_im, (i + N/2) % N, 10 + lineNumber, _c[v]);
 		//gdImageSetPixel(_im, i, 10 + lineNumber, _c[v]);
 	}
-	std::cout << min << " " << max << " " << maxv << std::endl;
+//	std::cout << std::endl;
+	//std::cout << min << " " << max << " " << maxv << std::endl;
 }
 
 void QGImage::save2Buffer() {

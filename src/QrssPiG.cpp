@@ -1,6 +1,7 @@
 #include "QrssPiG.h"
 
 #include <boost/program_options.hpp>
+#include <chrono>
 #include <string>
 
 QrssPiG::QrssPiG(bool unsignedIQ, int sampleRate, int N) :
@@ -9,14 +10,21 @@ QrssPiG::QrssPiG(bool unsignedIQ, int sampleRate, int N) :
 	_N(N) {
 	_fft = new QGFft(N);
 	_fftIn = _fft->getInputBuffer();
-	_fftOut = _fft->getOutputBuffer();
+	_fftOut = _fft->getFftBuffer();
 
-	_im = new QGImage(sampleRate, N);
+	_secondsPerFrame = 60;
+	_frameSize = 240;
+	_linesPerSecond = (double)_frameSize / _secondsPerFrame;
+
+	_lastLine = -1;
+	_lastFrame = -1;
+
+	_im = new QGImage(_frameSize, _sampleRate, _N);
 	_up = nullptr;
 }
 
 QrssPiG::~QrssPiG() {
-	push();
+	_push();
 
 	if (_fft) delete _fft;
 	if (_im) delete _im;
@@ -28,12 +36,28 @@ void QrssPiG::addUploader(const std::string &sshHost, const std::string &sshUser
 	_up = new QGUploader(sshHost, sshUser, sshDir, sshPort);
 }
 
-void QrssPiG::fft(int y) {
+void QrssPiG::fft() {
+	using namespace std::chrono;
+
+	auto tt = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
+	int l = (tt  * int(_linesPerSecond) / 1000) % _frameSize;
+	int f = tt / 1000 / _secondsPerFrame;
+
 	_fft->process();
-	_im->drawLine(_fftOut, y);
+
+	if ((_lastLine > 0) && (_lastLine != l)) {
+		_fft->average();
+		_im->drawLine(_fftOut, l);
+		_fft->reset();
+
+		if ((_lastFrame > 0) && (_lastFrame != f)) _push();
+		_push();
+		_lastFrame = f;
+	}
+	_lastLine = l;
 }
 
-void QrssPiG::push() {
+void QrssPiG::_push() {
 	std::string s("test");
 	int p = 0;
 
@@ -49,8 +73,8 @@ void QrssPiG::push() {
 double hannW[8000];
 
 int main(int argc, char *argv[]) {
-	bool unsignedIQ;
-	int sampleRate;
+	bool unsignedIQ = true;
+	int sampleRate = 2048;
 	std::string sshHost;
 	std::string sshUser;
 	std::string sshDir;
@@ -129,7 +153,6 @@ int main(int argc, char *argv[]) {
 
 	//	std::cin >> std::noskipws;
 	int idx = 0;
-	int y = 0;
 	int resampleCounter = 0;
 	int resampleValue = 0;
 	unsigned char i, q;
@@ -147,13 +170,7 @@ int main(int argc, char *argv[]) {
 			idx++;
 
 			if (idx >= N) {
-				pig->fft(y++);
-
-				if (y >= 2000) {
-					pig->push();
-					y = 0;
-				}
-
+				pig->fft();
 				idx = 0;
 			}
 

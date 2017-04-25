@@ -13,12 +13,21 @@ public:
 
 	void addUploader(const std::string &sshHost, const std::string &sshUser, const std::string &sshDir, int sshPort);
 
-	void fft(int y);
-	void push();
+	void fft();
 
 private:
+	void _push();
+
+private:
+	// Data format
 	bool _unsignedIQ;
 	int _sampleRate;
+
+	// Image format
+	int _secondsPerFrame;
+	int _frameSize;
+	double _linesPerSecond;
+
 	int _N; // FFT size
 
 	QGFft *_fft;
@@ -30,4 +39,7 @@ public:
 private:
 	QGImage *_im;
 	QGUploader *_up;
+
+	int _lastLine;
+	int _lastFrame;
 };

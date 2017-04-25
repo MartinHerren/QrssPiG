@@ -8,7 +8,7 @@
 
 class QGImage {
 public:
-	QGImage(int sampleRate, int N);
+	QGImage(int size, int sampleRate, int N);
 	~QGImage();
 
 	void drawLine(const std::complex<double> *fft, int lineNumber);
