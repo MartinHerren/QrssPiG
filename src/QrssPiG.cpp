@@ -3,6 +3,8 @@
 #include <chrono>
 #include <string>
 
+#include <yaml-cpp/yaml.h>
+
 QrssPiG::QrssPiG(bool unsignedIQ, int sampleRate, int N) :
 	_unsignedIQ(unsignedIQ),
 	_sampleRate(sampleRate),
