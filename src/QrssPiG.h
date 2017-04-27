@@ -9,6 +9,7 @@
 class QrssPiG {
 public:
 	QrssPiG(bool unsignedIQ, int sampleRate, int N = 2048);
+	QrssPiG(const std::string &configFile);
 	~QrssPiG();
 
 	void addUploader(const std::string &sshHost, const std::string &sshUser, const std::string &sshDir, int sshPort);
