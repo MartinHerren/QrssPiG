@@ -14,6 +14,11 @@ QrssPiG::QrssPiG(bool unsignedIQ, int sampleRate, int N) :
 	_init();
 }
 
+QrssPiG::QrssPiG(const std::string &configFile) {
+	std::cout << "piggy from config: " << configFile << std::endl;
+	YAML::Node config = YAML::LoadFile(configFile);
+}
+
 QrssPiG::~QrssPiG() {
 	_pushImage();
 
