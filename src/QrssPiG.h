@@ -13,12 +13,19 @@ public:
 
 	void addUploader(const std::string &sshHost, const std::string &sshUser, const std::string &sshDir, int sshPort);
 
-	void fft();
+	void addIQ(std::complex<double> iq);
 
 private:
-	void _push();
+	void _init();
+	
+	void _computeFft();
+	void _applyFilter();
+	void _pushImage();
 
 private:
+	// FFT size
+	int _N;
+
 	// Data format
 	bool _unsignedIQ;
 	int _sampleRate;
@@ -26,11 +33,13 @@ private:
 	// Image format
 	int _secondsPerFrame;
 	int _frameSize;
+
 	double _linesPerSecond;
 
-	int _N; // FFT size
-
+	double *_hannW;
 	QGFft *_fft;
+
+	int _idx;
 
 public:
 	std::complex<double> *_fftIn;

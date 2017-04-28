@@ -2,8 +2,6 @@
 
 #include "QrssPiG.h"
 
-double hannW[8000];
-
 int main(int argc, char *argv[]) {
 	bool unsignedIQ = true;
 	int sampleRate = 2048;
@@ -76,35 +74,19 @@ int main(int argc, char *argv[]) {
 	QrssPiG *pig = new QrssPiG(unsignedIQ, sampleRate);
 	if (sshHost.length()) pig->addUploader(sshHost, sshUser, sshDir, sshPort);
 
-  // TODO remove N... put hann filter into class
-	int N = 2048;
-
-	for (int i = 0; i < N/2; i++) {
-		hannW[i] = .5 * (1 - cos((2 * M_PI * i) / (N / 2 - 1)));
-	}
-
 	//	std::cin >> std::noskipws;
-	int idx = 0;
 	int resampleCounter = 0;
 	int resampleValue = 0;
 	unsigned char i, q;
 
 	while (std::cin >> i >> q) {
 		if (resampleCounter == 0) {
-			pig->_fftIn[idx].real(i / 127.);
-			pig->_fftIn[idx].imag(q / 127.);
+			std::complex<double> iq(i/127., q/127.);
 
 			// Shift I/Q from [0,2] to [-1,1} interval for unsigned input
-			if (unsignedIQ) pig->_fftIn[idx] -= std::complex<double>(-1.,-1);
+			if (unsignedIQ) iq -= std::complex<double>(-1.,-1);
 
-			pig->_fftIn[idx] *= hannW[idx/2];
-
-			idx++;
-
-			if (idx >= N) {
-				pig->fft();
-				idx = 0;
-			}
+			pig->addIQ(iq);
 
 			resampleCounter++;
 			if (resampleCounter >= resampleValue) resampleCounter = 0;

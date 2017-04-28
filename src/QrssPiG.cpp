@@ -6,25 +6,16 @@
 QrssPiG::QrssPiG(bool unsignedIQ, int sampleRate, int N) :
 	_unsignedIQ(unsignedIQ),
 	_sampleRate(sampleRate),
-	_N(N) {
-	_fft = new QGFft(N);
-	_fftIn = _fft->getInputBuffer();
-	_fftOut = _fft->getFftBuffer();
-
-	_secondsPerFrame = 60;
-	_frameSize = 240;
-	_linesPerSecond = (double)_frameSize / _secondsPerFrame;
-
-	_lastLine = -1;
-	_lastFrame = -1;
-
-	_im = new QGImage(_frameSize, _sampleRate, _N);
-	_up = nullptr;
+	_N(N),
+	_secondsPerFrame(600),
+	_frameSize(1000) {
+	_init();
 }
 
 QrssPiG::~QrssPiG() {
-	_push();
+	_pushImage();
 
+	if (_hannW) delete [] _hannW;
 	if (_fft) delete _fft;
 	if (_im) delete _im;
 	if (_up) delete _up;
@@ -35,13 +26,45 @@ void QrssPiG::addUploader(const std::string &sshHost, const std::string &sshUser
 	_up = new QGUploader(sshHost, sshUser, sshDir, sshPort);
 }
 
-void QrssPiG::fft() {
+void QrssPiG::addIQ(std::complex<double> iq) {
+	_fftIn[_idx++] = iq;
+
+	if (_idx >= _N) {
+		_computeFft();
+		_idx = 0;
+	}
+}
+
+void QrssPiG::_init() {
+	_fft = new QGFft(_N);
+
+	_fftIn = _fft->getInputBuffer();
+	_fftOut = _fft->getFftBuffer();
+
+	_linesPerSecond = (double)_frameSize / _secondsPerFrame;
+	_lastLine = -1;
+	_lastFrame = -1;
+
+	_im = new QGImage(_frameSize, _sampleRate, _N);
+	_up = nullptr;
+
+	_hannW = new double[_N];
+
+	for (int i = 0; i < _N/2; i++) {
+		_hannW[i] = .5 * (1 - cos((2 * M_PI * i) / (_N / 2 - 1)));
+	}
+
+	_idx = 0;
+}
+
+void QrssPiG::_computeFft() {
 	using namespace std::chrono;
 
 	auto tt = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
 	int l = (tt  * int(_linesPerSecond) / 1000) % _frameSize;
 	int f = tt / 1000 / _secondsPerFrame;
 
+	_applyFilter();
 	_fft->process();
 
 	if ((_lastLine > 0) && (_lastLine != l)) {
@@ -56,7 +79,11 @@ void QrssPiG::fft() {
 	_lastLine = l;
 }
 
-void QrssPiG::_push() {
+void QrssPiG::_applyFilter() {
+	for (int i = 0; i < _N; i++)_fftIn[i] *= _hannW[i/2];
+}
+
+void QrssPiG::_pushImage() {
 	std::string s("test");
 	int p = 0;
 
