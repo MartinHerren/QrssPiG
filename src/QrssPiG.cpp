@@ -27,6 +27,9 @@ void QrssPiG::addUploader(const std::string &sshHost, const std::string &sshUser
 }
 
 void QrssPiG::addIQ(std::complex<double> iq) {
+	// Shift I/Q from [0,2] to [-1,1} interval for unsigned input
+	if (_unsignedIQ) iq -= std::complex<double>(-1.,-1);
+
 	_fftIn[_idx++] = iq;
 
 	if (_idx >= _N) {
@@ -72,8 +75,8 @@ void QrssPiG::_computeFft() {
 		_im->drawLine(_fftOut, l);
 		_fft->reset();
 
-		if ((_lastFrame > 0) && (_lastFrame != f)) _push();
-		_push();
+		if ((_lastFrame > 0) && (_lastFrame != f)) _pushImage();
+		_pushImage();
 		_lastFrame = f;
 	}
 	_lastLine = l;

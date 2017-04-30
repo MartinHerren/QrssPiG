@@ -83,9 +83,6 @@ int main(int argc, char *argv[]) {
 		if (resampleCounter == 0) {
 			std::complex<double> iq(i/127., q/127.);
 
-			// Shift I/Q from [0,2] to [-1,1} interval for unsigned input
-			if (unsignedIQ) iq -= std::complex<double>(-1.,-1);
-
 			pig->addIQ(iq);
 
 			resampleCounter++;
