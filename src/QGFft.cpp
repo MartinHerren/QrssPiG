@@ -1,5 +1,7 @@
 #include "QGFft.h"
 
+#include <stdexcept>
+
 QGFft::QGFft(int N): N(N) {
 	_in = (std::complex<double>*)fftw_malloc(sizeof(std::complex<double>) * N);
 	_out = (std::complex<double>*)fftw_malloc(sizeof(std::complex<double>) * N);
@@ -26,13 +28,15 @@ void QGFft::process() {
 }
 
 void QGFft::average() {
+	if (_count == 0) throw std::runtime_error("No data to average");
+
 	for (auto i = 0; i < N; i++) _fft[i] /= _count;
 
 	_count = 1;
 }
 
 void QGFft::reset() {
-	for (auto i = 0; i < N; i++) _fft[i] = 0;
+	for (auto i = 0; i < N; i++) _fft[i] = std::complex<double>(0.,0.);
 
 	_count = 0;
 }

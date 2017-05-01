@@ -22,6 +22,12 @@ QrssPiG::QrssPiG(const std::string &configFile) {
 }
 
 QrssPiG::~QrssPiG() {
+	// Draw residual data if any
+	try {
+		_fft->average();
+		_im->drawLine(_fftOut, _lastLine);
+	} catch (const std::exception &e) {};
+
 	_pushImage();
 
 	if (_hannW) delete [] _hannW;
