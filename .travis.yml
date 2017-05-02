@@ -13,4 +13,4 @@ addons:
       - libfftw3-dev
 
 script:
-  - mkdir -p build && cmake .. && cmake --build .
+  - mkdir -p build && cd build && cmake .. && cmake --build .
