@@ -8,6 +8,6 @@ addons:
   apt:
     packages:
       - libboost-program-options-dev
-      - libgd-dev
+      - libgd2-noxpm-dev
       - libssh-dev
       - libfftw3-dev
