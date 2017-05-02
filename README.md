@@ -1,4 +1,5 @@
 # QrssPiG
+[![Build Status](https://travis-ci.org/MartinHerren/QrssPiG.svg?branch=dev)](https://travis-ci.org/MartinHerren/QrssPiG)
 
 QrssPiG is short for QRSS (Raspberry)Pi Grabber.
 
