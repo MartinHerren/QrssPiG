@@ -14,7 +14,7 @@ public:
 	void process();
 	void average();
 	void reset();
-	
+
 private:
 	int N;
 
