@@ -1,6 +1,6 @@
 #include "QGImage.h"
 
-#include "math.h"
+#include <math.h>
 
 QGImage::QGImage(int size, int sampleRate, int N): _sampleRate(sampleRate), N(N) {
 	_im = gdImageCreate(N, 10 + size);
@@ -39,41 +39,37 @@ QGImage::~QGImage() {
 }
 
 void QGImage::drawLine(const std::complex<double> *fft, int lineNumber) {
-	int v;
-
-	double min = 1, max = 0;
-	int maxv = 0;
+	// Set min range
+	double min = -50, max = -40;
 
 	// Get extrem values
 	for (int i = 2; i < N - 2; i++) {
-		double n = 10*log10(abs(fft[i]) / N);
-		//double n = abs(fft[i]) / N;
-
+		double n = 10 * log10(abs(fft[i]) / N); // TODO: search min max without log10, do log10 on found values
 		if (n > max) max = n;
 		if (n < min) min = n;
 	}
 
+	// Clip to max range
+	if (min < -100) min = -100;
+	if (max > 0) max = 0;
+
 	double delta = max - min;
-//std::cout << std::endl;
+
 	for (int i = 2; i < N - 2; i++) {
 		// Get normalized value with DC centered
-		double n = 10*log10(abs(fft[i]) / N);
-		//double n = abs(fft[i]) / N;
+		double n = 10 * log10(abs(fft[i]) / N);
 
-		v = (int)trunc((_cd - 1) * (n - min) / delta);
-		//		std::cout << n << ": " << v << std::endl;
-	//	std::cout << (abs(fft[i]) / N) << " " << n << " " << v << std::endl;
+		// Clip to min-max interval
+		if (n < min) n = min;
+		if (n > max) n = max;
 
-		// Clip maximum value
+		int v = (int)trunc((_cd - 1) * (n - min) / delta);
+		// Safety clip, should no happen
+		if (v < 0) v = 0;
 		if (v >= _cd) v = _cd - 1;
-		if (v > maxv) maxv = v;
 
-		//		std::cout << v << std::endl;
 		gdImageSetPixel(_im, (i + N/2) % N, 10 + lineNumber, _c[v]);
-		//gdImageSetPixel(_im, i, 10 + lineNumber, _c[v]);
 	}
-//	std::cout << std::endl;
-	//std::cout << min << " " << max << " " << maxv << std::endl;
 }
 
 void QGImage::save2Buffer() {
