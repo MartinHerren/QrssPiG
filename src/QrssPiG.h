@@ -1,3 +1,6 @@
+#pragma once
+
+#include <chrono>
 #include <complex>
 #include <iostream>
 #include <string>
@@ -17,7 +20,7 @@ public:
 
 private:
 	void _init();
-	
+
 	void _computeFft();
 	void _applyFilter();
 	void _pushImage();
@@ -51,4 +54,6 @@ private:
 
 	int _lastLine;
 	int _lastFrame;
+
+	std::chrono::milliseconds _started;
 };

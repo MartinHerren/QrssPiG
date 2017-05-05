@@ -1,6 +1,5 @@
 #include "QrssPiG.h"
 
-#include <chrono>
 #include <string>
 
 QrssPiG::QrssPiG(bool unsignedIQ, int sampleRate, int N) :
@@ -45,6 +44,9 @@ void QrssPiG::addIQ(std::complex<double> iq) {
 }
 
 void QrssPiG::_init() {
+	using namespace std::chrono;
+	_started = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
+	
 	_fft = new QGFft(_N);
 
 	_fftIn = _fft->getInputBuffer();
