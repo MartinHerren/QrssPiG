@@ -32,6 +32,8 @@ void QrssPiG::addUploader(const std::string &sshHost, const std::string &sshUser
 }
 
 void QrssPiG::addIQ(std::complex<double> iq) {
+	int overlap = _N / 8; // 0.._N-1
+
 	// Shift I/Q from [0,2] to [-1,1} interval for unsigned input
 	if (_unsignedIQ) iq -= std::complex<double>(-1.,-1);
 
@@ -39,14 +41,15 @@ void QrssPiG::addIQ(std::complex<double> iq) {
 
 	if (_idx >= _N) {
 		_computeFft();
-		_idx = 0;
+		for (auto i = 0; i < overlap; i++) _fftIn[i] = _fftIn[_N - overlap + i];
+		_idx = overlap;
 	}
 }
 
 void QrssPiG::_init() {
 	using namespace std::chrono;
 	_started = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
-	
+
 	_fft = new QGFft(_N);
 
 	_fftIn = _fft->getInputBuffer();
