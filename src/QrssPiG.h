@@ -20,6 +20,7 @@ public:
 
 private:
 	void _init();
+	void _timeInit();
 
 	void _computeFft();
 	void _applyFilter();
@@ -37,12 +38,14 @@ private:
 	int _secondsPerFrame;
 	int _frameSize;
 
+	double _samplesPerLine;
 	double _linesPerSecond;
 
 	double *_hannW;
 	QGFft *_fft;
 
 	int _idx;
+	long _samples;
 
 public:
 	std::complex<double> *_fftIn;

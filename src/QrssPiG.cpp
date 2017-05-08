@@ -38,6 +38,7 @@ void QrssPiG::addIQ(std::complex<double> iq) {
 	if (_unsignedIQ) iq -= std::complex<double>(-1.,-1);
 
 	_fftIn[_idx++] = iq;
+	_samples++;
 
 	if (_idx >= _N) {
 		_computeFft();
@@ -55,6 +56,7 @@ void QrssPiG::_init() {
 	_fftIn = _fft->getInputBuffer();
 	_fftOut = _fft->getFftBuffer();
 
+	_samplesPerLine = (double)(_sampleRate * _secondsPerFrame) / _frameSize;
 	_linesPerSecond = (double)_frameSize / _secondsPerFrame;
 	_lastLine = -1;
 	_lastFrame = -1;
@@ -69,31 +71,39 @@ void QrssPiG::_init() {
 	}
 
 	_idx = 0;
+
+	_timeInit();
+}
+
+void QrssPiG::_timeInit() {
+	using namespace std::chrono;
+	_started = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
+	_samples = 0;
 }
 
 void QrssPiG::_computeFft() {
 	using namespace std::chrono;
 
-	auto tt = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
-	int l = (tt  * int(_linesPerSecond) / 1000) % _frameSize;
-	int f = tt / 1000 / _secondsPerFrame;
+	long timeMs = _started.count() + 1000. * _samples / _sampleRate;
+	long frameTimeMs = timeMs - (timeMs / (_secondsPerFrame * 1000)) * (_secondsPerFrame * 1000);
+	long frameLine = int(frameTimeMs * _linesPerSecond / 1000) % _frameSize;
 
 	_applyFilter();
 	_fft->process();
 
-	if ((_lastLine > 0) && (_lastLine != l)) {
+	if ((_lastLine > 0) && (_lastLine != frameLine)) {
 		_fft->average();
-		_im->drawLine(_fftOut, l);
+		_im->drawLine(_fftOut, frameLine);
 		_fft->reset();
 
-		if ((_lastFrame > 0) && (_lastFrame != f)) _pushImage();
-		_pushImage();
-		_lastFrame = f;
+		if (frameLine >= _frameSize - 1) _pushImage();
 	}
-	_lastLine = l;
+
+	_lastLine = frameLine;
 }
 
 void QrssPiG::_applyFilter() {
+	// TODO: wrong with overlap
 	for (int i = 0; i < _N; i++)_fftIn[i] *= _hannW[i/2];
 }
 
