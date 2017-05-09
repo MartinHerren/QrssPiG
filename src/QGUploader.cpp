@@ -41,8 +41,12 @@ void QGUploader::pushFile(const std::string &fileName, const char *data, int dat
 
 	// Todo: improve auth host
 	ssh_is_server_known(ssh);
+
+	// Todo: improve...
 	unsigned char *hash = NULL;
-	ssh_get_pubkey_hash(ssh, &hash);
+	ssh_get_pubkey_hash(ssh, &hash); // TODO: deprecated, use ssh_get_publickey_hash()
+	ssh_clean_pubkey_hash(&hash);
+
 	ssh_write_knownhost(ssh);
 
 	// Todo: improve user auth
