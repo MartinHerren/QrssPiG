@@ -1,3 +1,6 @@
+#pragma once
+
+#include <chrono>
 #include <complex>
 #include <iostream>
 #include <string>
@@ -18,7 +21,8 @@ public:
 
 private:
 	void _init();
-	
+	void _timeInit();
+
 	void _computeFft();
 	void _applyFilter();
 	void _pushImage();
@@ -35,21 +39,24 @@ private:
 	int _secondsPerFrame;
 	int _frameSize;
 
+	double _samplesPerLine;
 	double _linesPerSecond;
 
 	double *_hannW;
 	QGFft *_fft;
 
 	int _idx;
+	long _samples;
 
-public:
+	std::complex<double> *_in;
 	std::complex<double> *_fftIn;
 	std::complex<double> *_fftOut;
 
-private:
 	QGImage *_im;
 	QGUploader *_up;
 
 	int _lastLine;
 	int _lastFrame;
+
+	std::chrono::milliseconds _started;
 };

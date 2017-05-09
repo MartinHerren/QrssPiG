@@ -6,9 +6,11 @@ QGFft::QGFft(int N): N(N) {
 	_in = (std::complex<double>*)fftw_malloc(sizeof(std::complex<double>) * N);
 	_out = (std::complex<double>*)fftw_malloc(sizeof(std::complex<double>) * N);
 	_fft = (std::complex<double>*)fftw_malloc(sizeof(std::complex<double>) * N);
-	_count = 0;
 
 	_p = fftw_plan_dft_1d(N, reinterpret_cast<fftw_complex*>(_in), reinterpret_cast<fftw_complex*>(_out), FFTW_FORWARD, FFTW_ESTIMATE);
+
+	// as _fft is accumulated, it must be initialized to zero first, resets _count as well
+	reset();
 }
 
 QGFft::~QGFft() {
@@ -32,7 +34,7 @@ void QGFft::average() {
 
 	for (auto i = 0; i < N; i++) _fft[i] /= _count;
 
-	_count = 1;
+	_count = 1; // TODO: Probably better to set a flag as it doesn't make sense to process after an average without reset
 }
 
 void QGFft::reset() {
