@@ -47,11 +47,10 @@ private:
 	int _idx;
 	long _samples;
 
-public:
+	std::complex<double> *_in;
 	std::complex<double> *_fftIn;
 	std::complex<double> *_fftOut;
 
-private:
 	QGImage *_im;
 	QGUploader *_up;
 

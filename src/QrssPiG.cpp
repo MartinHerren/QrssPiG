@@ -22,6 +22,7 @@ QrssPiG::~QrssPiG() {
 
 	if (_hannW) delete [] _hannW;
 	if (_fft) delete _fft;
+	if (_in) fftw_free(_in);
 	if (_im) delete _im;
 	if (_up) delete _up;
 }
@@ -37,12 +38,12 @@ void QrssPiG::addIQ(std::complex<double> iq) {
 	// Shift I/Q from [0,2] to [-1,1} interval for unsigned input
 	if (_unsignedIQ) iq -= std::complex<double>(-1.,-1);
 
-	_fftIn[_idx++] = iq;
+	_in[_idx++] = iq;
 	_samples++;
 
 	if (_idx >= _N) {
 		_computeFft();
-		for (auto i = 0; i < overlap; i++) _fftIn[i] = _fftIn[_N - overlap + i];
+		for (auto i = 0; i < overlap; i++) _in[i] = _in[_N - overlap + i];
 		_idx = overlap;
 	}
 }
@@ -53,6 +54,7 @@ void QrssPiG::_init() {
 
 	_fft = new QGFft(_N);
 
+	_in = (std::complex<double>*)fftw_malloc(sizeof(std::complex<double>) * _N);
 	_fftIn = _fft->getInputBuffer();
 	_fftOut = _fft->getFftBuffer();
 
@@ -103,8 +105,7 @@ void QrssPiG::_computeFft() {
 }
 
 void QrssPiG::_applyFilter() {
-	// TODO: wrong with overlap
-	for (int i = 0; i < _N; i++)_fftIn[i] *= _hannW[i/2];
+	for (int i = 0; i < _N; i++) _fftIn[i] = _in[i] * _hannW[i / 2];
 }
 
 void QrssPiG::_pushImage() {
