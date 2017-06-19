@@ -1,21 +1,50 @@
 #include "QrssPiG.h"
 
+#include <stdexcept>
 #include <string>
 
 #include <yaml-cpp/yaml.h>
 
-QrssPiG::QrssPiG(bool unsignedIQ, int sampleRate, int N) :
-	_unsignedIQ(unsignedIQ),
-	_sampleRate(sampleRate),
-	_N(N),
+QrssPiG::QrssPiG() :
+	_N(2048),
+	_unsignedIQ(true),
+	_sampleRate(2000),
 	_secondsPerFrame(600),
 	_frameSize(1000) {
+}
+
+QrssPiG::QrssPiG(int N, bool unsignedIQ, int sampleRate) : QrssPiG() {
+	_N = N;
+	_unsignedIQ = unsignedIQ;
+	_sampleRate = sampleRate;
+
 	_init();
 }
 
-QrssPiG::QrssPiG(const std::string &configFile) {
-	std::cout << "piggy from config: " << configFile << std::endl;
+QrssPiG::QrssPiG(const std::string &configFile) : QrssPiG() {
 	YAML::Node config = YAML::LoadFile(configFile);
+
+	if (config["N"]) _N = config["N"].as<int>();
+
+	if (config["input"]) {
+		if (config["input"].Type() != YAML::NodeType::Map) throw std::runtime_error("YAML: input must be a map");
+
+		YAML::Node input = config["input"];
+
+		if (input["format"]) {
+			std::string f = input["format"].as<std::string>();
+
+			if ((f.compare("rtlsdr") == 0) || (f.compare("unsigned") == 0)) {
+				_unsignedIQ = true;
+			} else if((f.compare("hackrf") == 0) || (f.compare("signed") == 0)) {
+				_unsignedIQ = false;
+			} else {
+				throw std::runtime_error("YAML: input format unrecognized");
+			}
+		}
+
+		if (input["samplerate"]) _sampleRate = input["samplerate"].as<int>();
+	}
 
 	_init();
 }

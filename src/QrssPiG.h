@@ -10,8 +10,11 @@
 #include "QGUploader.h"
 
 class QrssPiG {
+private:
+	QrssPiG();
+
 public:
-	QrssPiG(bool unsignedIQ, int sampleRate, int N = 2048);
+	QrssPiG(int N, bool unsignedIQ, int sampleRate);
 	QrssPiG(const std::string &configFile);
 	~QrssPiG();
 

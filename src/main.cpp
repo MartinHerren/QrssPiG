@@ -44,9 +44,9 @@ int main(int argc, char *argv[]) {
 			if (vm.count("format")) {
 				std::string f = vm["format"].as<std::string>();
 
-				if (f.compare("rtlsdr") == 0) {
+				if ((f.compare("rtlsdr") == 0) || (f.compare("unsigned") == 0)) {
 					unsignedIQ = true;
-				} else if (f.compare("hackrf") == 0) {
+				} else if ((f.compare("hackrf") == 0) || (f.compare("signed") == 0)) {
 					unsignedIQ = false;
 				} else {
 					std::cerr << "Invalid option for format: " << f << std::endl;
@@ -75,7 +75,7 @@ int main(int argc, char *argv[]) {
 				sshPort = vm["sshport"].as<int>();
 			}
 
-			pig = new QrssPiG(unsignedIQ, sampleRate);
+			pig = new QrssPiG(2048, unsignedIQ, sampleRate);
 			if (sshHost.length()) pig->addUploader(sshHost, sshUser, sshDir, sshPort);
 		}
 	} catch (const boost::program_options::error &ex) {
