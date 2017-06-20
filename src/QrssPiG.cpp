@@ -46,6 +46,16 @@ QrssPiG::QrssPiG(const std::string &configFile) : QrssPiG() {
 		if (input["samplerate"]) _sampleRate = input["samplerate"].as<int>();
 	}
 
+	if (config["output"]) {
+		if (config["output"].Type() != YAML::NodeType::Map) throw std::runtime_error("YAML: output must be a map");
+
+		YAML::Node output = config["output"];
+
+		if (output["secondsperframe"]) _secondsPerFrame = output["secondsperframe"].as<int>();
+
+		if (output["framesize"]) _frameSize = output["framesize"].as<int>();
+	}
+
 	_init();
 }
 
