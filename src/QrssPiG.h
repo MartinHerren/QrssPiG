@@ -14,11 +14,9 @@ private:
 	QrssPiG();
 
 public:
-	QrssPiG(int N, bool unsignedIQ, int sampleRate);
+	QrssPiG(int N, bool unsignedIQ, int sampleRate, const std::string &sshHost, const std::string &sshUser, const std::string &sshDir, int sshPort);
 	QrssPiG(const std::string &configFile);
 	~QrssPiG();
-
-	void addUploader(const std::string &sshHost, const std::string &sshUser, const std::string &sshDir, int sshPort);
 
 	void addIQ(std::complex<double> iq);
 

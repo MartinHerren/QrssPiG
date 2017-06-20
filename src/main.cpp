@@ -39,7 +39,7 @@ int main(int argc, char *argv[]) {
 			std::string sshHost;
 			std::string sshUser;
 			std::string sshDir;
-			int sshPort;
+			int sshPort = 22;
 
 			if (vm.count("format")) {
 				std::string f = vm["format"].as<std::string>();
@@ -75,8 +75,7 @@ int main(int argc, char *argv[]) {
 				sshPort = vm["sshport"].as<int>();
 			}
 
-			pig = new QrssPiG(2048, unsignedIQ, sampleRate);
-			if (sshHost.length()) pig->addUploader(sshHost, sshUser, sshDir, sshPort);
+			pig = new QrssPiG(2048, unsignedIQ, sampleRate, sshHost, sshUser, sshDir, sshPort);
 		}
 	} catch (const boost::program_options::error &ex) {
 		std::cerr << ex.what() << std::endl;

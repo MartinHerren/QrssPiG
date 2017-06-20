@@ -13,10 +13,15 @@ QrssPiG::QrssPiG() :
 	_frameSize(1000) {
 }
 
-QrssPiG::QrssPiG(int N, bool unsignedIQ, int sampleRate) : QrssPiG() {
+QrssPiG::QrssPiG(int N, bool unsignedIQ, int sampleRate, const std::string &sshHost, const std::string &sshUser, const std::string &sshDir, int sshPort) : QrssPiG() {
 	_N = N;
 	_unsignedIQ = unsignedIQ;
 	_sampleRate = sampleRate;
+
+	if (sshHost.length()) {
+		if (_up) delete _up;
+		_up = new QGUploader(sshHost, sshUser, sshDir, sshPort);
+	}
 
 	_init();
 }
@@ -73,11 +78,6 @@ QrssPiG::~QrssPiG() {
 	if (_in) fftw_free(_in);
 	if (_im) delete _im;
 	if (_up) delete _up;
-}
-
-void QrssPiG::addUploader(const std::string &sshHost, const std::string &sshUser, const std::string &sshDir, int sshPort) {
-	if (_up) delete _up;
-	_up = new QGUploader(sshHost, sshUser, sshDir, sshPort);
 }
 
 void QrssPiG::addIQ(std::complex<double> iq) {
