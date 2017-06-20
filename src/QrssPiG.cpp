@@ -3,8 +3,6 @@
 #include <stdexcept>
 #include <string>
 
-#include <yaml-cpp/yaml.h>
-
 QrssPiG::QrssPiG() :
 	_N(2048),
 	_unsignedIQ(true),
@@ -61,6 +59,21 @@ QrssPiG::QrssPiG(const std::string &configFile) : QrssPiG() {
 		if (output["framesize"]) _frameSize = output["framesize"].as<int>();
 	}
 
+	if (config["upload"]) {
+		if ((config["upload"].Type() != YAML::NodeType::Map) &&
+			(config["upload"].Type() != YAML::NodeType::Sequence)) {
+			throw std::runtime_error("YAML: upload must be a map or a list");
+		}
+
+		if (config["upload"].Type() == YAML::NodeType::Map) {
+			_addUploader(config["upload"]);
+		} else if (config["upload"].Type() == YAML::NodeType::Sequence) {
+			for (YAML::const_iterator it = config["upload"].begin(); it != config["upload"].end(); it++) {
+				_addUploader(*it);
+			}
+		}
+	}
+
 	_init();
 }
 
@@ -94,6 +107,20 @@ void QrssPiG::addIQ(std::complex<double> iq) {
 		for (auto i = 0; i < overlap; i++) _in[i] = _in[_N - overlap + i];
 		_idx = overlap;
 	}
+}
+
+//
+// Private members
+//
+void QrssPiG::_addUploader(const YAML::Node &uploader) {
+	if (!uploader["type"]) throw std::runtime_error("YAML: uploader must have a type");
+
+	std::string type = uploader["type"].as<std::string>();
+
+	if (type.compare("scp") == 0) std::cout << "SCP uploader" << std::endl;
+	else if (type.compare("local") == 0) std::cout << "Local uploader" << std::endl;
+//	if (_up) delete _up;
+//	_up = new QGUploader(sshHost, sshUser, sshDir, sshPort);
 }
 
 void QrssPiG::_init() {

@@ -5,6 +5,8 @@
 #include <iostream>
 #include <string>
 
+#include <yaml-cpp/yaml.h>
+
 #include "QGFft.h"
 #include "QGImage.h"
 #include "QGUploader.h"
@@ -21,6 +23,7 @@ public:
 	void addIQ(std::complex<double> iq);
 
 private:
+	void _addUploader(const YAML::Node &uploader);
 	void _init();
 	void _timeInit();
 
