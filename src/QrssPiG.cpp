@@ -117,10 +117,23 @@ void QrssPiG::_addUploader(const YAML::Node &uploader) {
 
 	std::string type = uploader["type"].as<std::string>();
 
-	if (type.compare("scp") == 0) std::cout << "SCP uploader" << std::endl;
-	else if (type.compare("local") == 0) std::cout << "Local uploader" << std::endl;
-//	if (_up) delete _up;
-//	_up = new QGUploader(sshHost, sshUser, sshDir, sshPort);
+	if (type.compare("scp") == 0) {
+		std::string host = "localhost";
+		int port = 22; // TODO: use 0 to force uploader to take default port ?
+		std::string user = "";
+		std::string dir = "./";
+
+		if (uploader["host"]) host = uploader["host"].as<std::string>();
+		if (uploader["port"]) port = uploader["port"].as<int>();
+		if (uploader["user"]) user = uploader["user"].as<std::string>();
+		if (uploader["dir"]) dir = uploader["dir"].as<std::string>();
+
+		std::cout << "SCP uploader" << std::endl;
+
+		_up = new QGUploader(host, user, dir, port);
+	} else if (type.compare("local") == 0) {
+		std::cout << "Local uploader" << std::endl;
+	}
 }
 
 void QrssPiG::_init() {
