@@ -1,0 +1,15 @@
+N: 4096
+input:
+  format: hackrf
+  samplerate: 8000
+output:
+  secondsperframe: 1200
+  framesize: 500
+upload:
+  - type: local
+    dir: /tmp
+  - type: scp
+    host: localhost
+    port: 22
+    user: qrsspig
+    dir: /tmp
