@@ -1,13 +1,79 @@
 #include "QrssPiG.h"
 
+#include <stdexcept>
 #include <string>
 
-QrssPiG::QrssPiG(bool unsignedIQ, int sampleRate, int N) :
-	_unsignedIQ(unsignedIQ),
-	_sampleRate(sampleRate),
-	_N(N),
+QrssPiG::QrssPiG() :
+	_N(2048),
+	_unsignedIQ(true),
+	_sampleRate(2000),
 	_secondsPerFrame(600),
 	_frameSize(1000) {
+}
+
+QrssPiG::QrssPiG(int N, bool unsignedIQ, int sampleRate, const std::string &sshHost, const std::string &sshUser, const std::string &sshDir, int sshPort) : QrssPiG() {
+	_N = N;
+	_unsignedIQ = unsignedIQ;
+	_sampleRate = sampleRate;
+
+	if (sshHost.length()) {
+		if (_up) delete _up;
+		_up = new QGUploader(sshHost, sshUser, sshDir, sshPort);
+	}
+
+	_init();
+}
+
+QrssPiG::QrssPiG(const std::string &configFile) : QrssPiG() {
+	YAML::Node config = YAML::LoadFile(configFile);
+
+	if (config["N"]) _N = config["N"].as<int>();
+
+	if (config["input"]) {
+		if (config["input"].Type() != YAML::NodeType::Map) throw std::runtime_error("YAML: input must be a map");
+
+		YAML::Node input = config["input"];
+
+		if (input["format"]) {
+			std::string f = input["format"].as<std::string>();
+
+			if ((f.compare("rtlsdr") == 0) || (f.compare("unsigned") == 0)) {
+				_unsignedIQ = true;
+			} else if((f.compare("hackrf") == 0) || (f.compare("signed") == 0)) {
+				_unsignedIQ = false;
+			} else {
+				throw std::runtime_error("YAML: input format unrecognized");
+			}
+		}
+
+		if (input["samplerate"]) _sampleRate = input["samplerate"].as<int>();
+	}
+
+	if (config["output"]) {
+		if (config["output"].Type() != YAML::NodeType::Map) throw std::runtime_error("YAML: output must be a map");
+
+		YAML::Node output = config["output"];
+
+		if (output["secondsperframe"]) _secondsPerFrame = output["secondsperframe"].as<int>();
+
+		if (output["framesize"]) _frameSize = output["framesize"].as<int>();
+	}
+
+	if (config["upload"]) {
+		if ((config["upload"].Type() != YAML::NodeType::Map) &&
+			(config["upload"].Type() != YAML::NodeType::Sequence)) {
+			throw std::runtime_error("YAML: upload must be a map or a list");
+		}
+
+		if (config["upload"].Type() == YAML::NodeType::Map) {
+			_addUploader(config["upload"]);
+		} else if (config["upload"].Type() == YAML::NodeType::Sequence) {
+			for (YAML::const_iterator it = config["upload"].begin(); it != config["upload"].end(); it++) {
+				_addUploader(*it);
+			}
+		}
+	}
+
 	_init();
 }
 
@@ -27,11 +93,6 @@ QrssPiG::~QrssPiG() {
 	if (_up) delete _up;
 }
 
-void QrssPiG::addUploader(const std::string &sshHost, const std::string &sshUser, const std::string &sshDir, int sshPort) {
-	if (_up) delete _up;
-	_up = new QGUploader(sshHost, sshUser, sshDir, sshPort);
-}
-
 void QrssPiG::addIQ(std::complex<double> iq) {
 	int overlap = _N / 8; // 0.._N-1
 
@@ -45,6 +106,33 @@ void QrssPiG::addIQ(std::complex<double> iq) {
 		_computeFft();
 		for (auto i = 0; i < overlap; i++) _in[i] = _in[_N - overlap + i];
 		_idx = overlap;
+	}
+}
+
+//
+// Private members
+//
+void QrssPiG::_addUploader(const YAML::Node &uploader) {
+	if (!uploader["type"]) throw std::runtime_error("YAML: uploader must have a type");
+
+	std::string type = uploader["type"].as<std::string>();
+
+	if (type.compare("scp") == 0) {
+		std::string host = "localhost";
+		int port = 22; // TODO: use 0 to force uploader to take default port ?
+		std::string user = "";
+		std::string dir = "./";
+
+		if (uploader["host"]) host = uploader["host"].as<std::string>();
+		if (uploader["port"]) port = uploader["port"].as<int>();
+		if (uploader["user"]) user = uploader["user"].as<std::string>();
+		if (uploader["dir"]) dir = uploader["dir"].as<std::string>();
+
+		std::cout << "SCP uploader" << std::endl;
+
+		_up = new QGUploader(host, user, dir, port);
+	} else if (type.compare("local") == 0) {
+		std::cout << "Local uploader" << std::endl;
 	}
 }
 

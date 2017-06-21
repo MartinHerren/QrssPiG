@@ -5,20 +5,25 @@
 #include <iostream>
 #include <string>
 
+#include <yaml-cpp/yaml.h>
+
 #include "QGFft.h"
 #include "QGImage.h"
 #include "QGUploader.h"
 
 class QrssPiG {
-public:
-	QrssPiG(bool unsignedIQ, int sampleRate, int N = 2048);
-	~QrssPiG();
+private:
+	QrssPiG();
 
-	void addUploader(const std::string &sshHost, const std::string &sshUser, const std::string &sshDir, int sshPort);
+public:
+	QrssPiG(int N, bool unsignedIQ, int sampleRate, const std::string &sshHost, const std::string &sshUser, const std::string &sshDir, int sshPort);
+	QrssPiG(const std::string &configFile);
+	~QrssPiG();
 
 	void addIQ(std::complex<double> iq);
 
 private:
+	void _addUploader(const YAML::Node &uploader);
 	void _init();
 	void _timeInit();
 

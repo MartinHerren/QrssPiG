@@ -14,6 +14,7 @@ addons:
       - libgd2-noxpm-dev
       - libssh-dev
       - libfftw3-dev
+      - libyaml-cpp-dev
 
 script:
   - mkdir -p build && cd build && cmake .. && cmake --build .
