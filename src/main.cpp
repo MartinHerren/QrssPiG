@@ -16,9 +16,9 @@ int main(int argc, char *argv[]) {
 		("configfile,c", value<std::string>(), "Config file")
 		("format,F", value<std::string>()->default_value("rtlsdr"), "Format, 'rtlsdr' or 'hackrf'")
 		("samplerate,s", value<int>()->default_value(2000), "Samplerate in S/s")
+		("directory,d", value<std::string>()->default_value("./"), "Output directory")
 		("sshhost,o", value<std::string>()->default_value(""), "Ssh host")
 		("sshuser,u", value<std::string>()->default_value(""), "Ssh user")
-		("sshdir,d", value<std::string>()->default_value("."), "Ssh directory")
 		("sshport,p", value<int>()->default_value(0), "Ssh port");
 
 		variables_map vm;
@@ -35,10 +35,10 @@ int main(int argc, char *argv[]) {
 			pig = new QrssPiG(configFile);
 		} else {
 			bool unsignedIQ = true;
-			int sampleRate = 2048;
+			int sampleRate = 2000;
+			std::string directory;
 			std::string sshHost;
 			std::string sshUser;
-			std::string sshDir;
 			int sshPort = 22;
 
 			if (vm.count("format")) {
@@ -59,6 +59,10 @@ int main(int argc, char *argv[]) {
 				sampleRate = vm["samplerate"].as<int>();
 			}
 
+			if (vm.count("directory")) {
+				directory = vm["directory"].as<std::string>();
+			}
+
 			if (vm.count("sshhost")) {
 				sshHost = vm["sshhost"].as<std::string>();
 			}
@@ -67,15 +71,11 @@ int main(int argc, char *argv[]) {
 				sshUser = vm["sshuser"].as<std::string>();
 			}
 
-			if (vm.count("sshdir")) {
-				sshDir = vm["sshdir"].as<std::string>();
-			}
-
 			if (vm.count("sshport")) {
 				sshPort = vm["sshport"].as<int>();
 			}
 
-			pig = new QrssPiG(2048, unsignedIQ, sampleRate, sshHost, sshUser, sshDir, sshPort);
+			pig = new QrssPiG(2048, unsignedIQ, sampleRate, directory, sshHost, sshUser, sshPort);
 		}
 	} catch (const boost::program_options::error &ex) {
 		std::cerr << ex.what() << std::endl;

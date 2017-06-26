@@ -16,7 +16,7 @@ private:
 	QrssPiG();
 
 public:
-	QrssPiG(int N, bool unsignedIQ, int sampleRate, const std::string &sshHost, const std::string &sshUser, const std::string &sshDir, int sshPort);
+	QrssPiG(int N, bool unsignedIQ, int sampleRate, const std::string &dir, const std::string &sshHost, const std::string &sshUser, int sshPort);
 	QrssPiG(const std::string &configFile);
 	~QrssPiG();
 

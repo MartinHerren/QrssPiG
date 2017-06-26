@@ -1,4 +1,4 @@
-#include "QGUploader.h"
+#include "QGSCPUploader.h"
 
 #include <iostream>
 #include <stdexcept>
@@ -6,18 +6,19 @@
 #include <libssh/libssh.h>
 //#include <libssh/libsshpp.hpp> // Not available in debian jessie, available in stretch
 
-QGUploader::QGUploader(const std::string &sshHost, const std::string &sshUser, const std::string &sshDir, int sshPort) :
-	_sshHost(sshHost),
-	_sshUser(sshUser),
-	_sshDir(sshDir),
-	_sshPort(sshPort),
+QGSCPUploader::QGSCPUploader(const std::string &host, const std::string &user, const std::string &dir, int port) :
+	QGUploader(),
+	_host(host),
+	_user(user),
+	_dir(dir),
+	_port(port),
 	_fileMode(0644) {
 }
 
-QGUploader::~QGUploader() {
+QGSCPUploader::~QGSCPUploader() {
 }
 
-void QGUploader::pushFile(const std::string &fileName, const char *data, int dataSize) {
+void QGSCPUploader::push(const std::string &fileName, const char *data, int dataSize) {
 	ssh_session ssh;
 
 	int verbosity = SSH_LOG_PROTOCOL;
@@ -27,9 +28,9 @@ void QGUploader::pushFile(const std::string &fileName, const char *data, int dat
 
 	if (ssh == NULL) throw std::runtime_error("Error allocating ssh handler");
 
-	ssh_options_set(ssh, SSH_OPTIONS_HOST, _sshHost.c_str());
-	if (_sshUser.length() > 0) ssh_options_set(ssh, SSH_OPTIONS_USER, _sshUser.c_str());
-	if (_sshPort > 0) ssh_options_set(ssh, SSH_OPTIONS_PORT, &_sshPort);
+	ssh_options_set(ssh, SSH_OPTIONS_HOST, _host.c_str());
+	if (_user.length() > 0) ssh_options_set(ssh, SSH_OPTIONS_USER, _user.c_str());
+	if (_port > 0) ssh_options_set(ssh, SSH_OPTIONS_PORT, &_port);
 	//ssh_options_set(ssh, SSH_OPTIONS_LOG_VERBOSITY, &verbosity);
 
 	rc = ssh_connect(ssh);
@@ -52,7 +53,7 @@ void QGUploader::pushFile(const std::string &fileName, const char *data, int dat
 	// Todo: improve user auth
 	ssh_userauth_publickey_auto(ssh, NULL, NULL);
 
-	ssh_scp scp = ssh_scp_new(ssh, SSH_SCP_WRITE, _sshDir.c_str());
+	ssh_scp scp = ssh_scp_new(ssh, SSH_SCP_WRITE, _dir.c_str());
 
 	if (scp == NULL) {
 		ssh_disconnect(ssh);

@@ -3,22 +3,27 @@
 #include <stdexcept>
 #include <string>
 
+#include "QGLocalUploader.h"
+#include "QGSCPUploader.h"
+
 QrssPiG::QrssPiG() :
 	_N(2048),
 	_unsignedIQ(true),
 	_sampleRate(2000),
 	_secondsPerFrame(600),
-	_frameSize(1000) {
+	_frameSize(1000),
+	_up(nullptr) {
 }
 
-QrssPiG::QrssPiG(int N, bool unsignedIQ, int sampleRate, const std::string &sshHost, const std::string &sshUser, const std::string &sshDir, int sshPort) : QrssPiG() {
+QrssPiG::QrssPiG(int N, bool unsignedIQ, int sampleRate, const std::string &dir, const std::string &sshHost, const std::string &sshUser, int sshPort) : QrssPiG() {
 	_N = N;
 	_unsignedIQ = unsignedIQ;
 	_sampleRate = sampleRate;
 
 	if (sshHost.length()) {
-		if (_up) delete _up;
-		_up = new QGUploader(sshHost, sshUser, sshDir, sshPort);
+		_up = new QGSCPUploader(sshHost, sshUser, dir, sshPort);
+	} else {
+		_up = new QGLocalUploader(dir);
 	}
 
 	_init();
@@ -130,9 +135,15 @@ void QrssPiG::_addUploader(const YAML::Node &uploader) {
 
 		std::cout << "SCP uploader" << std::endl;
 
-		_up = new QGUploader(host, user, dir, port);
+		_up = new QGSCPUploader(host, user, dir, port);
 	} else if (type.compare("local") == 0) {
+		std::string dir = "./";
+
+		if (uploader["dir"]) dir = uploader["dir"].as<std::string>();
+
 		std::cout << "Local uploader" << std::endl;
+
+		_up = new QGLocalUploader(dir);
 	}
 }
 
@@ -152,7 +163,6 @@ void QrssPiG::_init() {
 	_lastFrame = -1;
 
 	_im = new QGImage(_frameSize, _sampleRate, _N);
-	_up = nullptr;
 
 	_hannW = new double[_N];
 
@@ -202,7 +212,8 @@ void QrssPiG::_pushImage() {
 
 	try {
 		_im->save2Buffer();
-		if (_up) _up->pushFile(s + std::to_string(p) + ".png", _im->getBuffer(), _im->getBufferSize());
+		if (_up) _up->push(s + std::to_string(p) + ".png", _im->getBuffer(), _im->getBufferSize());
+std::cout << "pushed" << std::endl;
 	} catch (const std::exception &e) {
 		std::cerr << "Error pushing file: " << e.what() << std::endl;
 	}
