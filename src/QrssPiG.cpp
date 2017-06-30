@@ -85,7 +85,6 @@ QrssPiG::QrssPiG(const std::string &configFile) : QrssPiG() {
 QrssPiG::~QrssPiG() {
 	// Draw residual data if any
 	try {
-		_fft->average();
 		_im->drawLine(_fftOut, _lastLine);
 	} catch (const std::exception &e) {};
 
@@ -191,15 +190,13 @@ void QrssPiG::_computeFft() {
 	_applyFilter();
 	_fft->process();
 
-	if ((_lastLine > 0) && (_lastLine != frameLine)) {
-		_fft->average();
-		_im->drawLine(_fftOut, frameLine);
-		_fft->reset();
-
+	//if ((_lastLine > 0) && (_lastLine != frameLine)) {
+		//_im->drawLine(_fftOut, frameLine);
+		_im->drawLine(_fftOut, ++_lastLine);
 		if (frameLine >= _frameSize - 1) _pushImage();
-	}
+	//}
 
-	_lastLine = frameLine;
+	//_lastLine = frameLine;
 }
 
 void QrssPiG::_applyFilter() {
