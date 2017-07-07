@@ -19,6 +19,7 @@ public:
 	int getBufferSize() { return _imBufferSize;} ;
 
 private:
+	int _size;
 	int _sampleRate;
 	int N;
 	gdImagePtr _im;

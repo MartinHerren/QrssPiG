@@ -2,8 +2,8 @@
 
 #include <math.h>
 
-QGImage::QGImage(int size, int sampleRate, int N): _sampleRate(sampleRate), N(N) {
-	_im = gdImageCreate(N, 10 + size);
+QGImage::QGImage(int size, int sampleRate, int N): _size(size), _sampleRate(sampleRate), N(N) {
+	_im = gdImageCreate(N, 10 + _size + 100);
 
 	_imBuffer = nullptr;
 	_imBufferSize = 0;
@@ -41,6 +41,10 @@ QGImage::~QGImage() {
 void QGImage::drawLine(const std::complex<double> *fft, int lineNumber) {
 	// Set min range
 	double min = -50, max = -40;
+
+	for (int i = 1; i < N; i++) {
+		gdImageLine(_im, (i + N/2) % N - 1, 10 * log10(abs(fft[i - 1]) / N) + 10 + _size + 100, (i + N/2) % N, 10 * log10(abs(fft[i]) / N) + 10 + _size + 100, _c[_cd-1]);
+	}
 
 	// Get extrem values
 	for (int i = 2; i < N - 2; i++) {
