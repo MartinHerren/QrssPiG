@@ -13,10 +13,10 @@ QGImage::QGImage(int size, int sampleRate, int N): _sampleRate(sampleRate), N(N)
 
 	// Allocate colormap, taken from 'qrx' colormap from RFAnalyzer, reduced to 256 palette due to use of libgd
 	int ii = 0;
-	for (int i = 0; i <= 255; i+=4,ii++) _c[ii] = gdImageColorAllocate(_im, 0, i, 255);
-	for (int i = 0; i <= 255; i+=4,ii++) _c[ii] = gdImageColorAllocate(_im, 0, 255, 255 - i);
-	for (int i = 0; i <= 255; i+=4,ii++) _c[ii] = gdImageColorAllocate(_im, i, 255, 0);
-	for (int i = 0; i <= 255; i+=4,ii++) _c[ii] = gdImageColorAllocate(_im, 255, 255 -  i, 0);
+	for (int i = 0; i <= 255; i += 4) _c[ii++] = gdImageColorAllocate(_im, 0, 0, i);
+	for (int i = 0; i <= 255; i += 4) _c[ii++] = gdImageColorAllocate(_im, 0, i, 255);
+	for (int i = 0; i <= 255; i += 4) _c[ii++] = gdImageColorAllocate(_im, i, 255, 255 - i);
+	for (int i = 0; i <= 255; i += 4) _c[ii++] = gdImageColorAllocate(_im, 255, 255 -  i, 0);
 
 	//int bucket = (_sampleRate/100) / (_sampleRate/N);
 	int bucket = N/(2*100);
