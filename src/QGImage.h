@@ -19,6 +19,8 @@ public:
 	int getBufferSize() { return _imBufferSize;} ;
 
 private:
+	int db2Color(double v);
+
 	int _size;
 	int _sampleRate;
 	int N;
@@ -27,4 +29,8 @@ private:
 	int _imBufferSize;
 	int *_c;
 	int _cd; // Color depth
+
+	double _dBmin;
+	double _dBmax;
+	double _dBdelta;
 };

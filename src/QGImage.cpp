@@ -3,13 +3,17 @@
 #include <math.h>
 
 QGImage::QGImage(int size, int sampleRate, int N): _size(size), _sampleRate(sampleRate), N(N) {
-	_im = gdImageCreateTrueColor(N, 10 + _size + 100);
+	_im = gdImageCreateTrueColor(100 + N, 10 + _size + 100);
 
 	_imBuffer = nullptr;
 	_imBufferSize = 0;
 
 	_cd = 256;
 	_c = new int[_cd];
+
+	_dBmin = -20.;
+	_dBmax = -10.;
+	_dBdelta = _dBmax - _dBmin;
 
 	// Allocate colormap, taken from 'qrx' colormap from RFAnalyzer, reduced to 256 palette due to use of libgd
 	int ii = 0;
@@ -20,12 +24,23 @@ QGImage::QGImage(int size, int sampleRate, int N): _size(size), _sampleRate(samp
 
 	//int bucket = (_sampleRate/100) / (_sampleRate/N);
 	int bucket = N/(2*100);
-
 	int white = gdTrueColor(255, 255, 255);
 
 	for (int i = 0; i < N/2; i += bucket) {
-		gdImageLine(_im, N/2 - i*bucket, 0, N/2 - i*bucket, 10, white);
-		gdImageLine(_im, N/2 + i*bucket, 0, N/2 + i*bucket, 10, white);
+		gdImageLine(_im, 100 + N/2 - i*bucket, 0, 100 + N/2 - i*bucket, 10, white);
+		gdImageLine(_im, 100 + N/2 + i*bucket, 0, 100 + N/2 + i*bucket, 10, white);
+	}
+
+	for (int i = -100; i <= 0; i += 10) {
+		gdImageLine(_im, 90, 10 + _size - i, 93, 10 + _size - i, white);
+	}
+
+	for (double i = -100.; i <= 0.; i++) {
+		int c = db2Color(i);
+		gdImageSetPixel(_im, 95, 10 + _size - i, c);
+		gdImageSetPixel(_im, 96, 10 + _size - i, c);
+		gdImageSetPixel(_im, 97, 10 + _size - i, c);
+		gdImageSetPixel(_im, 98, 10 + _size - i, c);
 	}
 }
 
@@ -36,42 +51,15 @@ QGImage::~QGImage() {
 }
 
 void QGImage::drawLine(const std::complex<double> *fft, int lineNumber) {
-	// Set min range
-	double min = -50, max = -40;
-
 	int whiteA = gdTrueColorAlpha(255, 255, 255, 125);
 
 	for (int i = 1; i < N; i++) {
-		gdImageLine(_im, (i + N/2) % N - 1, 10 + _size - 10 * log10(abs(fft[i - 1]) / N), (i + N/2) % N, 10 + _size - 10 * log10(abs(fft[i]) / N), whiteA);
+		gdImageLine(_im, 100 + (i + N/2) % N - 1, 10 + _size - 10 * log10(abs(fft[i - 1]) / N), 100 + (i + N/2) % N, 10 + _size - 10 * log10(abs(fft[i]) / N), whiteA);
 	}
-
-	// Get extrem values
-	for (int i = 2; i < N - 2; i++) {
-		double n = 10 * log10(abs(fft[i]) / N); // TODO: search min max without log10, do log10 on found values
-		if (n > max) max = n;
-		if (n < min) min = n;
-	}
-
-	// Clip to max range
-	if (min < -100) min = -100;
-	if (max > 0) max = 0;
-
-	double delta = max - min;
 
 	for (int i = 2; i < N - 2; i++) {
 		// Get normalized value with DC centered
-		double n = 10 * log10(abs(fft[i]) / N);
-
-		// Clip to min-max interval
-		if (n < min) n = min;
-		if (n > max) n = max;
-
-		int v = (int)trunc((_cd - 1) * (n - min) / delta);
-		// Safety clip, should no happen
-		if (v < 0) v = 0;
-		if (v >= _cd) v = _cd - 1;
-
-		gdImageSetPixel(_im, (i + N/2) % N, 10 + lineNumber, _c[v]);
+		gdImageSetPixel(_im, 100 + (i + N/2) % N, 10 + lineNumber, db2Color(10 * log10(abs(fft[i]) / N)));
 	}
 }
 
@@ -87,4 +75,11 @@ void QGImage::save(const std::string &fileName) {
 	pngout = fopen(fileName.c_str(), "wb");
 	gdImagePng(_im, pngout);
 	fclose(pngout);
+}
+
+int QGImage::db2Color(double v) {
+	if (v < _dBmin) v = _dBmin;
+	if (v > _dBmax) v = _dBmax;
+
+	return _c[(int)trunc((_cd - 1) * (v - _dBmin) / _dBdelta)];
 }
