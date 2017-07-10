@@ -44,7 +44,7 @@ void QGImage::setScale(double dBmin, double dBmax) {
 	_dBmax = dBmax;
 	_dBdelta = _dBmax - _dBmin;
 
-	gdImageRectangle(_im, 0, 10 + _size, 100 + N, 10 + _size + 105, gdTrueColor(0, 0, 0));
+	gdImageFilledRectangle(_im, 0, 10 + _size + 105, 100 + N, 10 + _size, gdTrueColor(0, 0, 0));
 
 	int white = gdTrueColor(255, 255, 255);
 
@@ -87,7 +87,7 @@ void QGImage::setScale(double dBmin, double dBmax) {
 }
 
 void QGImage::clearGraph() {
-	gdImageRectangle(_im, 100, 10, 100 + N, 10 + _size + 105, gdTrueColor(0, 0, 0));
+	gdImageFilledRectangle(_im, 100, 10, 100 + N, 10 + _size + 105, gdTrueColor(0, 0, 0));
 }
 
 void QGImage::drawLine(const std::complex<double> *fft, int lineNumber) {

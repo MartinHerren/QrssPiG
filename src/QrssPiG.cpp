@@ -31,6 +31,7 @@ QrssPiG::QrssPiG(int N, bool unsignedIQ, int sampleRate, const std::string &dir,
 
 QrssPiG::QrssPiG(const std::string &configFile) : QrssPiG() {
 	YAML::Node config = YAML::LoadFile(configFile);
+	double dBmin = -30., dBmax = 0.;
 
 	if (config["N"]) _N = config["N"].as<int>();
 
@@ -62,6 +63,8 @@ QrssPiG::QrssPiG(const std::string &configFile) : QrssPiG() {
 		if (output["secondsperframe"]) _secondsPerFrame = output["secondsperframe"].as<int>();
 
 		if (output["framesize"]) _frameSize = output["framesize"].as<int>();
+		if (output["dBmin"]) dBmin = output["dBmin"].as<double>();
+		if (output["dBmax"]) dBmax = output["dBmax"].as<double>();
 	}
 
 	if (config["upload"]) {
@@ -80,6 +83,8 @@ QrssPiG::QrssPiG(const std::string &configFile) : QrssPiG() {
 	}
 
 	_init();
+
+	_im->setScale(dBmin, dBmax);
 }
 
 QrssPiG::~QrssPiG() {

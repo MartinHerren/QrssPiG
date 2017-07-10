@@ -3,6 +3,8 @@ input:
   format: hackrf
   samplerate: 8000
 output:
+  dBmin: -30
+  dBmax: 0
   secondsperframe: 1200
   framesize: 500
 upload:
