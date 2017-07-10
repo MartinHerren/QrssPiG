@@ -82,20 +82,13 @@ int main(int argc, char *argv[]) {
 		exit(-1);
 	}
 
-	//	std::cin >> std::noskipws;
-	int resampleCounter = 0;
-	int resampleValue = 0;
 	unsigned char i, q;
 
+	std::cin >> std::noskipws;
 	while (std::cin >> i >> q) {
-		if (resampleCounter == 0) {
-			std::complex<double> iq(i/127., q/127.);
+		std::complex<double> iq(i/127., q/127.);
 
-			pig->addIQ(iq);
-
-			resampleCounter++;
-			if (resampleCounter >= resampleValue) resampleCounter = 0;
-		}
+		pig->addIQ(iq);
 	}
 
 	delete pig;
