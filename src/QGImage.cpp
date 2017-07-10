@@ -3,7 +3,7 @@
 #include <math.h>
 
 QGImage::QGImage(int size, int sampleRate, int N): _size(size), _sampleRate(sampleRate), N(N) {
-	_im = gdImageCreate(N, 10 + _size + 100);
+	_im = gdImageCreateTrueColor(N, 10 + _size + 100);
 
 	_imBuffer = nullptr;
 	_imBufferSize = 0;
@@ -21,14 +21,11 @@ QGImage::QGImage(int size, int sampleRate, int N): _size(size), _sampleRate(samp
 	//int bucket = (_sampleRate/100) / (_sampleRate/N);
 	int bucket = N/(2*100);
 
-	//int black = gdImageColorAllocate(_im, 0, 0, 0);
-	//int white = gdImageColorAllocate(_im, 255, 255, 255);
-
-	//gdImageFilledRectangle(_im, 0, 0, N, 10, black);
+	int white = gdTrueColor(255, 255, 255);
 
 	for (int i = 0; i < N/2; i += bucket) {
-		gdImageLine(_im, N/2 - i*bucket, 0, N/2 - i*bucket, 10, _c[_cd-1]);
-		gdImageLine(_im, N/2 + i*bucket, 0, N/2 + i*bucket, 10, _c[_cd-1]);
+		gdImageLine(_im, N/2 - i*bucket, 0, N/2 - i*bucket, 10, white);
+		gdImageLine(_im, N/2 + i*bucket, 0, N/2 + i*bucket, 10, white);
 	}
 }
 
@@ -42,8 +39,10 @@ void QGImage::drawLine(const std::complex<double> *fft, int lineNumber) {
 	// Set min range
 	double min = -50, max = -40;
 
+	int whiteA = gdTrueColorAlpha(255, 255, 255, 125);
+
 	for (int i = 1; i < N; i++) {
-		gdImageLine(_im, (i + N/2) % N - 1, 10 * log10(abs(fft[i - 1]) / N) + 10 + _size + 100, (i + N/2) % N, 10 * log10(abs(fft[i]) / N) + 10 + _size + 100, _c[_cd-1]);
+		gdImageLine(_im, (i + N/2) % N - 1, 10 + _size - 10 * log10(abs(fft[i - 1]) / N), (i + N/2) % N, 10 + _size - 10 * log10(abs(fft[i]) / N), whiteA);
 	}
 
 	// Get extrem values
