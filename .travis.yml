@@ -15,6 +15,7 @@ addons:
       - libssh-dev
       - libfftw3-dev
       - libyaml-cpp-dev
+      - libfreetype6-dev
 
 script:
   - mkdir -p build && cd build && cmake .. && cmake --build .

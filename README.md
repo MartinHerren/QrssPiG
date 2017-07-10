@@ -24,6 +24,7 @@ It depends on following dev libs:
  - libssh-dev
  - libfftw3-dev
  - libyaml-cpp-dev
+ - libfreetype6-dev
  - (librtlsdr-dev)
 
 To build:
