@@ -1,9 +1,11 @@
 #include "QGImage.h"
 
+#include <iomanip>
+#include <string>
 #include <math.h>
 
 QGImage::QGImage(int size, int sampleRate, int N): _size(size), _sampleRate(sampleRate), N(N) {
-	_im = gdImageCreateTrueColor(100 + N, 10 + _size + 100);
+	_im = gdImageCreateTrueColor(100 + N, 10 + _size + 105); // TODO: configurable margins or at least some defines
 
 	_imBuffer = nullptr;
 	_imBufferSize = 0;
@@ -12,7 +14,7 @@ QGImage::QGImage(int size, int sampleRate, int N): _size(size), _sampleRate(samp
 	_c = new int[_cd];
 
 	_dBmin = -20.;
-	_dBmax = -10.;
+	_dBmax = -0.;
 	_dBdelta = _dBmax - _dBmin;
 
 	// Allocate colormap, taken from 'qrx' colormap from RFAnalyzer, reduced to 256 palette due to use of libgd
@@ -31,10 +33,32 @@ QGImage::QGImage(int size, int sampleRate, int N): _size(size), _sampleRate(samp
 		gdImageLine(_im, 100 + N/2 + i*bucket, 0, 100 + N/2 + i*bucket, 10, white);
 	}
 
+	// Render graph scale (hard coded to full range -100dB-0dB)
+	// Tick-markers with dB indication
+	std::string font = "ttf-dejavu/DejaVuSans.ttf";
+	std::stringstream text;
+
 	for (int i = -100; i <= 0; i += 10) {
-		gdImageLine(_im, 90, 10 + _size - i, 93, 10 + _size - i, white);
+		int x = 90;
+		int y = 10 + _size - i;
+
+		gdImageLine(_im, x, y, x + 3, y, white);
+
+		text.str("");
+		text.clear();
+		text << i << "dB";
+
+		// Calculate text's bounding box
+		int brect[8];
+		gdImageStringFT(nullptr, brect, white, (char *)font.c_str(), 8, 0, x, y, (char *)text.str().c_str());
+
+		// Fix position according to bounding box to be nicely aligned with tick-markers
+		x += x - brect[0] - (brect[2] - brect[0]) - 5; // right aligned with 5px space to tick-marker
+		y += y - brect[1] + .5 * (brect[1] - brect[7]); // vertically centered on tick-marker
+		gdImageStringFT(_im, brect, white, (char *)font.c_str(), 8, 0, x, y, (char *)text.str().c_str());
 	}
 
+	// Color bar
 	for (double i = -100.; i <= 0.; i++) {
 		int c = db2Color(i);
 		gdImageSetPixel(_im, 95, 10 + _size - i, c);
@@ -42,6 +66,9 @@ QGImage::QGImage(int size, int sampleRate, int N): _size(size), _sampleRate(samp
 		gdImageSetPixel(_im, 97, 10 + _size - i, c);
 		gdImageSetPixel(_im, 98, 10 + _size - i, c);
 	}
+
+	// Indicator for dBmin-max range
+	gdImageLine(_im, 94, 10 + _size - _dBmin, 94, 10 + _size - _dBmax, white);
 }
 
 QGImage::~QGImage() {
