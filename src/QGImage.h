@@ -11,6 +11,9 @@ public:
 	QGImage(int size, int sampleRate, int N);
 	~QGImage();
 
+	void setScale(double dBmin, double dBmax);
+	void clearGraph();
+
 	void drawLine(const std::complex<double> *fft, int lineNumber);
 	void save2Buffer();
 	void save(const std::string &fileName);
@@ -19,7 +22,7 @@ public:
 	int getBufferSize() { return _imBufferSize;} ;
 
 private:
-	int db2Color(double v);
+	int _db2Color(double v);
 
 	int _size;
 	int _sampleRate;

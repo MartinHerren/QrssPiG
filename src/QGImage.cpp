@@ -13,10 +13,6 @@ QGImage::QGImage(int size, int sampleRate, int N): _size(size), _sampleRate(samp
 	_cd = 256;
 	_c = new int[_cd];
 
-	_dBmin = -20.;
-	_dBmax = -0.;
-	_dBdelta = _dBmax - _dBmin;
-
 	// Allocate colormap, taken from 'qrx' colormap from RFAnalyzer, reduced to 256 palette due to use of libgd
 	int ii = 0;
 	for (int i = 0; i <= 255; i += 4) _c[ii++] = gdImageColorAllocate(_im, 0, 0, i);
@@ -32,6 +28,25 @@ QGImage::QGImage(int size, int sampleRate, int N): _size(size), _sampleRate(samp
 		gdImageLine(_im, 100 + N/2 - i*bucket, 0, 100 + N/2 - i*bucket, 10, white);
 		gdImageLine(_im, 100 + N/2 + i*bucket, 0, 100 + N/2 + i*bucket, 10, white);
 	}
+
+	setScale(-30., 0.);
+	clearGraph();
+}
+
+QGImage::~QGImage() {
+	delete [] _c;
+	if (_imBuffer) gdFree(_imBuffer);
+	gdImageDestroy(_im);
+}
+
+void QGImage::setScale(double dBmin, double dBmax) {
+	_dBmin = dBmin;
+	_dBmax = dBmax;
+	_dBdelta = _dBmax - _dBmin;
+
+	gdImageRectangle(_im, 0, 10 + _size, 100 + N, 10 + _size + 105, gdTrueColor(0, 0, 0));
+
+	int white = gdTrueColor(255, 255, 255);
 
 	// Render graph scale (hard coded to full range -100dB-0dB)
 	// Tick-markers with dB indication
@@ -60,7 +75,7 @@ QGImage::QGImage(int size, int sampleRate, int N): _size(size), _sampleRate(samp
 
 	// Color bar
 	for (double i = -100.; i <= 0.; i++) {
-		int c = db2Color(i);
+		int c = _db2Color(i);
 		gdImageSetPixel(_im, 95, 10 + _size - i, c);
 		gdImageSetPixel(_im, 96, 10 + _size - i, c);
 		gdImageSetPixel(_im, 97, 10 + _size - i, c);
@@ -71,13 +86,12 @@ QGImage::QGImage(int size, int sampleRate, int N): _size(size), _sampleRate(samp
 	gdImageLine(_im, 94, 10 + _size - _dBmin, 94, 10 + _size - _dBmax, white);
 }
 
-QGImage::~QGImage() {
-	delete [] _c;
-	if (_imBuffer) gdFree(_imBuffer);
-	gdImageDestroy(_im);
+void QGImage::clearGraph() {
+	gdImageRectangle(_im, 100, 10, 100 + N, 10 + _size + 105, gdTrueColor(0, 0, 0));
 }
 
 void QGImage::drawLine(const std::complex<double> *fft, int lineNumber) {
+	if (lineNumber >= _size) return;
 	int whiteA = gdTrueColorAlpha(255, 255, 255, 125);
 
 	for (int i = 1; i < N; i++) {
@@ -86,7 +100,7 @@ void QGImage::drawLine(const std::complex<double> *fft, int lineNumber) {
 
 	for (int i = 2; i < N - 2; i++) {
 		// Get normalized value with DC centered
-		gdImageSetPixel(_im, 100 + (i + N/2) % N, 10 + lineNumber, db2Color(10 * log10(abs(fft[i]) / N)));
+		gdImageSetPixel(_im, 100 + (i + N/2) % N, 10 + lineNumber, _db2Color(10 * log10(abs(fft[i]) / N)));
 	}
 }
 
@@ -104,7 +118,9 @@ void QGImage::save(const std::string &fileName) {
 	fclose(pngout);
 }
 
-int QGImage::db2Color(double v) {
+// Private members
+
+int QGImage::_db2Color(double v) {
 	if (v < _dBmin) v = _dBmin;
 	if (v > _dBmax) v = _dBmax;
 
