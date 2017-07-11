@@ -29,7 +29,6 @@ private:
 
 	void _addIQ(std::complex<double> iq);
 	void _computeFft();
-	void _applyFilter();
 	void _pushImage();
 
 private:

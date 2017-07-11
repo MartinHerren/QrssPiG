@@ -158,9 +158,6 @@ void QrssPiG::_addUploader(const YAML::Node &uploader) {
 }
 
 void QrssPiG::_init() {
-	using namespace std::chrono;
-	_started = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
-
 	_fft = new QGFft(_N);
 
 	_in = (std::complex<double>*)fftw_malloc(sizeof(std::complex<double>) * _N);
@@ -211,7 +208,7 @@ void QrssPiG::_computeFft() {
 	long frameTimeMs = timeMs - (timeMs / (_secondsPerFrame * 1000)) * (_secondsPerFrame * 1000);
 	long frameLine = int(frameTimeMs * _linesPerSecond / 1000) % _frameSize;
 
-	_applyFilter();
+	for (int i = 0; i < _N; i++) _fftIn[i] = _in[i] * _hannW[i / 2];
 	_fft->process();
 
 	//if ((_lastLine > 0) && (_lastLine != frameLine)) {
@@ -221,10 +218,6 @@ void QrssPiG::_computeFft() {
 	//}
 
 	//_lastLine = frameLine;
-}
-
-void QrssPiG::_applyFilter() {
-	for (int i = 0; i < _N; i++) _fftIn[i] = _in[i] * _hannW[i / 2];
 }
 
 void QrssPiG::_pushImage() {
