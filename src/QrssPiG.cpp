@@ -10,6 +10,7 @@ QrssPiG::QrssPiG() :
 	_N(2048),
 	_unsignedIQ(true),
 	_sampleRate(2000),
+	_orientation(QGImage::Orientation::Horizontal),
 	_secondsPerFrame(600),
 	_frameSize(1000),
 	_up(nullptr) {
@@ -63,6 +64,15 @@ QrssPiG::QrssPiG(const std::string &configFile) : QrssPiG() {
 		if (output["secondsperframe"]) _secondsPerFrame = output["secondsperframe"].as<int>();
 
 		if (output["framesize"]) _frameSize = output["framesize"].as<int>();
+
+		if (output["orientation"]) {
+			std::string o = output["orientation"].as<std::string>();
+
+			if (o.compare("horizontal") == 0) _orientation = QGImage::Orientation::Horizontal;
+			else if (o.compare("vertical") == 0) _orientation = QGImage::Orientation::Vertical;
+			else throw std::runtime_error("YAML: output orientation unrecognized");
+		}
+
 		if (output["dBmin"]) dBmin = output["dBmin"].as<double>();
 		if (output["dBmax"]) dBmax = output["dBmax"].as<double>();
 	}
@@ -166,7 +176,7 @@ void QrssPiG::_init() {
 	_lastLine = -1;
 	_lastFrame = -1;
 
-	_im = new QGImage(_frameSize, _sampleRate, _N);
+	_im = new QGImage(_frameSize, _sampleRate, _N, _orientation);
 
 	_hannW = new double[_N];
 

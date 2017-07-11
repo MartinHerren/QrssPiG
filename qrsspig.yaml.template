@@ -3,6 +3,7 @@ input:
   format: hackrf
   samplerate: 8000
 output:
+  orientation: horizontal
   dBmin: -30
   dBmax: 0
   secondsperframe: 1200

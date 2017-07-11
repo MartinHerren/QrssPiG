@@ -8,7 +8,9 @@
 
 class QGImage {
 public:
-	QGImage(int size, int sampleRate, int N);
+	enum class Orientation { Horizontal, Vertical };
+
+	QGImage(int size, int sampleRate, int N, Orientation orientation = Orientation::Horizontal);
 	~QGImage();
 
 	void setScale(double dBmin, double dBmax);
@@ -27,6 +29,8 @@ private:
 	int _size;
 	int _sampleRate;
 	int N;
+	Orientation _orientation;
+
 	gdImagePtr _im;
 	char *_imBuffer;
 	int _imBufferSize;
