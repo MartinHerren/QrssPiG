@@ -20,13 +20,14 @@ public:
 	QrssPiG(const std::string &configFile);
 	~QrssPiG();
 
-	void addIQ(std::complex<double> iq);
+	void run();
 
 private:
 	void _addUploader(const YAML::Node &uploader);
 	void _init();
 	void _timeInit();
 
+	void _addIQ(std::complex<double> iq);
 	void _computeFft();
 	void _applyFilter();
 	void _pushImage();

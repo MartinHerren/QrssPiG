@@ -82,14 +82,7 @@ int main(int argc, char *argv[]) {
 		exit(-1);
 	}
 
-	unsigned char i, q;
-
-	std::cin >> std::noskipws;
-	while (std::cin >> i >> q) {
-		std::complex<double> iq(i/127., q/127.);
-
-		pig->addIQ(iq);
-	}
+	pig->run();
 
 	delete pig;
 

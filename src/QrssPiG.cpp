@@ -112,19 +112,15 @@ QrssPiG::~QrssPiG() {
 	if (_up) delete _up;
 }
 
-void QrssPiG::addIQ(std::complex<double> iq) {
-	int overlap = _N / 8; // 0.._N-1
+void QrssPiG::run() {
+	std::cin >> std::noskipws;
 
-	// Shift I/Q from [0,2] to [-1,1} interval for unsigned input
-	if (_unsignedIQ) iq -= std::complex<double>(-1.,-1);
-
-	_in[_idx++] = iq;
-	_samples++;
-
-	if (_idx >= _N) {
-		_computeFft();
-		for (auto i = 0; i < overlap; i++) _in[i] = _in[_N - overlap + i];
-		_idx = overlap;
+	if (_unsignedIQ) {
+		unsigned char i, q;
+		while (std::cin >> i >> q) _addIQ(std::complex<double>((i - 128) / 128., (q - 128) / 128.));
+	} else {
+		signed char i, q;
+		while (std::cin >> i >> q) _addIQ(std::complex<double>(i / 128., q / 128.));
 	}
 }
 
@@ -193,6 +189,19 @@ void QrssPiG::_timeInit() {
 	using namespace std::chrono;
 	_started = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
 	_samples = 0;
+}
+
+void QrssPiG::_addIQ(std::complex<double> iq) {
+	int overlap = _N / 8; // 0.._N-1 // TODO: compute once
+
+	_in[_idx++] = iq;
+	_samples++;
+
+	if (_idx >= _N) {
+		_computeFft();
+		for (auto i = 0; i < overlap; i++) _in[i] = _in[_N - overlap + i];
+		_idx = overlap;
+	}
 }
 
 void QrssPiG::_computeFft() {
