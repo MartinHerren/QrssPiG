@@ -157,18 +157,17 @@ void QGImage::drawLine(const std::complex<double> *fft, int lineNumber) {
 	double last;
 
 	for (int i = 0; i < N; i++) {
-		int p = (i + N/2) % N; // DC centered position
-		double v = 10 * log10(abs(fft[i]) / N); // Current value
+		double v = 10 * log10(abs(fft[(i + N/2) % N]) / N); // Current value, DC centered
 
 		switch (_orientation) {
 		case Orientation::Horizontal:
-			gdImageSetPixel(_im, 10 + lineNumber, N - p, _db2Color(v));
-			if (i > 0) gdImageLine(_im, 10 + _size - last, N - p, 10 + _size - v, N - p, whiteA);
+			gdImageSetPixel(_im, 10 + lineNumber, N - i, _db2Color(v));
+			if (i > 0) gdImageLine(_im, 10 + _size - last, N - i, 10 + _size - v, N - i, whiteA);
 			break;
 
 		case Orientation::Vertical:
-			gdImageSetPixel(_im, 100 + p, 10 + lineNumber, _db2Color(v));
-			if (i > 0) gdImageLine(_im, 100 + p - 1, 10 + _size - last, 100 + p, 10 + _size - v, whiteA);
+			gdImageSetPixel(_im, 100 + i, 10 + lineNumber, _db2Color(v));
+			if (i > 0) gdImageLine(_im, 100 + i - 1, 10 + _size - last, 100 + i, 10 + _size - v, whiteA);
 			break;
 		}
 
