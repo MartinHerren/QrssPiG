@@ -5,9 +5,19 @@
 #include <math.h>
 
 QGImage::QGImage(int size, int sampleRate, int N, Orientation orientation): _size(size), _sampleRate(sampleRate), N(N), _orientation(orientation) {
+	// Define font
+	_font = "ttf-dejavu/DejaVuSans.ttf";
+	_fontSize = 8;
+
+	// Calculate max width for frequency label
+	int brect[8];
+	gdImageStringFT(nullptr, brect, 0, (char *)_font.c_str(), _fontSize, 0, 0, 0, (char *)"000000000");
+	_freqLabelWidth = brect[2] - brect[0];
+
+	// Allocate canvas
 	switch (_orientation) {
 	case Orientation::Horizontal:
-		_im = gdImageCreateTrueColor(10 + _size + 105, N + 25); // TODO: configurable margins or at least some defines
+		_im = gdImageCreateTrueColor(_freqLabelWidth + 10 + _size + 100 + 10 +_freqLabelWidth, N + 25);
 		break;
 
 	case Orientation::Vertical:
@@ -18,6 +28,7 @@ QGImage::QGImage(int size, int sampleRate, int N, Orientation orientation): _siz
 	_imBuffer = nullptr;
 	_imBufferSize = 0;
 
+	// Define colormap
 	_cd = 256;
 	_c = new int[_cd];
 
@@ -28,25 +39,7 @@ QGImage::QGImage(int size, int sampleRate, int N, Orientation orientation): _siz
 	for (int i = 0; i <= 255; i += 4) _c[ii++] = gdImageColorAllocate(_im, i, 255, 255 - i);
 	for (int i = 0; i <= 255; i += 4) _c[ii++] = gdImageColorAllocate(_im, 255, 255 -  i, 0);
 
-	// Frequency tick-markers
-	//int bucket = (_sampleRate/100) / (_sampleRate/N);
-	int bucket = N/(2*100);
-	int white = gdTrueColor(255, 255, 255);
-
-	for (int i = 0; i < N/2; i += bucket) {
-		switch (_orientation) {
-		case Orientation::Horizontal:
-			gdImageLine(_im, 0, N/2 - i*bucket, 10, N/2 - i*bucket, white);
-			gdImageLine(_im, 0, N/2 + i*bucket, 10, N/2 + i*bucket, white);
-			break;
-
-		case Orientation::Vertical:
-			gdImageLine(_im, 100 + N/2 - i*bucket, 0, 100 + N/2 - i*bucket, 10, white);
-			gdImageLine(_im, 100 + N/2 + i*bucket, 0, 100 + N/2 + i*bucket, 10, white);
-			break;
-		}
-	}
-
+	_drawFreqScale();
 	setScale(-30., 0.);
 	clearGraph();
 }
@@ -64,7 +57,7 @@ void QGImage::setScale(double dBmin, double dBmax) {
 
 	switch (_orientation) {
 	case Orientation::Horizontal:
-		gdImageFilledRectangle(_im, 10 + _size, N + 25, 10 + _size + 105, 0, gdTrueColor(0, 0, 0));
+		gdImageFilledRectangle(_im, _freqLabelWidth + 10 + _size, N + 25, _freqLabelWidth + 10 + _size + 100, N, gdTrueColor(0, 0, 0));
 		break;
 
 	case Orientation::Vertical:
@@ -76,7 +69,6 @@ void QGImage::setScale(double dBmin, double dBmax) {
 
 	// Render graph scale (hard coded to full range -100dB-0dB)
 	// Tick-markers with dB indication
-	std::string font = "ttf-dejavu/DejaVuSans.ttf";
 	std::stringstream text;
 
 	for (int i = -100; i <= 0; i += 10) {
@@ -86,11 +78,11 @@ void QGImage::setScale(double dBmin, double dBmax) {
 
 		// Calculate text's bounding box
 		int brect[8];
-		gdImageStringFT(nullptr, brect, white, (char *)font.c_str(), 8, 0, 0, 0, (char *)text.str().c_str());
+		gdImageStringFT(nullptr, brect, white, (char *)_font.c_str(), 8, 0, 0, 0, (char *)text.str().c_str());
 
 		switch (_orientation) {
 		case Orientation::Horizontal:
-			gdImageLine(_im, 10 + _size - i, N + 10, 10 + _size - i, N + 7, white);
+			gdImageLine(_im, _freqLabelWidth + 10 + _size - i, N + 10, _freqLabelWidth + 10 + _size - i, N + 7, white);
 			break;
 
 		case Orientation::Vertical:
@@ -100,8 +92,8 @@ void QGImage::setScale(double dBmin, double dBmax) {
 
 		// Fix position according to bounding box to be nicely aligned with tick-markers
 		int xT = 90 - brect[0] - (brect[2] - brect[0]) - 5; // right aligned with 5px space to tick-marker
-		int yT = 10 + _size - i - brect[1] + .5 * (brect[1] - brect[7]); // vertically centered on tick-marker
-		gdImageStringFT(_im, brect, white, (char *)font.c_str(), 8, 0, xT, yT, (char *)text.str().c_str());
+		int yT = _freqLabelWidth + 10 + _size - i - brect[1] + .5 * (brect[1] - brect[7]); // vertically centered on tick-marker
+		gdImageStringFT(_im, brect, white, (char *)_font.c_str(), 8, 0, xT, yT, (char *)text.str().c_str());
 	}
 
 	// Color bar
@@ -110,10 +102,10 @@ void QGImage::setScale(double dBmin, double dBmax) {
 
 		switch (_orientation) {
 		case Orientation::Horizontal:
-			gdImageSetPixel(_im, 10 + _size - i, N + 2, c);
-			gdImageSetPixel(_im, 10 + _size - i, N + 3, c);
-			gdImageSetPixel(_im, 10 + _size - i, N + 4, c);
-			gdImageSetPixel(_im, 10 + _size - i, N + 5, c);
+			gdImageSetPixel(_im, _freqLabelWidth + 10 + _size - i, N + 2, c);
+			gdImageSetPixel(_im, _freqLabelWidth + 10 + _size - i, N + 3, c);
+			gdImageSetPixel(_im, _freqLabelWidth + 10 + _size - i, N + 4, c);
+			gdImageSetPixel(_im, _freqLabelWidth + 10 + _size - i, N + 5, c);
 			break;
 
 		case Orientation::Vertical:
@@ -128,7 +120,7 @@ void QGImage::setScale(double dBmin, double dBmax) {
 	// Indicator for dBmin-max range
 	switch (_orientation) {
 	case Orientation::Horizontal:
-		gdImageLine(_im, 10 + _size - _dBmin, N + 6, 10 + _size - _dBmax, N + 6, white);
+		gdImageLine(_im, _freqLabelWidth + 10 + _size - _dBmin, N + 6, _freqLabelWidth + 10 + _size - _dBmax, N + 6, white);
 		break;
 
 	case Orientation::Vertical:
@@ -140,7 +132,7 @@ void QGImage::setScale(double dBmin, double dBmax) {
 void QGImage::clearGraph() {
 	switch (_orientation) {
 	case Orientation::Horizontal:
-		gdImageFilledRectangle(_im, 10, N, 10 + _size + 105, 0, gdTrueColor(0, 0, 0));
+		gdImageFilledRectangle(_im, _freqLabelWidth + 10, N, _freqLabelWidth + 10 + _size + 100, 0, gdTrueColor(0, 0, 0));
 		break;
 
 	case Orientation::Vertical:
@@ -161,8 +153,8 @@ void QGImage::drawLine(const std::complex<double> *fft, int lineNumber) {
 
 		switch (_orientation) {
 		case Orientation::Horizontal:
-			gdImageSetPixel(_im, 10 + lineNumber, N - i, _db2Color(v));
-			if (i > 0) gdImageLine(_im, 10 + _size - last, N - i, 10 + _size - v, N - i, whiteA);
+			gdImageSetPixel(_im, _freqLabelWidth + 10 + lineNumber, N - i, _db2Color(v));
+			if (i > 0) gdImageLine(_im, _freqLabelWidth + 10 + _size - last, N - i, _freqLabelWidth + 10 + _size - v, N - i, whiteA);
 			break;
 
 		case Orientation::Vertical:
@@ -190,6 +182,47 @@ void QGImage::save(const std::string &fileName) {
 }
 
 // Private members
+
+void QGImage::_drawFreqScale() {
+	int white = gdTrueColor(255, 255, 255);
+	//int bucket = (_sampleRate/100) / (_sampleRate/N);
+	//int bucket = N/(2*100);
+	int bucket = 10;
+
+	for (int i = 0; i < N; i += bucket) {
+		std::stringstream f;
+		f << (((i - N/2) * _sampleRate) / N) << "Hz";
+
+                // Calculate text's bounding box
+		int brect[8];
+		gdImageStringFT(nullptr, brect, white, (char *)_font.c_str(), _fontSize, 0, 0, 0, (char *)f.str().c_str());
+
+		switch (_orientation) {
+		case Orientation::Horizontal:
+			gdImageLine(_im, _freqLabelWidth + 1, N - i, _freqLabelWidth + 10, N - i, white);
+			gdImageStringFT(_im, brect, white, (char *)_font.c_str(), _fontSize, 0, _freqLabelWidth - brect[2] + brect[0], N - i - brect[1] + .5 * (brect[1] - brect[7]), (char *)f.str().c_str());
+			gdImageLine(_im, _freqLabelWidth + 10 + _size + 100, N - i, _freqLabelWidth + 10 + _size + 100 + 9, N - i, white);
+			gdImageStringFT(_im, brect, white, (char *)_font.c_str(), _fontSize, 0, _freqLabelWidth + 10 + _size + 100 + 10, N - i - brect[1] + .5 * (brect[1] - brect[7]), (char *)f.str().c_str());
+			break;
+
+		case Orientation::Vertical:
+			gdImageLine(_im, 100 + N/2 - i, 0, 100 + N/2 - i, 10, white);
+			break;
+		}
+	}
+
+return;
+                // Fix position according to bounding box to be nicely aligned with tick-markers
+                //int xT = 90 - brect[0] - (brect[2] - brect[0]) - 5; // right aligned with 5px space to tick-marker
+                //int yT = 10 + _size - i - brect[1] + .5 * (brect[1] - brect[7]); // vertically centered on tick-marker
+                //gdImageStringFT(_im, brect, white, (char *)_font.c_str(), 8, 0, xT, yT, (char *)text.str().c_str());
+}
+
+void QGImage::_drawTimeScale() {
+}
+
+void QGImage::_drawDbScale() {
+}
 
 int QGImage::_db2Color(double v) {
 	if (v < _dBmin) v = _dBmin;

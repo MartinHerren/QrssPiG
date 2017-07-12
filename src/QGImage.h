@@ -24,6 +24,10 @@ public:
 	int getBufferSize() { return _imBufferSize;} ;
 
 private:
+	void _drawFreqScale();
+	void _drawTimeScale();
+	void _drawDbScale();
+
 	int _db2Color(double v);
 
 	int _size;
@@ -36,6 +40,10 @@ private:
 	int _imBufferSize;
 	int *_c;
 	int _cd; // Color depth
+
+	std::string _font;
+	int _fontSize;
+	int _freqLabelWidth;
 
 	double _dBmin;
 	double _dBmax;
