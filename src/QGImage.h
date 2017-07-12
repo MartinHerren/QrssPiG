@@ -44,6 +44,9 @@ private:
 	std::string _font;
 	int _fontSize;
 	int _freqLabelWidth;
+	int _freqLabelHeight;
+	int _dBLabelWidth;
+	int _dBLabelHeight;
 
 	double _dBmin;
 	double _dBmax;
