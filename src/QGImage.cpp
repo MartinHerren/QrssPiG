@@ -117,61 +117,91 @@ void QGImage::save(const std::string &fileName) {
 // Private members
 
 void QGImage::_drawFreqScale() {
+	int topLeftX, topLeftY, topLeftX2, topLeftY2;
+	int tickStep, labelStep;
 	int white = gdTrueColor(255, 255, 255);
-	//int bucket = (_sampleRate/100) / (_sampleRate/N);
-	//int bucket = N/(2*100);
-	int bucket = 10;
 
-	for (int i = 0; i < N; i += bucket) {
+	// Clear zones and set topLeft corners
+	if (_orientation == Orientation::Horizontal) {
+		topLeftX = 0;
+		topLeftY = 0;
+		topLeftX2 = _freqLabelWidth + 10 + _size + 100;
+		topLeftY2 = 0;
+		tickStep = 10;
+		labelStep = tickStep * 10;
+		gdImageFilledRectangle(_im, topLeftX, topLeftY, topLeftX + _freqLabelWidth + 10, topLeftY + N, gdTrueColor(0, 0, 0));
+		gdImageFilledRectangle(_im, topLeftX2, topLeftY2, topLeftX2 + 10 + _freqLabelWidth, topLeftY2 + N, gdTrueColor(0, 0, 0));
+	} else {
+		topLeftX = _dBLabelWidth + 10;
+		topLeftY = 0;
+		topLeftX2 = _dBLabelWidth + 10;
+		topLeftY2 = _freqLabelHeight + 10 + _size + 100;
+		tickStep = 10;
+		labelStep = tickStep * 10;
+		gdImageFilledRectangle(_im, topLeftX, topLeftY, topLeftX + N, topLeftY + _freqLabelWidth + 10, gdTrueColor(0, 0, 0));
+		gdImageFilledRectangle(_im, topLeftX2, topLeftY2, topLeftX2 + N, topLeftY2 + _freqLabelWidth + 10, gdTrueColor(0, 0, 0));
+	}
+
+	// Freq labels
+	for (int i = 0; i < N; i += labelStep) {
 		std::stringstream f;
 		f << (((i - N/2) * _sampleRate) / N) << "Hz";
 
 		// Calculate text's bounding box
 		int brect[8];
 		gdImageStringFT(nullptr, brect, white, (char *)_font.c_str(), _fontSize, 0, 0, 0, (char *)f.str().c_str());
-		int y = brect[1], w = brect[2] - brect[0], h = brect[1] - brect[7];
 
-		switch (_orientation) {
-		case Orientation::Horizontal:
-			gdImageLine(_im, _freqLabelWidth + 1, N - i, _freqLabelWidth + 9, N - i, white);
-			gdImageStringFT(_im, brect, white, (char *)_font.c_str(), _fontSize, 0, _freqLabelWidth - w, N - i - y + .5 * h, (char *)f.str().c_str());
-			gdImageLine(_im, _freqLabelWidth + 10 + _size + 100 + 1, N - i, _freqLabelWidth + 10 + _size + 100 + 9, N - i, white);
-			gdImageStringFT(_im, brect, white, (char *)_font.c_str(), _fontSize, 0, _freqLabelWidth + 10 + _size + 100 + 10, N - i - y + .5 * h, (char *)f.str().c_str());
-			break;
+		// Cache key data as they will be overriden when rendering first string
+		int x = brect[0], y = brect[1], w = brect[2] - brect[0], h = brect[1] - brect[7];
 
-		case Orientation::Vertical:
-			gdImageLine(_im, _dBLabelWidth + 10 + N - i, _freqLabelHeight + 1, _dBLabelWidth + 10 + N - i, _freqLabelHeight + 9, white);
-			gdImageLine(_im, _dBLabelWidth + 10 + N - i, _freqLabelHeight + 10 + _size + 100 + 1, _dBLabelWidth + 10 + N - i, _freqLabelHeight + 10 + _size + 100 + 9, white);
-			break;
+		if (_orientation == Orientation::Horizontal) {
+			gdImageStringFT(_im, brect, white, (char *)_font.c_str(), _fontSize, 0, topLeftX + _freqLabelWidth - w, topLeftY + N - i - y + .5 * h, (char *)f.str().c_str());
+			gdImageStringFT(_im, brect, white, (char *)_font.c_str(), _fontSize, 0, topLeftX2 + 10, topLeftY2 + N - i - y + .5 * h, (char *)f.str().c_str());
+		} else {
+			gdImageStringFT(_im, brect, white, (char *)_font.c_str(), _fontSize, 0, topLeftX + i - w/2, topLeftY + _freqLabelHeight - x, (char *)f.str().c_str());
+			gdImageStringFT(_im, brect, white, (char *)_font.c_str(), _fontSize, 0, topLeftX2 + i - w/2, topLeftY2 + 10 + _freqLabelHeight - x, (char *)f.str().c_str());
 		}
 	}
 
-                // Fix position according to bounding box to be nicely aligned with tick-markers
-                //int xT = 90 - brect[0] - (brect[2] - brect[0]) - 5; // right aligned with 5px space to tick-marker
-                //int yT = 10 + _size - i - brect[1] + .5 * (brect[1] - brect[7]); // vertically centered on tick-marker
-                //gdImageStringFT(_im, brect, white, (char *)_font.c_str(), 8, 0, xT, yT, (char *)text.str().c_str());
+	// Tick markersA
+	for (int i = 0; i < N; i += tickStep) {
+		if (_orientation == Orientation::Horizontal) {
+			gdImageLine(_im, topLeftX + _freqLabelWidth + 1, topLeftY + N - i, topLeftX + _freqLabelWidth + 9, topLeftY + N - i, white);
+			gdImageLine(_im, topLeftX2 + 1, topLeftY2 + N - i, topLeftX2 + 9, topLeftY2 + N - i, white);
+		} else {
+			gdImageLine(_im, topLeftX + i, _freqLabelHeight + 1, topLeftX + i, _freqLabelHeight + 9, white);
+			gdImageLine(_im, topLeftX2 + i, _freqLabelHeight + 10 + _size + 100 + 1, topLeftX2 + i, _freqLabelHeight + 10 + _size + 100 + 9, white);
+		}
+	}
 }
 
 void QGImage::_drawTimeScale() {
 }
 
 void QGImage::_drawDbScale() {
-	switch (_orientation) {
-	case Orientation::Horizontal:
-		gdImageFilledRectangle(_im, _freqLabelWidth + 10 + _size, N + 10 + _dBLabelHeight, _freqLabelWidth + 10 + _size + 100, N, gdTrueColor(0, 0, 0));
-		break;
-
-	case Orientation::Vertical:
-		gdImageFilledRectangle(_im, 0, _freqLabelHeight + 10 + _size + 100, _dBLabelWidth + 10, _freqLabelHeight + 10 + _size, gdTrueColor(0, 0, 0));
-		break;
-	}
-
+	int topLeftX, topLeftY;
+	int tickStep, labelStep;
 	int white = gdTrueColor(255, 255, 255);
 
-	// Render graph scale (hard coded to full range -100dB-0dB)
-	// Tick-markers with dB indication
+	// Clear zone and set topLeft corner
+	if (_orientation == Orientation::Horizontal) {
+		topLeftX = _freqLabelWidth + 10 + _size;
+		topLeftY = N;
+		tickStep = 10;
+		labelStep = tickStep * 3;
+		gdImageFilledRectangle(_im, topLeftX, topLeftY, topLeftX + 100, topLeftY + 10 + _dBLabelHeight, gdTrueColor(0, 0, 0));
+	} else {
+		topLeftX = 0;
+		topLeftY = _freqLabelHeight + 10 + _size;
+		tickStep = 10;
+		labelStep = tickStep;
+		gdImageFilledRectangle(_im, topLeftX, topLeftY, topLeftX + _dBLabelWidth + 10, topLeftY + 100, gdTrueColor(0, 0, 0));
+	}
 
-	for (int i = -100; i <= 0; i += 10) {
+	// Render graph scale (hard coded to full range -100dB-0dB)
+
+	// dB labels
+	for (int i = 0; i >= -100; i -= labelStep) {
 		std::stringstream text;
 		text << i << "dB";
 
@@ -181,61 +211,40 @@ void QGImage::_drawDbScale() {
 
 		// Fix position according to bounding box to be nicely aligned with tick-markers
 		int x, y;
-		switch (_orientation) {
-		case Orientation::Horizontal:
-			x = _dBLabelWidth + 10 + _size - i - 0.5 * (brect[2] - brect[0]); // right aligned to tick-marker
-			y = N + 10 - brect[1] + brect[1] - brect[7]; // vertically centered on tick-marker
-			gdImageStringFT(_im, brect, white, (char *)_font.c_str(), 8, 0, x, y, (char *)text.str().c_str());
-			break;
 
-		case Orientation::Vertical:
-			x = _dBLabelWidth - brect[0] - (brect[2] - brect[0]); // right aligned to tick-marker
-			y = _freqLabelHeight + 10 + _size - i - brect[1] + .5 * (brect[1] - brect[7]); // vertically centered on tick-marker
-			gdImageStringFT(_im, brect, white, (char *)_font.c_str(), 8, 0, x, y, (char *)text.str().c_str());
-			break;
+		if (_orientation == Orientation::Horizontal) {
+			x = topLeftX - i - 0.5 * (brect[2] - brect[0]);
+			y = topLeftY + 10 - brect[7];
+		} else {
+			x = topLeftX +_dBLabelWidth - brect[2];
+			y = topLeftY - i - .5 * (brect[1] + brect[7]);
 		}
 
-		switch (_orientation) {
-		case Orientation::Horizontal:
-			gdImageLine(_im, _freqLabelWidth + 10 + _size - i, N + 10, _freqLabelWidth + 10 + _size - i, N + 7, white);
-			break;
-
-		case Orientation::Vertical:
-			gdImageLine(_im, _dBLabelWidth, _freqLabelHeight + 10 + _size - i, _dBLabelWidth + 3, _freqLabelHeight + 10 + _size - i, white);
-			break;
-		}
+		gdImageStringFT(_im, brect, white, (char *)_font.c_str(), 8, 0, x, y, (char *)text.str().c_str());
 	}
 
-	// Indicator for dBmin-max range
-	switch (_orientation) {
-	case Orientation::Horizontal:
-		gdImageLine(_im, _freqLabelWidth + 10 + _size - _dBmin, N + 6, _freqLabelWidth + 10 + _size - _dBmax, N + 6, white);
-		break;
-
-	case Orientation::Vertical:
-		gdImageLine(_im, _dBLabelWidth + 4, _freqLabelHeight + 10 + _size - _dBmin, _dBLabelWidth + 4, _freqLabelHeight + 10 + _size - _dBmax, white);
-		break;
+	// Tick markers
+	for (int i = 0; i >= -100; i -= tickStep) {
+		if (_orientation == Orientation::Horizontal)
+			gdImageLine(_im, topLeftX - i, topLeftY + 10, topLeftX - i, topLeftY + 7, white);
+		else
+			gdImageLine(_im, topLeftX + _dBLabelWidth, topLeftY - i, topLeftX + _dBLabelWidth + 3, topLeftY - i, white);
 	}
+
+	// Indicator bar for dBmin-max range
+	if (_orientation == Orientation::Horizontal)
+		gdImageLine(_im, topLeftX - _dBmin, topLeftY + 6, topLeftX - _dBmax, topLeftY + 6, white);
+	else
+		gdImageLine(_im, topLeftX + _dBLabelWidth + 4, topLeftY - _dBmin, topLeftX +_dBLabelWidth + 4, topLeftY - _dBmax, white);
 
 	// Color bar
 	for (double i = -100.; i <= 0.; i++) {
 		int c = _db2Color(i);
 
-		switch (_orientation) {
-		case Orientation::Horizontal:
-			gdImageSetPixel(_im, _freqLabelWidth + 10 + _size - i, N + 2, c);
-			gdImageSetPixel(_im, _freqLabelWidth + 10 + _size - i, N + 3, c);
-			gdImageSetPixel(_im, _freqLabelWidth + 10 + _size - i, N + 4, c);
-			gdImageSetPixel(_im, _freqLabelWidth + 10 + _size - i, N + 5, c);
-			break;
-
-		case Orientation::Vertical:
-			gdImageSetPixel(_im, _dBLabelWidth + 5, _freqLabelHeight + 10 + _size - i, c);
-			gdImageSetPixel(_im, _dBLabelWidth + 6, _freqLabelHeight + 10 + _size - i, c);
-			gdImageSetPixel(_im, _dBLabelWidth + 7, _freqLabelHeight + 10 + _size - i, c);
-			gdImageSetPixel(_im, _dBLabelWidth + 8, _freqLabelHeight + 10 + _size - i, c);
-			break;
-		}
+		if (_orientation == Orientation::Horizontal)
+			gdImageLine(_im, topLeftX - i, topLeftY + 2, topLeftX - i, topLeftY + 5, c);
+		else
+			gdImageLine(_im, topLeftX + _dBLabelWidth + 5, topLeftY - i, topLeftX +_dBLabelWidth + 8, topLeftY - i, c);
 	}
 }
 
