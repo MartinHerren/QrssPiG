@@ -48,7 +48,14 @@ private:
 	int _dBLabelWidth;
 	int _dBLabelHeight;
 
+	// Covered dB range. Only used for waterfall colormapping, not in spectro graph yet
 	double _dBmin;
 	double _dBmax;
 	double _dBdelta;
+
+	// Covered frequency range. In DC centered 'fft' bucket, 0 means DC, N/2 means max positive frequency
+	// Negative value make only sense with IQ data, not audio data
+	int _fMin;
+	int _fMax;
+	int _fDelta;
 };

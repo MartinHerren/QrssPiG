@@ -18,14 +18,19 @@ QGImage::QGImage(int size, int sampleRate, int N, Orientation orientation): _siz
 	_dBLabelWidth = brect[2] - brect[0];
 	_dBLabelHeight = brect[1] - brect[7];
 
+	// Calculate _fMin/Max/Delta from frequencies
+	_fMin = (0 * N) / _sampleRate;
+	_fMax = (2500 * N) / _sampleRate;
+	_fDelta = _fMax - _fMin;
+
 	// Allocate canvas
 	switch (_orientation) {
 	case Orientation::Horizontal:
-		_im = gdImageCreateTrueColor(_freqLabelWidth + 10 + _size + 100 + 10 +_freqLabelWidth, N + 10 + _dBLabelHeight);
+		_im = gdImageCreateTrueColor(_freqLabelWidth + 10 + _size + 100 + 10 +_freqLabelWidth, _fDelta + 10 + _dBLabelHeight);
 		break;
 
 	case Orientation::Vertical:
-		_im = gdImageCreateTrueColor(_dBLabelWidth + 10 + N, _freqLabelHeight + 10 + _size + 100 + 10 + _freqLabelHeight);
+		_im = gdImageCreateTrueColor(_dBLabelWidth + 10 + _fDelta, _freqLabelHeight + 10 + _size + 100 + 10 + _freqLabelHeight);
 		break;
 	}
 
@@ -65,11 +70,11 @@ void QGImage::setScale(double dBmin, double dBmax) {
 void QGImage::clearGraph() {
 	switch (_orientation) {
 	case Orientation::Horizontal:
-		gdImageFilledRectangle(_im, _freqLabelWidth + 10, N, _freqLabelWidth + 10 + _size + 100, 0, gdTrueColor(0, 0, 0));
+		gdImageFilledRectangle(_im, _freqLabelWidth + 10, _fDelta, _freqLabelWidth + 10 + _size + 100, 0, gdTrueColor(0, 0, 0));
 		break;
 
 	case Orientation::Vertical:
-		gdImageFilledRectangle(_im, _dBLabelWidth + 10, _freqLabelHeight + 10 + _size + 100, _dBLabelWidth + 10 + N, _freqLabelHeight + 10, gdTrueColor(0, 0, 0));
+		gdImageFilledRectangle(_im, _dBLabelWidth + 10, _freqLabelHeight + 10 + _size + 100, _dBLabelWidth + 10 + _fDelta, _freqLabelHeight + 10, gdTrueColor(0, 0, 0));
 		break;
 	}
 }
@@ -81,13 +86,13 @@ void QGImage::drawLine(const std::complex<double> *fft, int lineNumber) {
 	// Draw a data line DC centered
 	double last;
 
-	for (int i = 0; i < N; i++) {
-		double v = 10 * log10(abs(fft[(i + N/2) % N]) / N); // Current value, DC centered
+	for (int i = _fMin; i < _fMax; i++) {
+		double v = 10 * log10(abs(fft[(i + N) % N]) / N); // Current value, DC centered
 
 		switch (_orientation) {
 		case Orientation::Horizontal:
-			gdImageSetPixel(_im, _freqLabelWidth + 10 + lineNumber, N - i, _db2Color(v));
-			if (i > 0) gdImageLine(_im, _freqLabelWidth + 10 + _size - last, N - i + 1, _freqLabelWidth + 10 + _size - v, N - i, whiteA);
+			gdImageSetPixel(_im, _freqLabelWidth + 10 + lineNumber, _fDelta + _fMin - i, _db2Color(v));
+			if (i != _fMin) gdImageLine(_im, _freqLabelWidth + 10 + _size - last, _fDelta + _fMin - i + 1, _freqLabelWidth + 10 + _size - v, _fDelta + _fMin - i, whiteA);
 			break;
 
 		case Orientation::Vertical:
@@ -129,8 +134,8 @@ void QGImage::_drawFreqScale() {
 		topLeftY2 = 0;
 		tickStep = 10;
 		labelStep = tickStep * 10;
-		gdImageFilledRectangle(_im, topLeftX, topLeftY, topLeftX + _freqLabelWidth + 10, topLeftY + N, gdTrueColor(0, 0, 0));
-		gdImageFilledRectangle(_im, topLeftX2, topLeftY2, topLeftX2 + 10 + _freqLabelWidth, topLeftY2 + N, gdTrueColor(0, 0, 0));
+		gdImageFilledRectangle(_im, topLeftX, topLeftY, topLeftX + _freqLabelWidth + 10, topLeftY + _fDelta, gdTrueColor(0, 0, 0));
+		gdImageFilledRectangle(_im, topLeftX2, topLeftY2, topLeftX2 + 10 + _freqLabelWidth, topLeftY2 + _fDelta, gdTrueColor(0, 0, 0));
 	} else {
 		topLeftX = _dBLabelWidth + 10;
 		topLeftY = 0;
@@ -138,14 +143,14 @@ void QGImage::_drawFreqScale() {
 		topLeftY2 = _freqLabelHeight + 10 + _size + 100;
 		tickStep = 10;
 		labelStep = tickStep * 10;
-		gdImageFilledRectangle(_im, topLeftX, topLeftY, topLeftX + N, topLeftY + _freqLabelWidth + 10, gdTrueColor(0, 0, 0));
-		gdImageFilledRectangle(_im, topLeftX2, topLeftY2, topLeftX2 + N, topLeftY2 + _freqLabelWidth + 10, gdTrueColor(0, 0, 0));
+		gdImageFilledRectangle(_im, topLeftX, topLeftY, topLeftX + _fDelta, topLeftY + _freqLabelWidth + 10, gdTrueColor(0, 0, 0));
+		gdImageFilledRectangle(_im, topLeftX2, topLeftY2, topLeftX2 + _fDelta, topLeftY2 + _freqLabelWidth + 10, gdTrueColor(0, 0, 0));
 	}
 
 	// Freq labels
-	for (int i = 0; i < N; i += labelStep) {
+	for (int i = _fMin; i < _fMax; i += labelStep) {
 		std::stringstream f;
-		f << (((i - N/2) * _sampleRate) / N) << "Hz";
+		f << ((i * _sampleRate) / N) << "Hz";
 
 		// Calculate text's bounding box
 		int brect[8];
@@ -155,8 +160,8 @@ void QGImage::_drawFreqScale() {
 		int x = brect[0], y = brect[1], w = brect[2] - brect[0], h = brect[1] - brect[7];
 
 		if (_orientation == Orientation::Horizontal) {
-			gdImageStringFT(_im, brect, white, (char *)_font.c_str(), _fontSize, 0, topLeftX + _freqLabelWidth - w, topLeftY + N - i - y + .5 * h, (char *)f.str().c_str());
-			gdImageStringFT(_im, brect, white, (char *)_font.c_str(), _fontSize, 0, topLeftX2 + 10, topLeftY2 + N - i - y + .5 * h, (char *)f.str().c_str());
+			gdImageStringFT(_im, brect, white, (char *)_font.c_str(), _fontSize, 0, topLeftX + _freqLabelWidth - w, topLeftY + _fDelta + _fMin - i - y + .5 * h, (char *)f.str().c_str());
+			gdImageStringFT(_im, brect, white, (char *)_font.c_str(), _fontSize, 0, topLeftX2 + 10, topLeftY2 + _fDelta + _fMin - i - y + .5 * h, (char *)f.str().c_str());
 		} else {
 			gdImageStringFT(_im, brect, white, (char *)_font.c_str(), _fontSize, 0, topLeftX + i - w/2, topLeftY + _freqLabelHeight - x, (char *)f.str().c_str());
 			gdImageStringFT(_im, brect, white, (char *)_font.c_str(), _fontSize, 0, topLeftX2 + i - w/2, topLeftY2 + 10 + _freqLabelHeight - x, (char *)f.str().c_str());
@@ -164,10 +169,10 @@ void QGImage::_drawFreqScale() {
 	}
 
 	// Tick markersA
-	for (int i = 0; i < N; i += tickStep) {
+	for (int i = _fMin; i < _fMax; i += tickStep) {
 		if (_orientation == Orientation::Horizontal) {
-			gdImageLine(_im, topLeftX + _freqLabelWidth + 1, topLeftY + N - i, topLeftX + _freqLabelWidth + 9, topLeftY + N - i, white);
-			gdImageLine(_im, topLeftX2 + 1, topLeftY2 + N - i, topLeftX2 + 9, topLeftY2 + N - i, white);
+			gdImageLine(_im, topLeftX + _freqLabelWidth + 1, topLeftY + _fDelta + _fMin - i, topLeftX + _freqLabelWidth + 9, topLeftY + _fDelta + _fMin - i, white);
+			gdImageLine(_im, topLeftX2 + 1, topLeftY2 + _fDelta + _fMin - i, topLeftX2 + 9, topLeftY2 + _fDelta + _fMin - i, white);
 		} else {
 			gdImageLine(_im, topLeftX + i, _freqLabelHeight + 1, topLeftX + i, _freqLabelHeight + 9, white);
 			gdImageLine(_im, topLeftX2 + i, _freqLabelHeight + 10 + _size + 100 + 1, topLeftX2 + i, _freqLabelHeight + 10 + _size + 100 + 9, white);
@@ -186,7 +191,7 @@ void QGImage::_drawDbScale() {
 	// Clear zone and set topLeft corner
 	if (_orientation == Orientation::Horizontal) {
 		topLeftX = _freqLabelWidth + 10 + _size;
-		topLeftY = N;
+		topLeftY = _fDelta;
 		tickStep = 10;
 		labelStep = tickStep * 3;
 		gdImageFilledRectangle(_im, topLeftX, topLeftY, topLeftX + 100, topLeftY + 10 + _dBLabelHeight, gdTrueColor(0, 0, 0));
