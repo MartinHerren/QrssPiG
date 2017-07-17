@@ -5,7 +5,7 @@
 #include <string>
 #include <math.h>
 
-QGImage::QGImage(int sampleRate, int N): _sampleRate(sampleRate), N(N) {
+QGImage::QGImage(int sampleRate, int baseFreq, int N): _sampleRate(sampleRate), _baseFreq(baseFreq), N(N) {
 	_c = nullptr;
 	_imBuffer = nullptr;
 	_imBufferSize = 0;
@@ -39,11 +39,20 @@ void QGImage::configure(const YAML::Node &config) {
 	_font = "ttf-dejavu/DejaVuSans.ttf";
 	_fontSize = 8;
 
-	// Configure freq range
+	// Configure freq range, default value doesn't depend on base freq. In config file freq is given as absolute frequency unless freqrel is set to true
+	bool fRel = false;
 	_fMin = (0 * N) / _sampleRate;
 	_fMax = (2500 * N) / _sampleRate;
-	if (config["freqmin"]) _fMin = (config["freqmin"].as<int>() * N) / _sampleRate;
-	if (config["freqmax"]) _fMax = (config["freqmax"].as<int>() * N) / _sampleRate;
+	if (config["freqrel"]) fRel = config["freqrel"].as<bool>();
+	if (fRel) {
+		if (config["freqmin"]) _fMin = (config["freqmin"].as<int>() * N) / _sampleRate;
+		if (config["freqmin"]) _fMin = (config["freqmin"].as<int>() * N) / _sampleRate;
+	} else {
+		if (config["freqmax"]) _fMax = ((config["freqmax"].as<int>() - _baseFreq) * N) / _sampleRate;
+		if (config["freqmax"]) _fMax = ((config["freqmax"].as<int>() - _baseFreq) * N) / _sampleRate;
+	}
+	if ((_fMin < -N / 2 + 1) || (_fMin > N / 2 - 1)) throw std::runtime_error("QGImage::configure: freqmin out of range");
+	if ((_fMax < -N / 2 + 1) || (_fMax > N / 2 - 1)) throw std::runtime_error("QGImage::configure: freqmax out of range");
 	_fDelta = _fMax - _fMin;
 
 	// Configure db range
@@ -185,7 +194,7 @@ void QGImage::_drawFreqScale() {
 	// Freq labels
 	for (int i = _fMin; i < _fMax; i += labelStep) {
 		std::stringstream f;
-		f << ((i * _sampleRate) / N) << "Hz";
+		f << (_baseFreq + (i * _sampleRate) / N) << "Hz";
 
 		// Calculate text's bounding box
 		int brect[8];

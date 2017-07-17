@@ -10,6 +10,7 @@ QrssPiG::QrssPiG() :
 	_N(2048),
 	_unsignedIQ(true),
 	_sampleRate(2000),
+	_baseFreq(0),
 	_secondsPerFrame(600),
 	_frameSize(1000),
 	_up(nullptr) {
@@ -52,6 +53,7 @@ QrssPiG::QrssPiG(const std::string &configFile) : QrssPiG() {
 		}
 
 		if (input["samplerate"]) _sampleRate = input["samplerate"].as<int>();
+		if (input["basefreq"]) _baseFreq = input["basefreq"].as<int>();
 	}
 
 	_init();
@@ -158,7 +160,7 @@ void QrssPiG::_init() {
 	_lastLine = -1;
 	_lastFrame = -1;
 
-	_im = new QGImage(_sampleRate, _N);
+	_im = new QGImage(_sampleRate, _baseFreq,_N);
 
 	_hannW = new double[_N];
 

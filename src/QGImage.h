@@ -12,7 +12,7 @@ class QGImage {
 public:
 	enum class Orientation { Horizontal, Vertical };
 
-	QGImage(int sampleRate, int N);
+	QGImage(int sampleRate, int baseFreq, int N);
 	~QGImage();
 
 	void configure(const YAML::Node &config);
@@ -37,6 +37,7 @@ private:
 
 	// Params given at constructor time, cannot be changed
 	int _sampleRate;
+	int _baseFreq;
 	int N;
 
 	// Configuration

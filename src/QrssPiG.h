@@ -38,6 +38,7 @@ private:
 	// Data format
 	bool _unsignedIQ;
 	int _sampleRate;
+	int _baseFreq;
 
 	// Image format
 	int _secondsPerFrame;

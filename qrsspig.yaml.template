@@ -2,8 +2,10 @@ N: 4096
 input:
   format: hackrf
   samplerate: 8000
+  basefreq: 10000000
 output:
   orientation: horizontal
+  freqrel: true
   freqmin: 0
   freqmax: 2500
   dBmin: -30
