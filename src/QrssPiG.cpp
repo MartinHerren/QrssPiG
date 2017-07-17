@@ -10,7 +10,6 @@ QrssPiG::QrssPiG() :
 	_N(2048),
 	_unsignedIQ(true),
 	_sampleRate(2000),
-	_orientation(QGImage::Orientation::Horizontal),
 	_secondsPerFrame(600),
 	_frameSize(1000),
 	_up(nullptr) {
@@ -32,7 +31,6 @@ QrssPiG::QrssPiG(int N, bool unsignedIQ, int sampleRate, const std::string &dir,
 
 QrssPiG::QrssPiG(const std::string &configFile) : QrssPiG() {
 	YAML::Node config = YAML::LoadFile(configFile);
-	double dBmin = -30., dBmax = 0.;
 
 	if (config["N"]) _N = config["N"].as<int>();
 
@@ -56,25 +54,20 @@ QrssPiG::QrssPiG(const std::string &configFile) : QrssPiG() {
 		if (input["samplerate"]) _sampleRate = input["samplerate"].as<int>();
 	}
 
+	_init();
+
 	if (config["output"]) {
 		if (config["output"].Type() != YAML::NodeType::Map) throw std::runtime_error("YAML: output must be a map");
 
 		YAML::Node output = config["output"];
 
-		if (output["secondsperframe"]) _secondsPerFrame = output["secondsperframe"].as<int>();
+		_im->configure(output);
 
+		// TODO whole timing is wrong
+		if (output["secondsperframe"]) _secondsPerFrame = output["secondsperframe"].as<int>();
 		if (output["framesize"]) _frameSize = output["framesize"].as<int>();
 
-		if (output["orientation"]) {
-			std::string o = output["orientation"].as<std::string>();
-
-			if (o.compare("horizontal") == 0) _orientation = QGImage::Orientation::Horizontal;
-			else if (o.compare("vertical") == 0) _orientation = QGImage::Orientation::Vertical;
-			else throw std::runtime_error("YAML: output orientation unrecognized");
-		}
-
-		if (output["dBmin"]) dBmin = output["dBmin"].as<double>();
-		if (output["dBmax"]) dBmax = output["dBmax"].as<double>();
+		// TODO: overlap must be done here and in image
 	}
 
 	if (config["upload"]) {
@@ -91,10 +84,6 @@ QrssPiG::QrssPiG(const std::string &configFile) : QrssPiG() {
 			}
 		}
 	}
-
-	_init();
-
-	_im->setScale(dBmin, dBmax);
 }
 
 QrssPiG::~QrssPiG() {
@@ -169,7 +158,7 @@ void QrssPiG::_init() {
 	_lastLine = -1;
 	_lastFrame = -1;
 
-	_im = new QGImage(_frameSize, _sampleRate, _N, _orientation);
+	_im = new QGImage(_sampleRate, _N);
 
 	_hannW = new double[_N];
 

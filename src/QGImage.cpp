@@ -1,73 +1,64 @@
 #include "QGImage.h"
 
 #include <iomanip>
+#include <stdexcept>
 #include <string>
 #include <math.h>
 
-QGImage::QGImage(int size, int sampleRate, int N, Orientation orientation): _size(size), _sampleRate(sampleRate), N(N), _orientation(orientation) {
-	// Define font
-	_font = "ttf-dejavu/DejaVuSans.ttf";
-	_fontSize = 8;
-
-	// Calculate max size for frequency and dB labels
-	int brect[8];
-	gdImageStringFT(nullptr, brect, 0, (char *)_font.c_str(), _fontSize, 0, 0, 0, (char *)"000000000Hz");
-	_freqLabelWidth = brect[2] - brect[0];
-	_freqLabelHeight = brect[1] - brect[7];
-	gdImageStringFT(nullptr, brect, 0, (char *)_font.c_str(), _fontSize, 0, 0, 0, (char *)"-100dB");
-	_dBLabelWidth = brect[2] - brect[0];
-	_dBLabelHeight = brect[1] - brect[7];
-
-	// Calculate _fMin/Max/Delta from frequencies
-	_fMin = (0 * N) / _sampleRate;
-	_fMax = (2500 * N) / _sampleRate;
-	_fDelta = _fMax - _fMin;
-
-	// Allocate canvas
-	switch (_orientation) {
-	case Orientation::Horizontal:
-		_im = gdImageCreateTrueColor(_freqLabelWidth + 10 + _size + 100 + 10 +_freqLabelWidth, _fDelta + 10 + _dBLabelHeight);
-		break;
-
-	case Orientation::Vertical:
-		_im = gdImageCreateTrueColor(_dBLabelWidth + 10 + _fDelta, _freqLabelHeight + 10 + _size + 100 + 10 + _freqLabelHeight);
-		break;
-	}
-
+QGImage::QGImage(int sampleRate, int N): _sampleRate(sampleRate), N(N) {
+	_c = nullptr;
 	_imBuffer = nullptr;
 	_imBufferSize = 0;
+	_im = nullptr;
 
-	// Define colormap
-	_cd = 256;
-	_c = new int[_cd];
-
-	// Allocate colormap, taken from 'qrx' colormap from RFAnalyzer, reduced to 256 palette due to use of libgd
-	int ii = 0;
-	for (int i = 0; i <= 255; i += 4) _c[ii++] = gdImageColorAllocate(_im, 0, 0, i);
-	for (int i = 0; i <= 255; i += 4) _c[ii++] = gdImageColorAllocate(_im, 0, i, 255);
-	for (int i = 0; i <= 255; i += 4) _c[ii++] = gdImageColorAllocate(_im, i, 255, 255 - i);
-	for (int i = 0; i <= 255; i += 4) _c[ii++] = gdImageColorAllocate(_im, 255, 255 -  i, 0);
-
-	_drawFreqScale();
-	setScale(-30., 0.);
-	clearGraph();
+	configure(YAML::Load("")); // Start with default config
 }
 
 QGImage::~QGImage() {
-	delete [] _c;
-	if (_imBuffer) gdFree(_imBuffer);
-	gdImageDestroy(_im);
+	_free();
 }
 
-void QGImage::setScale(double dBmin, double dBmax) {
-	_dBmin = dBmin;
-	_dBmax = dBmax;
+void QGImage::configure(const YAML::Node &config) {
+	_free();
+
+	// Configure size TODO use secondes per frame ?
+	_size = 600;
+	if (config["framesize"]) _size = config["framesize"].as<int>();
+
+	// Configure orientation
+	_orientation = Orientation::Horizontal;
+	if (config["orientation"]) {
+		std::string o = config["orientation"].as<std::string>();
+
+		if (o.compare("horizontal") == 0) _orientation = Orientation::Horizontal;
+		else if (o.compare("vertical") == 0) _orientation = Orientation::Vertical;
+		else throw std::runtime_error("QGImage::configure: output orientation unrecognized");
+	}
+
+	// Configure font
+	_font = "ttf-dejavu/DejaVuSans.ttf";
+	_fontSize = 8;
+
+	// Configure freq range
+	_fMin = (0 * N) / _sampleRate;
+	_fMax = (2500 * N) / _sampleRate;
+	if (config["freqmin"]) _fMin = (config["freqmin"].as<int>() * N) / _sampleRate;
+	if (config["freqmax"]) _fMax = (config["freqmax"].as<int>() * N) / _sampleRate;
+	_fDelta = _fMax - _fMin;
+
+	// Configure db range
+	_dBmin = -30;
+	_dBmax = 0;
+	if (config["dBmin"]) _dBmin = config["dBmin"].as<int>();
+	if (config["dBmax"]) _dBmax = config["dBmax"].as<int>();
 	_dBdelta = _dBmax - _dBmin;
 
+	_init();
+	_drawFreqScale();
 	_drawDbScale();
 }
 
-void QGImage::clearGraph() {
+void QGImage::startFrame(time_t startTime) {
 	switch (_orientation) {
 	case Orientation::Horizontal:
 		gdImageFilledRectangle(_im, _freqLabelWidth + 10, _fDelta, _freqLabelWidth + 10 + _size + 100, 0, gdTrueColor(0, 0, 0));
@@ -77,6 +68,8 @@ void QGImage::clearGraph() {
 		gdImageFilledRectangle(_im, _dBLabelWidth + 10, _freqLabelHeight + 10 + _size + 100, _dBLabelWidth + 10 + _fDelta, _freqLabelHeight + 10, gdTrueColor(0, 0, 0));
 		break;
 	}
+
+	_drawTimeScale(startTime);
 }
 
 void QGImage::drawLine(const std::complex<double> *fft, int lineNumber) {
@@ -105,7 +98,7 @@ void QGImage::drawLine(const std::complex<double> *fft, int lineNumber) {
 	}
 }
 
-void QGImage::save2Buffer() {
+void QGImage::save2Buffer() { // TODO ? return buffer and size ?
 	if (_imBuffer) gdFree(_imBuffer);
 
 	_imBuffer = (char *)gdImagePngPtr(_im, &_imBufferSize);
@@ -120,6 +113,48 @@ void QGImage::save(const std::string &fileName) {
 }
 
 // Private members
+void QGImage::_init() {
+	// Calculate max bounding boxes for labels
+	int brect[8];
+	gdImageStringFT(nullptr, brect, 0, (char *)_font.c_str(), _fontSize, 0, 0, 0, (char *)"000000000Hz");
+	_freqLabelWidth = brect[2] - brect[0];
+	_freqLabelHeight = brect[1] - brect[7];
+	gdImageStringFT(nullptr, brect, 0, (char *)_font.c_str(), _fontSize, 0, 0, 0, (char *)"-100dB");
+	_dBLabelWidth = brect[2] - brect[0];
+	_dBLabelHeight = brect[1] - brect[7];
+
+	// Allocate canvas
+	switch (_orientation) {
+	case Orientation::Horizontal:
+		_im = gdImageCreateTrueColor(_freqLabelWidth + 10 + _size + 100 + 10 + _freqLabelWidth, _fDelta + 10 + _dBLabelHeight);
+		break;
+
+	case Orientation::Vertical:
+		_im = gdImageCreateTrueColor(_dBLabelWidth + 10 + _fDelta, _freqLabelHeight + 10 + _size + 100 + 10 + _freqLabelHeight);
+		break;
+	}
+
+	// Allocate colormap, based on modified qrx colormap reduced to 256 colors
+	_cd = 256;
+	_c = new int[_cd];
+
+	int ii = 0;
+	for (int i = 0; i <= 255; i+= 4) _c[ii++] = gdImageColorAllocate(_im, 0, 0, i);
+	for (int i = 0; i <= 255; i+= 4) _c[ii++] = gdImageColorAllocate(_im, 0, i, 255);
+	for (int i = 0; i <= 255; i+= 4) _c[ii++] = gdImageColorAllocate(_im, i, 255, 255 - i);
+	for (int i = 0; i <= 255; i+= 4) _c[ii++] = gdImageColorAllocate(_im, 255, 255 - i, 0);
+}
+
+void QGImage::_free() {
+	if (_c) delete [] _c;
+	_c = nullptr;
+
+	if (_imBuffer) gdFree(_imBuffer);
+	_imBuffer = nullptr;
+
+	if (_im) gdImageDestroy(_im);
+	_im = nullptr;
+}
 
 void QGImage::_drawFreqScale() {
 	int topLeftX, topLeftY, topLeftX2, topLeftY2;
@@ -178,9 +213,6 @@ void QGImage::_drawFreqScale() {
 			gdImageLine(_im, topLeftX2 + i, _freqLabelHeight + 10 + _size + 100 + 1, topLeftX2 + i, _freqLabelHeight + 10 + _size + 100 + 9, white);
 		}
 	}
-}
-
-void QGImage::_drawTimeScale() {
 }
 
 void QGImage::_drawDbScale() {
@@ -251,6 +283,9 @@ void QGImage::_drawDbScale() {
 		else
 			gdImageLine(_im, topLeftX + _dBLabelWidth + 5, topLeftY - i, topLeftX +_dBLabelWidth + 8, topLeftY - i, c);
 	}
+}
+
+void QGImage::_drawTimeScale(time_t startTime) {
 }
 
 int QGImage::_db2Color(double v) {

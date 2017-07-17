@@ -40,7 +40,6 @@ private:
 	int _sampleRate;
 
 	// Image format
-	QGImage::Orientation _orientation;
 	int _secondsPerFrame;
 	int _frameSize;
 
