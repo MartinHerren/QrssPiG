@@ -7,13 +7,14 @@
 #include "QGSCPUploader.h"
 
 QrssPiG::QrssPiG() :
-	_N(2048),
 	_unsignedIQ(true),
 	_sampleRate(2000),
 	_baseFreq(0),
 	_secondsPerFrame(600),
 	_frameSize(1000),
 	_up(nullptr) {
+		_N = 2048;
+		_overlap = (3 * _N) / 4;
 }
 
 QrssPiG::QrssPiG(int N, bool unsignedIQ, int sampleRate, const std::string &dir, const std::string &sshHost, const std::string &sshUser, int sshPort) : QrssPiG() {
@@ -32,8 +33,6 @@ QrssPiG::QrssPiG(int N, bool unsignedIQ, int sampleRate, const std::string &dir,
 
 QrssPiG::QrssPiG(const std::string &configFile) : QrssPiG() {
 	YAML::Node config = YAML::LoadFile(configFile);
-
-	if (config["N"]) _N = config["N"].as<int>();
 
 	if (config["input"]) {
 		if (config["input"].Type() != YAML::NodeType::Map) throw std::runtime_error("YAML: input must be a map");
@@ -56,6 +55,20 @@ QrssPiG::QrssPiG(const std::string &configFile) : QrssPiG() {
 		if (input["basefreq"]) _baseFreq = input["basefreq"].as<int>();
 	}
 
+	if (config["processing"]) {
+		if (config["processing"].Type() != YAML::NodeType::Map) throw std::runtime_error("YAML: processing must be a map");
+
+		YAML::Node processing = config["processing"];
+
+		if (processing["fft"]) _N = processing["fft"].as<int>();
+		if (processing["fftoverlap"]) {
+			int o = processing["fftoverlap"].as<int>();
+			if ((o < 0) || (o >= _N)) throw std::runtime_error("YAML: overlap value out of range [0..N[");
+			_overlap = (o * _N) / (o + 1);
+		}
+	}
+
+	// Must be done here, so that _im exists when configuringit
 	_init();
 
 	if (config["output"]) {
@@ -180,15 +193,13 @@ void QrssPiG::_timeInit() {
 }
 
 void QrssPiG::_addIQ(std::complex<double> iq) {
-	int overlap = _N / 8; // 0.._N-1 // TODO: compute once
-
 	_in[_idx++] = iq;
 	_samples++;
 
 	if (_idx >= _N) {
 		_computeFft();
-		for (auto i = 0; i < overlap; i++) _in[i] = _in[_N - overlap + i];
-		_idx = overlap;
+		for (auto i = 0; i < _overlap; i++) _in[i] = _in[_N - _overlap + i];
+		_idx = _overlap;
 	}
 }
 

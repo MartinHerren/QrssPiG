@@ -1,8 +1,10 @@
-N: 4096
 input:
   format: hackrf
   samplerate: 8000
   basefreq: 10000000
+processing:
+  fft: 4096
+  fftoverlap: 7
 output:
   orientation: horizontal
   freqrel: true

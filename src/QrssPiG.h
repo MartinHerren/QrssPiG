@@ -34,6 +34,7 @@ private:
 private:
 	// FFT size
 	int _N;
+	int _overlap; // 0: no overlap, 1: 1/2, 2: 2/3...
 
 	// Data format
 	bool _unsignedIQ;
