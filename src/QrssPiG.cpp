@@ -7,7 +7,7 @@
 #include "QGSCPUploader.h"
 
 QrssPiG::QrssPiG() :
-	_unsignedIQ(true),
+	_format(Format::U8IQ),
 	_sampleRate(2000),
 	_baseFreq(0),
 	_secondsPerFrame(600),
@@ -17,9 +17,14 @@ QrssPiG::QrssPiG() :
 		_overlap = (3 * _N) / 4;
 }
 
-QrssPiG::QrssPiG(int N, bool unsignedIQ, int sampleRate, const std::string &dir, const std::string &sshHost, const std::string &sshUser, int sshPort) : QrssPiG() {
+QrssPiG::QrssPiG(const std::string &format, int sampleRate, int N, const std::string &dir, const std::string &sshHost, const std::string &sshUser, int sshPort) : QrssPiG() {
+	if ((format.compare("u8iq") == 0) || (format.compare("rtlsdr") == 0)) _format = Format::U8IQ;
+	else if ((format.compare("s8iq") == 0) || (format.compare("hackrf") == 0)) _format = Format::S8IQ;
+	else if (format.compare("u16iq") == 0) _format = Format::U16IQ;
+	else if (format.compare("s16iq") == 0) _format = Format::S16IQ;
+	else throw std::runtime_error("Unsupported format");
+
 	_N = N;
-	_unsignedIQ = unsignedIQ;
 	_sampleRate = sampleRate;
 
 	if (sshHost.length()) {
@@ -42,13 +47,11 @@ QrssPiG::QrssPiG(const std::string &configFile) : QrssPiG() {
 		if (input["format"]) {
 			std::string f = input["format"].as<std::string>();
 
-			if ((f.compare("rtlsdr") == 0) || (f.compare("unsigned") == 0)) {
-				_unsignedIQ = true;
-			} else if((f.compare("hackrf") == 0) || (f.compare("signed") == 0)) {
-				_unsignedIQ = false;
-			} else {
-				throw std::runtime_error("YAML: input format unrecognized");
-			}
+			if ((f.compare("u8iq") == 0) || (f.compare("rtlsdr") == 0)) _format = Format::U8IQ;
+			else if ((f.compare("s8iq") == 0) || (f.compare("hackrf") == 0)) _format = Format::S8IQ;
+			else if (f.compare("u16iq") == 0) _format = Format::U16IQ;
+			else if (f.compare("s16iq") == 0) _format = Format::S16IQ;
+			else throw std::runtime_error("YAML: input format unrecognized");
 		}
 
 		if (input["samplerate"]) _sampleRate = input["samplerate"].as<int>();
@@ -119,12 +122,50 @@ QrssPiG::~QrssPiG() {
 void QrssPiG::run() {
 	std::cin >> std::noskipws;
 
-	if (_unsignedIQ) {
-		unsigned char i, q;
-		while (std::cin >> i >> q) _addIQ(std::complex<double>((i - 128) / 128., (q - 128) / 128.));
-	} else {
-		signed char i, q;
-		while (std::cin >> i >> q) _addIQ(std::complex<double>(i / 128., q / 128.));
+	switch (_format) {
+		case Format::U8IQ: {
+			unsigned char i, q;
+			while (std::cin) {
+				i = std::cin.get();
+				q = std::cin.get();
+				_addIQ(std::complex<double>((i - 128) / 128., (q - 128) / 128.));
+			}
+			break;
+		}
+	
+		case Format::S8IQ: {
+			signed char i, q;
+			while (std::cin) {
+				i = std::cin.get();
+				q = std::cin.get();
+				_addIQ(std::complex<double>(i / 128., q / 128.));
+			}
+			break;
+		}
+
+		case Format::U16IQ: {
+			unsigned short int i, q;
+			while (std::cin) {
+				i = std::cin.get();
+				i += std::cin.get() << 8;
+				q = std::cin.get();
+				q += std::cin.get() << 8;
+				_addIQ(std::complex<double>((i - 32768) / 32768., (q - 32768) / 32768.));
+			}
+			break;
+		}
+
+		case Format::S16IQ: {
+			signed short int i, q;
+			while (std::cin) {
+				i = std::cin.get();
+				i += std::cin.get() << 8;
+				q = std::cin.get();
+				q += std::cin.get() << 8;
+				_addIQ(std::complex<double>(i / 32768., q / 32768.));
+			}
+			break;
+		}
 	}
 }
 

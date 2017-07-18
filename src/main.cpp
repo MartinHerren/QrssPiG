@@ -34,7 +34,7 @@ int main(int argc, char *argv[]) {
 
 			pig = new QrssPiG(configFile);
 		} else {
-			bool unsignedIQ = true;
+			std::string format = "rtlsdr";
 			int sampleRate = 2000;
 			std::string directory;
 			std::string sshHost;
@@ -42,17 +42,7 @@ int main(int argc, char *argv[]) {
 			int sshPort = 22;
 
 			if (vm.count("format")) {
-				std::string f = vm["format"].as<std::string>();
-
-				if ((f.compare("rtlsdr") == 0) || (f.compare("unsigned") == 0)) {
-					unsignedIQ = true;
-				} else if ((f.compare("hackrf") == 0) || (f.compare("signed") == 0)) {
-					unsignedIQ = false;
-				} else {
-					std::cerr << "Invalid option for format: " << f << std::endl;
-					std::cerr << desc << std::endl;
-					exit(-1);
-				}
+				std::string format = vm["format"].as<std::string>();
 			}
 
 			if (vm.count("samplerate")) {
@@ -75,7 +65,7 @@ int main(int argc, char *argv[]) {
 				sshPort = vm["sshport"].as<int>();
 			}
 
-			pig = new QrssPiG(2048, unsignedIQ, sampleRate, directory, sshHost, sshUser, sshPort);
+			pig = new QrssPiG(format, sampleRate, 2048, directory, sshHost, sshUser, sshPort);
 		}
 	} catch (const boost::program_options::error &ex) {
 		std::cerr << ex.what() << std::endl;

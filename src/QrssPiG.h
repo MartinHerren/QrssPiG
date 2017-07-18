@@ -12,11 +12,14 @@
 #include "QGUploader.h"
 
 class QrssPiG {
+public:
+	enum class Format { U8IQ, S8IQ, U16IQ, S16IQ };
+
 private:
 	QrssPiG();
 
 public:
-	QrssPiG(int N, bool unsignedIQ, int sampleRate, const std::string &dir, const std::string &sshHost, const std::string &sshUser, int sshPort);
+	QrssPiG(const std::string &format, int sampleRate, int N, const std::string &dir, const std::string &sshHost, const std::string &sshUser, int sshPort);
 	QrssPiG(const std::string &configFile);
 	~QrssPiG();
 
@@ -37,7 +40,7 @@ private:
 	int _overlap; // 0: no overlap, 1: 1/2, 2: 2/3...
 
 	// Data format
-	bool _unsignedIQ;
+	Format _format;
 	int _sampleRate;
 	int _baseFreq;
 
