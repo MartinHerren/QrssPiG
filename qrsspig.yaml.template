@@ -1,0 +1,22 @@
+N: 4096
+input:
+  format: hackrf
+  samplerate: 8000
+  basefreq: 10000000
+output:
+  orientation: horizontal
+  freqrel: true
+  freqmin: 0
+  freqmax: 2500
+  dBmin: -30
+  dBmax: 0
+  secondsperframe: 1200
+  framesize: 500
+upload:
+  - type: local
+    dir: /tmp
+  - type: scp
+    host: localhost
+    port: 22
+    user: qrsspig
+    dir: /tmp

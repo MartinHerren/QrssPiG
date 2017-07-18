@@ -1,6 +1,7 @@
 # QrssPiG
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](http://www.gnu.org/licenses/gpl-3.0)
+[![Build Status](https://travis-ci.org/MartinHerren/QrssPiG.svg?branch=dev)](https://travis-ci.org/MartinHerren/QrssPiG)
 
 QrssPiG is short for QRSS (Raspberry)Pi Grabber.
 
@@ -24,6 +25,8 @@ It depends on following dev libs:
  - libgd-dev
  - libssh-dev
  - libfftw3-dev
+ - libyaml-cpp-dev
+ - libfreetype6-dev
  - (librtlsdr-dev)
 
 To build:
