@@ -136,6 +136,9 @@ void QrssPiG::_addUploader(const YAML::Node &uploader) {
 
 	std::string type = uploader["type"].as<std::string>();
 
+	// TODO remove once multiple uploader supported
+	if (_up) delete _up;
+
 	if (type.compare("scp") == 0) {
 		std::string host = "localhost";
 		int port = 22; // TODO: use 0 to force uploader to take default port ?
