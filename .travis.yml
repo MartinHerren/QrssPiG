@@ -1,0 +1,21 @@
+dist: trusty
+sudo: false
+
+language: cpp
+
+compiler:
+  - clang
+  - gcc
+
+addons:
+  apt:
+    packages:
+      - libboost-program-options-dev
+      - libgd2-noxpm-dev
+      - libssh-dev
+      - libfftw3-dev
+      - libyaml-cpp-dev
+      - libfreetype6-dev
+
+script:
+  - mkdir -p build && cd build && cmake .. && cmake --build .
