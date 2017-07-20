@@ -12,7 +12,7 @@ class QGImage {
 public:
 	enum class Orientation { Horizontal, Vertical };
 
-	QGImage(int sampleRate, int baseFreq, int N);
+	QGImage(int sampleRate, int baseFreq, int fftSize, int fftOverlap);
 	~QGImage();
 
 	void configure(const YAML::Node &config);
@@ -39,6 +39,7 @@ private:
 	int _sampleRate;
 	int _baseFreq;
 	int N;
+	int _overlap;
 
 	// Configuration
 	int _size;

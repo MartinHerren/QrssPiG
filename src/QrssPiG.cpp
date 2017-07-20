@@ -217,7 +217,7 @@ void QrssPiG::_init() {
 	_lastLine = -1;
 	_lastFrame = -1;
 
-	_im = new QGImage(_sampleRate, _baseFreq,_N);
+	_im = new QGImage(_sampleRate, _baseFreq, _N, _overlap);
 
 	_hannW = new double[_N];
 
@@ -237,6 +237,8 @@ void QrssPiG::_timeInit() {
 }
 
 void QrssPiG::_addIQ(std::complex<double> iq) {
+	if (_samples == 0) _im->startFrame(0);
+
 	_in[_idx++] = iq;
 	_samples++;
 

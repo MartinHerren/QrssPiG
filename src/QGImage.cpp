@@ -5,7 +5,7 @@
 #include <string>
 #include <math.h>
 
-QGImage::QGImage(int sampleRate, int baseFreq, int N): _sampleRate(sampleRate), _baseFreq(baseFreq), N(N) {
+QGImage::QGImage(int sampleRate, int baseFreq, int fftSize, int fftOverlap): _sampleRate(sampleRate), _baseFreq(baseFreq), N(fftSize), _overlap(fftOverlap) {
 	_c = nullptr;
 	_imBuffer = nullptr;
 	_imBufferSize = 0;
@@ -259,7 +259,7 @@ void QGImage::_drawDbScale() {
 		int x, y;
 
 		if (_orientation == Orientation::Horizontal) {
-			x = topLeftX - i - 0.5 * (brect[2] - brect[0]);
+			x = topLeftX - i - .5 * (brect[2] - brect[0]);
 			y = topLeftY + 10 - brect[7];
 		} else {
 			x = topLeftX +_dBLabelWidth - brect[2];
@@ -295,6 +295,57 @@ void QGImage::_drawDbScale() {
 }
 
 void QGImage::_drawTimeScale(time_t startTime) {
+	int topLeftX, topLeftY;
+	int tickStep, labelStep;
+	int white = gdTrueColor(255, 255, 255);
+
+	// Clear zone and set topLeft corner
+	if (_orientation == Orientation::Horizontal) {
+		topLeftX = _freqLabelWidth + 10;
+		topLeftY = _fDelta;
+		tickStep = 10;
+		labelStep = 100;
+		gdImageFilledRectangle(_im, topLeftX, topLeftY, topLeftX + _size, topLeftY + 10 + _dBLabelHeight, gdTrueColor(0, 0, 0));
+	} else {
+		topLeftX = 0;
+		topLeftY = _freqLabelHeight + 10;
+		tickStep = 10;
+		labelStep = 100;
+		gdImageFilledRectangle(_im, topLeftX, topLeftY, topLeftX + _dBLabelWidth + 10, topLeftY + _size, gdTrueColor(0, 0, 0));
+	}
+
+	// Time labels with long ticks
+	for (int i = 0; i < _size; i += labelStep) {
+		std::stringstream t;
+		t << ((i * (N - _overlap)) / _sampleRate);
+
+		// Calculatre text's bounding box
+		int brect[8];
+		gdImageStringFT(nullptr, brect, white, (char *)_font.c_str(), 8, 0, 0, 0, (char *)t.str().c_str());
+
+		// Fix position according to bounding box
+		int x, y;
+
+		if (_orientation == Orientation::Horizontal) {
+			x = topLeftX + i - .5 * (brect[2] - brect[0]);
+			y = topLeftY + 10 - brect[7];
+			gdImageLine(_im, topLeftX + i, topLeftY, topLeftX + i, topLeftY + 9, white);
+		} else {
+			x = topLeftX + _dBLabelWidth - brect[2];
+			y = topLeftY + i - .5 * (brect[1] + brect[7]);
+			gdImageLine(_im, topLeftX + _dBLabelWidth, topLeftY + i, topLeftX + _dBLabelWidth + 9, topLeftY + i, white);
+		}
+
+		gdImageStringFT(_im, brect, white, (char *)_font.c_str(), 8, 0, x, y, (char *)t.str().c_str());
+	}
+
+	// Small tick markers
+	for (int i = 0; i < _size; i+= tickStep) {
+		if (_orientation == Orientation::Horizontal)
+			gdImageLine(_im, topLeftX + i, topLeftY, topLeftX + i, topLeftY + 5, white);
+		else
+			gdImageLine(_im, topLeftX + _dBLabelWidth, topLeftY + i, topLeftX + _dBLabelWidth + 5, topLeftY + i, white);
+	}
 }
 
 int QGImage::_db2Color(double v) {
