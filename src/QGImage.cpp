@@ -46,9 +46,9 @@ void QGImage::configure(const YAML::Node &config) {
 	if (config["freqrel"]) fRel = config["freqrel"].as<bool>();
 	if (fRel) {
 		if (config["freqmin"]) _fMin = (config["freqmin"].as<int>() * N) / _sampleRate;
-		if (config["freqmin"]) _fMin = (config["freqmin"].as<int>() * N) / _sampleRate;
+		if (config["freqmax"]) _fMax = (config["freqmax"].as<int>() * N) / _sampleRate;
 	} else {
-		if (config["freqmax"]) _fMax = ((config["freqmax"].as<int>() - _baseFreq) * N) / _sampleRate;
+		if (config["freqmin"]) _fMin = ((config["freqmin"].as<int>() - _baseFreq) * N) / _sampleRate;
 		if (config["freqmax"]) _fMax = ((config["freqmax"].as<int>() - _baseFreq) * N) / _sampleRate;
 	}
 	if ((_fMin < -N / 2 + 1) || (_fMin > N / 2 - 1)) throw std::runtime_error("QGImage::configure: freqmin out of range");
