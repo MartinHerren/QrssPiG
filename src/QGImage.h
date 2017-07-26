@@ -1,8 +1,8 @@
 #pragma once
 
-#include <iostream>
-
+#include <chrono>
 #include <complex> // Must be included before fftw3
+#include <iostream>
 
 #include <fftw3.h>
 #include <gd.h>
@@ -16,7 +16,7 @@ public:
 	~QGImage();
 
 	void configure(const YAML::Node &config);
-	void startFrame(time_t startTime);
+	void startFrame(std::chrono::milliseconds startTime);
 
 	void drawLine(const std::complex<double> *fft, int lineNumber);
 	void save2Buffer();
@@ -31,7 +31,7 @@ private:
 
 	void _drawFreqScale();
 	void _drawDbScale();
-	void _drawTimeScale(time_t startTime);
+	void _drawTimeScale(std::chrono::milliseconds startTime);
 
 	int _db2Color(double v);
 

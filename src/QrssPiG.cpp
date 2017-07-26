@@ -237,7 +237,7 @@ void QrssPiG::_timeInit() {
 }
 
 void QrssPiG::_addIQ(std::complex<double> iq) {
-	if (_samples == 0) _im->startFrame(0);
+	if (_samples == 0) _im->startFrame(_started);
 
 	_in[_idx++] = iq;
 	_samples++;

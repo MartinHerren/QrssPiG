@@ -67,7 +67,7 @@ void QGImage::configure(const YAML::Node &config) {
 	_drawDbScale();
 }
 
-void QGImage::startFrame(time_t startTime) {
+void QGImage::startFrame(std::chrono::milliseconds startTime) {
 	switch (_orientation) {
 	case Orientation::Horizontal:
 		gdImageFilledRectangle(_im, _freqLabelWidth + 10, _fDelta, _freqLabelWidth + 10 + _size + 100, 0, gdTrueColor(0, 0, 0));
@@ -298,7 +298,7 @@ void QGImage::_drawDbScale() {
 	}
 }
 
-void QGImage::_drawTimeScale(time_t startTime) {
+void QGImage::_drawTimeScale(std::chrono::milliseconds startTime) {
 	int topLeftX, topLeftY;
 	int tickStep, labelStep;
 	int white = gdTrueColor(255, 255, 255);
@@ -320,12 +320,16 @@ void QGImage::_drawTimeScale(time_t startTime) {
 
 	// Time labels with long ticks
 	for (int i = 0; i < _size; i += labelStep) {
-		std::stringstream t;
-		t << ((i * (N - _overlap)) / _sampleRate);
+		std::chrono::milliseconds t = startTime + std::chrono::seconds((i * (N - _overlap)) / _sampleRate);
+		int hh = std::chrono::duration_cast<std::chrono::hours>(t).count() % 24;
+		int mm = std::chrono::duration_cast<std::chrono::minutes>(t).count() % 60;
+		int ss = std::chrono::duration_cast<std::chrono::seconds>(t).count() % 60;
+		std::stringstream s;
+		s << std::setfill('0') << std::setw(2) << hh << ":" << std::setw(2) << mm << ":" << std::setw(2) << ss;
 
 		// Calculatre text's bounding box
 		int brect[8];
-		gdImageStringFT(nullptr, brect, white, (char *)_font.c_str(), 8, 0, 0, 0, (char *)t.str().c_str());
+		gdImageStringFT(nullptr, brect, white, (char *)_font.c_str(), 8, 0, 0, 0, (char *)s.str().c_str());
 
 		// Fix position according to bounding box
 		int x, y;
@@ -340,7 +344,7 @@ void QGImage::_drawTimeScale(time_t startTime) {
 			gdImageLine(_im, topLeftX + _dBLabelWidth, topLeftY + i, topLeftX + _dBLabelWidth + 9, topLeftY + i, white);
 		}
 
-		gdImageStringFT(_im, brect, white, (char *)_font.c_str(), 8, 0, x, y, (char *)t.str().c_str());
+		gdImageStringFT(_im, brect, white, (char *)_font.c_str(), 8, 0, x, y, (char *)s.str().c_str());
 	}
 
 	// Small tick markers
