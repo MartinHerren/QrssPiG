@@ -123,9 +123,13 @@ void QGImage::save(const std::string &fileName) {
 
 // Private members
 void QGImage::_init() {
-	// Calculate max bounding boxes for labels
+	// Calculate max bounding boxes for labels, check font existence on first call
 	int brect[8];
-	gdImageStringFT(nullptr, brect, 0, (char *)_font.c_str(), _fontSize, 0, 0, 0, (char *)"000000000Hz");
+
+	char * err = gdImageStringFT(nullptr, brect, 0, (char *)_font.c_str(), _fontSize, 0, 0, 0, (char *)"000000000Hz");
+
+	if (err) throw std::runtime_error(err);
+	
 	_freqLabelWidth = brect[2] - brect[0];
 	_freqLabelHeight = brect[1] - brect[7];
 	gdImageStringFT(nullptr, brect, 0, (char *)_font.c_str(), _fontSize, 0, 0, 0, (char *)"-100dB");
