@@ -21,9 +21,10 @@ QGImage::~QGImage() {
 void QGImage::configure(const YAML::Node &config) {
 	_free();
 
-	// Configure size TODO use secondes per frame ?
-	_size = 600;
-	if (config["framesize"]) _size = config["framesize"].as<int>();
+	// Configure and calculate size
+	int minutesperframe = 10;
+	if (config["minutesperframe"]) minutesperframe = config["minutesperframe"].as<int>();
+	_size = (minutesperframe * 60 * _sampleRate) / (N - _overlap);
 
 	// Configure orientation
 	_orientation = Orientation::Horizontal;

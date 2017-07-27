@@ -42,8 +42,8 @@ private:
 	int _overlap;
 
 	// Configuration
-	int _size;
 	Orientation _orientation;
+	int _size;
 
 	std::string _font;
 	int _fontSize;
