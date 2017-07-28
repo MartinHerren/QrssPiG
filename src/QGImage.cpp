@@ -22,9 +22,10 @@ void QGImage::configure(const YAML::Node &config) {
 	_free();
 
 	// Configure and calculate size
-	int minutesperframe = 10;
-	if (config["minutesperframe"]) minutesperframe = config["minutesperframe"].as<int>();
-	_size = (minutesperframe * 60 * _sampleRate) / (N - _overlap);
+	int spf = 10 * 60;
+	if (config["minutesperframe"]) spf = config["minutesperframe"].as<int>() *  60;
+	if (config["secondsperframe"]) spf = config["secondsperframe"].as<int>();
+	_size = (spf * _sampleRate) / (N - _overlap);
 
 	// Configure orientation
 	_orientation = Orientation::Horizontal;
