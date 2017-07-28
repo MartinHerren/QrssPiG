@@ -5,7 +5,7 @@
 #include <string>
 #include <math.h>
 
-QGImage::QGImage(int sampleRate, int baseFreq, int fftSize, int fftOverlap): _sampleRate(sampleRate), _baseFreq(baseFreq), N(fftSize), _overlap(fftOverlap) {
+QGImage::QGImage(long int sampleRate, long int baseFreq, int fftSize, int fftOverlap): _sampleRate(sampleRate), _baseFreq(baseFreq), N(fftSize), _overlap(fftOverlap) {
 	_c = nullptr;
 	_imBuffer = nullptr;
 	_imBufferSize = 0;
@@ -46,11 +46,11 @@ void QGImage::configure(const YAML::Node &config) {
 	_fMax = (2500 * N) / _sampleRate;
 	if (config["freqrel"]) fRel = config["freqrel"].as<bool>();
 	if (fRel) {
-		if (config["freqmin"]) _fMin = (config["freqmin"].as<int>() * N) / _sampleRate;
-		if (config["freqmax"]) _fMax = (config["freqmax"].as<int>() * N) / _sampleRate;
+		if (config["freqmin"]) _fMin = (int)((config["freqmin"].as<long int>() * N) / _sampleRate);
+		if (config["freqmax"]) _fMax = (int)((config["freqmax"].as<long int>() * N) / _sampleRate);
 	} else {
-		if (config["freqmin"]) _fMin = ((config["freqmin"].as<int>() - _baseFreq) * N) / _sampleRate;
-		if (config["freqmax"]) _fMax = ((config["freqmax"].as<int>() - _baseFreq) * N) / _sampleRate;
+		if (config["freqmin"]) _fMin = (int)(((config["freqmin"].as<long int>() - _baseFreq) * N) / _sampleRate);
+		if (config["freqmax"]) _fMax = (int)(((config["freqmax"].as<long int>() - _baseFreq) * N) / _sampleRate);
 	}
 	if ((_fMin < -N / 2 + 1) || (_fMin > N / 2 - 1)) throw std::runtime_error("QGImage::configure: freqmin out of range");
 	if ((_fMax < -N / 2 + 1) || (_fMax > N / 2 - 1)) throw std::runtime_error("QGImage::configure: freqmax out of range");
@@ -128,9 +128,8 @@ void QGImage::_init() {
 	int brect[8];
 
 	char * err = gdImageStringFT(nullptr, brect, 0, (char *)_font.c_str(), _fontSize, 0, 0, 0, (char *)"000000000Hz");
-
 	if (err) throw std::runtime_error(err);
-	
+
 	_freqLabelWidth = brect[2] - brect[0];
 	_freqLabelHeight = brect[1] - brect[7];
 	gdImageStringFT(nullptr, brect, 0, (char *)_font.c_str(), _fontSize, 0, 0, 0, (char *)"-100dB");

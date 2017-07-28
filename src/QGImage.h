@@ -12,7 +12,7 @@ class QGImage {
 public:
 	enum class Orientation { Horizontal, Vertical };
 
-	QGImage(int sampleRate, int baseFreq, int fftSize, int fftOverlap);
+	QGImage(long int sampleRate, long int baseFreq, int fftSize, int fftOverlap);
 	~QGImage();
 
 	void configure(const YAML::Node &config);
@@ -36,8 +36,8 @@ private:
 	int _db2Color(double v);
 
 	// Params given at constructor time, cannot be changed
-	int _sampleRate;
-	int _baseFreq;
+	long int _sampleRate;
+	long int _baseFreq;
 	int N;
 	int _overlap;
 
