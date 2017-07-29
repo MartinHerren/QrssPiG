@@ -1,6 +1,5 @@
 #pragma once
 
-#include <chrono>
 #include <complex>
 #include <iostream>
 #include <string>
@@ -28,7 +27,6 @@ public:
 private:
 	void _addUploader(const YAML::Node &uploader);
 	void _init();
-	void _timeInit();
 
 	void _addIQ(std::complex<double> iq);
 	void _computeFft();
@@ -44,18 +42,10 @@ private:
 	int _sampleRate;
 	int _baseFreq;
 
-	// Image format
-	int _secondsPerFrame;
-	int _frameSize;
-
-	double _samplesPerLine;
-	double _linesPerSecond;
-
 	double *_hannW;
 	QGFft *_fft;
 
-	int _idx;
-	long _samples;
+	int _idx; // Current sample index in fft input
 
 	std::complex<double> *_in;
 	std::complex<double> *_fftIn;
@@ -64,8 +54,5 @@ private:
 	QGImage *_im;
 	QGUploader *_up;
 
-	int _lastLine;
-	int _lastFrame;
-
-	std::chrono::milliseconds _started;
+	int _frameIndex;
 };

@@ -10,8 +10,6 @@ QrssPiG::QrssPiG() :
 	_format(Format::U8IQ),
 	_sampleRate(2000),
 	_baseFreq(0),
-	_secondsPerFrame(600),
-	_frameSize(1000),
 	_up(nullptr) {
 		_N = 2048;
 		_overlap = (3 * _N) / 4;
@@ -71,7 +69,7 @@ QrssPiG::QrssPiG(const std::string &configFile) : QrssPiG() {
 		}
 	}
 
-	// Must be done here, so that _im exists when configuringit
+	// Must be done here, so that _im exists when configuring it
 	_init();
 
 	if (config["output"]) {
@@ -80,12 +78,6 @@ QrssPiG::QrssPiG(const std::string &configFile) : QrssPiG() {
 		YAML::Node output = config["output"];
 
 		_im->configure(output);
-
-		// TODO whole timing is wrong
-		if (output["secondsperframe"]) _secondsPerFrame = output["secondsperframe"].as<int>();
-		if (output["framesize"]) _frameSize = output["framesize"].as<int>();
-
-		// TODO: overlap must be done here and in image
 	}
 
 	if (config["upload"]) {
@@ -107,7 +99,7 @@ QrssPiG::QrssPiG(const std::string &configFile) : QrssPiG() {
 QrssPiG::~QrssPiG() {
 	// Draw residual data if any
 	try {
-		_im->drawLine(_fftOut, _lastLine);
+		_im->addLine(_fftOut);
 	} catch (const std::exception &e) {};
 
 	_pushImage();
@@ -132,7 +124,7 @@ void QrssPiG::run() {
 			}
 			break;
 		}
-	
+
 		case Format::S8IQ: {
 			signed char i, q;
 			while (std::cin) {
@@ -212,11 +204,6 @@ void QrssPiG::_init() {
 	_fftIn = _fft->getInputBuffer();
 	_fftOut = _fft->getFftBuffer();
 
-	_samplesPerLine = (double)(_sampleRate * _secondsPerFrame) / _frameSize;
-	_linesPerSecond = (double)_frameSize / _secondsPerFrame;
-	_lastLine = -1;
-	_lastFrame = -1;
-
 	_im = new QGImage(_sampleRate, _baseFreq, _N, _overlap);
 
 	_hannW = new double[_N];
@@ -226,21 +213,11 @@ void QrssPiG::_init() {
 	}
 
 	_idx = 0;
-
-	_timeInit();
-}
-
-void QrssPiG::_timeInit() {
-	using namespace std::chrono;
-	_started = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
-	_samples = 0;
+	_frameIndex = 0;
 }
 
 void QrssPiG::_addIQ(std::complex<double> iq) {
-	if (_samples == 0) _im->startFrame(_started);
-
 	_in[_idx++] = iq;
-	_samples++;
 
 	if (_idx >= _N) {
 		_computeFft();
@@ -250,34 +227,22 @@ void QrssPiG::_addIQ(std::complex<double> iq) {
 }
 
 void QrssPiG::_computeFft() {
-	using namespace std::chrono;
-
-	long timeMs = _started.count() + 1000. * _samples / _sampleRate;
-	long frameTimeMs = timeMs - (timeMs / (_secondsPerFrame * 1000)) * (_secondsPerFrame * 1000);
-	long frameLine = int(frameTimeMs * _linesPerSecond / 1000) % _frameSize;
-
 	for (int i = 0; i < _N; i++) _fftIn[i] = _in[i] * _hannW[i / 2];
 	_fft->process();
-
-	//if ((_lastLine > 0) && (_lastLine != frameLine)) {
-		//_im->drawLine(_fftOut, frameLine);
-		_im->drawLine(_fftOut, ++_lastLine);
-		if (frameLine >= _frameSize - 1) _pushImage();
-	//}
-
-	//_lastLine = frameLine;
+	if (_im->addLine(_fftOut) == QGImage::Status::FrameReady) _pushImage();
 }
 
 void QrssPiG::_pushImage() {
 	std::string s("test");
-	int p = 0;
 
 	try {
 		_im->save2Buffer();
-		if (_up) _up->push(s + std::to_string(p) + ".png", _im->getBuffer(), _im->getBufferSize());
+		if (_up) _up->push(s + "_" + std::to_string(_frameIndex) + ".png", _im->getBuffer(), _im->getBufferSize());
+		_im->startNewFrame();
 std::cout << "pushed" << std::endl;
 	} catch (const std::exception &e) {
 		std::cerr << "Error pushing file: " << e.what() << std::endl;
 	}
-	p++;
+	
+	_frameIndex++;
 }

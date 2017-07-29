@@ -6,10 +6,13 @@
 #include <math.h>
 
 QGImage::QGImage(long int sampleRate, long int baseFreq, int fftSize, int fftOverlap): _sampleRate(sampleRate), _baseFreq(baseFreq), N(fftSize), _overlap(fftOverlap) {
-	_c = nullptr;
+	_im = nullptr;
 	_imBuffer = nullptr;
 	_imBufferSize = 0;
-	_im = nullptr;
+	_c = nullptr;
+	_cd = 0;
+	_started = std::chrono::milliseconds(0);
+	_currentLine = 0;
 
 	configure(YAML::Load("")); // Start with default config
 }
@@ -22,10 +25,10 @@ void QGImage::configure(const YAML::Node &config) {
 	_free();
 
 	// Configure and calculate size
-	int spf = 10 * 60;
-	if (config["minutesperframe"]) spf = config["minutesperframe"].as<int>() *  60;
-	if (config["secondsperframe"]) spf = config["secondsperframe"].as<int>();
-	_size = (spf * _sampleRate) / (N - _overlap);
+	_secondsPerFrame = 10 * 60;
+	if (config["minutesperframe"]) _secondsPerFrame = config["minutesperframe"].as<int>() *  60;
+	if (config["secondsperframe"]) _secondsPerFrame = config["secondsperframe"].as<int>();
+	_size = (_secondsPerFrame * _sampleRate) / (N - _overlap);
 
 	// Configure orientation
 	_orientation = Orientation::Horizontal;
@@ -67,9 +70,15 @@ void QGImage::configure(const YAML::Node &config) {
 	_init();
 	_drawFreqScale();
 	_drawDbScale();
+
+	using namespace std::chrono;
+	_started = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
+	// TODO: configure start from config file
+
+	startNewFrame(false);
 }
 
-void QGImage::startFrame(std::chrono::milliseconds startTime) {
+void QGImage::startNewFrame(bool incrementTime) {
 	switch (_orientation) {
 	case Orientation::Horizontal:
 		gdImageFilledRectangle(_im, _freqLabelWidth + 10, _fDelta, _freqLabelWidth + 10 + _size + 100, 0, gdTrueColor(0, 0, 0));
@@ -80,11 +89,16 @@ void QGImage::startFrame(std::chrono::milliseconds startTime) {
 		break;
 	}
 
-	_drawTimeScale(startTime);
+	// TODO: fix started on secondsperframe boundary and fix currentline if necessary
+	if (incrementTime) _started += std::chrono::seconds(_secondsPerFrame);
+	_drawTimeScale();
+
+	_currentLine = 0;
 }
 
-void QGImage::drawLine(const std::complex<double> *fft, int lineNumber) {
-	if (lineNumber >= _size) return;
+QGImage::Status QGImage::addLine(const std::complex<double> *fft) {
+	if (_currentLine >= _size) return Status::FrameReady;
+
 	int whiteA = gdTrueColorAlpha(255, 255, 255, 125);
 
 	// Draw a data line DC centered
@@ -95,18 +109,24 @@ void QGImage::drawLine(const std::complex<double> *fft, int lineNumber) {
 
 		switch (_orientation) {
 		case Orientation::Horizontal:
-			gdImageSetPixel(_im, _freqLabelWidth + 10 + lineNumber, _fDelta + _fMin - i, _db2Color(v));
+			gdImageSetPixel(_im, _freqLabelWidth + 10 + _currentLine, _fDelta + _fMin - i, _db2Color(v));
 			if (i != _fMin) gdImageLine(_im, _freqLabelWidth + 10 + _size - last, _fDelta + _fMin - i + 1, _freqLabelWidth + 10 + _size - v, _fDelta + _fMin - i, whiteA);
 			break;
 
 		case Orientation::Vertical:
-			gdImageSetPixel(_im, _dBLabelWidth + 10 + i, _freqLabelHeight + 10 + lineNumber, _db2Color(v));
+			gdImageSetPixel(_im, _dBLabelWidth + 10 + i, _freqLabelHeight + 10 + _currentLine, _db2Color(v));
 			if (i > 0) gdImageLine(_im, _dBLabelWidth + 10 + i - 1, _freqLabelHeight + 10 + _size - last, _dBLabelWidth + 10 + i, _freqLabelHeight + 10 + _size - v, whiteA);
 			break;
 		}
 
 		last = v;
 	}
+
+	_currentLine++;
+
+	if (_currentLine >= _size) return Status::FrameReady;
+
+	return Status::Ok;
 }
 
 void QGImage::save2Buffer() { // TODO ? return buffer and size ?
@@ -157,6 +177,8 @@ void QGImage::_init() {
 	for (int i = 0; i <= 255; i+= 4) _c[ii++] = gdImageColorAllocate(_im, 0, i, 255);
 	for (int i = 0; i <= 255; i+= 4) _c[ii++] = gdImageColorAllocate(_im, i, 255, 255 - i);
 	for (int i = 0; i <= 255; i+= 4) _c[ii++] = gdImageColorAllocate(_im, 255, 255 - i, 0);
+
+	_currentLine = 0;
 }
 
 void QGImage::_free() {
@@ -299,7 +321,7 @@ void QGImage::_drawDbScale() {
 	}
 }
 
-void QGImage::_drawTimeScale(std::chrono::milliseconds startTime) {
+void QGImage::_drawTimeScale() {
 	int topLeftX, topLeftY;
 	int tickStep, labelStep;
 	int white = gdTrueColor(255, 255, 255);
@@ -310,6 +332,7 @@ void QGImage::_drawTimeScale(std::chrono::milliseconds startTime) {
 		topLeftY = _fDelta;
 		tickStep = 10;
 		labelStep = 100;
+		gdImageFilledRectangle(_im, 0, topLeftY + 10, topLeftX, topLeftY + 10 + _dBLabelHeight, gdTrueColor(0, 0, 0));
 		gdImageFilledRectangle(_im, topLeftX, topLeftY, topLeftX + _size, topLeftY + 10 + _dBLabelHeight, gdTrueColor(0, 0, 0));
 	} else {
 		topLeftX = 0;
@@ -321,7 +344,7 @@ void QGImage::_drawTimeScale(std::chrono::milliseconds startTime) {
 
 	// Time labels with long ticks
 	for (int i = 0; i < _size; i += labelStep) {
-		std::chrono::milliseconds t = startTime + std::chrono::seconds((i * (N - _overlap)) / _sampleRate);
+		std::chrono::milliseconds t = _started + std::chrono::seconds((i * (N - _overlap)) / _sampleRate);
 		int hh = std::chrono::duration_cast<std::chrono::hours>(t).count() % 24;
 		int mm = std::chrono::duration_cast<std::chrono::minutes>(t).count() % 60;
 		int ss = std::chrono::duration_cast<std::chrono::seconds>(t).count() % 60;

@@ -11,14 +11,15 @@
 class QGImage {
 public:
 	enum class Orientation { Horizontal, Vertical };
+	enum class Status { Ok, FrameReady };
 
 	QGImage(long int sampleRate, long int baseFreq, int fftSize, int fftOverlap);
 	~QGImage();
 
 	void configure(const YAML::Node &config);
-	void startFrame(std::chrono::milliseconds startTime);
+	void startNewFrame(bool incrementTime = true);
 
-	void drawLine(const std::complex<double> *fft, int lineNumber);
+	Status addLine(const std::complex<double> *fft);
 	void save2Buffer();
 	void save(const std::string &fileName);
 
@@ -31,7 +32,7 @@ private:
 
 	void _drawFreqScale();
 	void _drawDbScale();
-	void _drawTimeScale(std::chrono::milliseconds startTime);
+	void _drawTimeScale();
 
 	int _db2Color(double v);
 
@@ -43,6 +44,7 @@ private:
 
 	// Configuration
 	Orientation _orientation;
+	int _secondsPerFrame;
 	int _size;
 
 	std::string _font;
@@ -65,6 +67,8 @@ private:
 	int _imBufferSize;
 	int *_c;
 	int _cd; // Color depth
+	std::chrono::milliseconds _started; // current frame start
+	int _currentLine;
 
 	int _freqLabelWidth;
 	int _freqLabelHeight;
