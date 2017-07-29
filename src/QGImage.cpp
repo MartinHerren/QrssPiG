@@ -24,12 +24,6 @@ QGImage::~QGImage() {
 void QGImage::configure(const YAML::Node &config) {
 	_free();
 
-	// Configure and calculate size
-	_secondsPerFrame = 10 * 60;
-	if (config["minutesperframe"]) _secondsPerFrame = config["minutesperframe"].as<int>() *  60;
-	if (config["secondsperframe"]) _secondsPerFrame = config["secondsperframe"].as<int>();
-	_size = (_secondsPerFrame * _sampleRate) / (N - _overlap);
-
 	// Configure orientation
 	_orientation = Orientation::Horizontal;
 	if (config["orientation"]) {
@@ -40,9 +34,17 @@ void QGImage::configure(const YAML::Node &config) {
 		else throw std::runtime_error("QGImage::configure: output orientation unrecognized");
 	}
 
+	// Configure and calculate size
+	_secondsPerFrame = 10 * 60;
+	if (config["minutesperframe"]) _secondsPerFrame = config["minutesperframe"].as<int>() *  60;
+	if (config["secondsperframe"]) _secondsPerFrame = config["secondsperframe"].as<int>();
+	_size = (_secondsPerFrame * _sampleRate) / (N - _overlap);
+
 	// Configure font
 	_font = "ttf-dejavu/DejaVuSans.ttf";
+	if (config["font"]) _font = config["font"].as<std::string>();
 	_fontSize = 8;
+	if (config["fontsize"]) _fontSize = config["fontsize"].as<int>();
 
 	// Configure freq range, default value doesn't depend on base freq. In config file freq is given as absolute frequency unless freqrel is set to true
 	bool fRel = false;
@@ -288,7 +290,7 @@ void QGImage::_drawDbScale() {
 
 		// Calculate text's bounding box
 		int brect[8];
-		gdImageStringFT(nullptr, brect, white, (char *)_font.c_str(), 8, 0, 0, 0, (char *)text.str().c_str());
+		gdImageStringFT(nullptr, brect, white, (char *)_font.c_str(), _fontSize, 0, 0, 0, (char *)text.str().c_str());
 
 		// Fix position according to bounding box to be nicely aligned with tick-markers
 		int x, y;
@@ -301,7 +303,7 @@ void QGImage::_drawDbScale() {
 			y = topLeftY - i - .5 * (brect[1] + brect[7]);
 		}
 
-		gdImageStringFT(_im, brect, white, (char *)_font.c_str(), 8, 0, x, y, (char *)text.str().c_str());
+		gdImageStringFT(_im, brect, white, (char *)_font.c_str(), _fontSize, 0, x, y, (char *)text.str().c_str());
 	}
 
 	// Tick markers
@@ -361,7 +363,7 @@ void QGImage::_drawTimeScale() {
 
 		// Calculatre text's bounding box
 		int brect[8];
-		gdImageStringFT(nullptr, brect, white, (char *)_font.c_str(), 8, 0, 0, 0, (char *)s.str().c_str());
+		gdImageStringFT(nullptr, brect, white, (char *)_font.c_str(), _fontSize, 0, 0, 0, (char *)s.str().c_str());
 
 		// Fix position according to bounding box
 		int x, y;
@@ -376,7 +378,7 @@ void QGImage::_drawTimeScale() {
 			gdImageLine(_im, topLeftX + _dBLabelWidth, topLeftY + i, topLeftX + _dBLabelWidth + 9, topLeftY + i, white);
 		}
 
-		gdImageStringFT(_im, brect, white, (char *)_font.c_str(), 8, 0, x, y, (char *)s.str().c_str());
+		gdImageStringFT(_im, brect, white, (char *)_font.c_str(), _fontSize, 0, x, y, (char *)s.str().c_str());
 	}
 
 	// Small tick markers

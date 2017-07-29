@@ -7,13 +7,14 @@ processing:
   fftoverlap: 7
 output:
   orientation: horizontal
+  minutesperframe: 10
+  font: "ttf-dejavu/DejaVuSans.ttf"
+  fontsize: 16
   freqrel: true
   freqmin: 0
   freqmax: 2500
   dBmin: -30
   dBmax: 0
-  secondsperframe: 1200
-  framesize: 500
 upload:
   - type: local
     dir: /tmp
