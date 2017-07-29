@@ -67,15 +67,23 @@ void QGImage::configure(const YAML::Node &config) {
 	if (config["dBmax"]) _dBmax = config["dBmax"].as<int>();
 	_dBdelta = _dBmax - _dBmin;
 
+	// Configure start time
+	using namespace std::chrono;
+	_started = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
+	if (config["started"]) {
+		// TODO: configure start from config file
+	}
+	milliseconds intoFrame = _started % seconds(_secondsPerFrame); // Time into first frame to align frames on correct boundary
+	_started -= intoFrame;
+
 	_init();
 	_drawFreqScale();
 	_drawDbScale();
 
-	using namespace std::chrono;
-	_started = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
-	// TODO: configure start from config file
-
 	startNewFrame(false);
+
+	// Fix first _currentLine according to intoFrame;
+	_currentLine = (intoFrame.count() * _sampleRate) / (1000 * (N - _overlap));
 }
 
 void QGImage::startNewFrame(bool incrementTime) {
