@@ -38,6 +38,34 @@ $ make
 ```
 
 ## Run
+### Piping from audio device using alsa including resampling using sox
+You need arecord and sox to be installed
+```
+arecord -q -t raw -f S16_LE -r 48000 -d 600 | sox -t s16 -c 1 -r 48000 - -t s16 -c 2 -r 6000 - remix 1 0 | ./src/QrssPiG -c qrss.yaml
+```
+arecord is used to record from the standard audio input as raw audio data without header in signed 16 bit little-endian format with 48kHz samplerate during 600 seconds. Output is sent to standard out.
+sox is used to resample audio from 48kHz to 6kHz to lower processing and create a stereo signal with the audio data on the left channel and the right one silent. Reads from stdin and writes to stdout.
+In the qrss.yaml config file you must set the sample rate to 6000 and the format to s16iq like in the following example:
+```
+input:
+  format: s16iq
+  samplerate: 6000
+  basefreq: 10139000
+processing:
+  fft: 4096
+  fftoverlap: 7
+output:
+  orientation: horizontal
+  freqrel: true
+  freqmin: 300
+  freqmax: 2700
+  dBmin: -30
+  dBmax: 0
+  minutesperframe: 10
+upload:
+  type: local
+```
+
 ### Piping from rtl_sdr
 You need rtl_sdr installed. From your build directory
 ```
