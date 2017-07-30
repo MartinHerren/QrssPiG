@@ -73,7 +73,11 @@ void QGImage::configure(const YAML::Node &config) {
 	using namespace std::chrono;
 	_started = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
 	if (config["started"]) {
-		// TODO: configure start from config file
+		std::tm tm = {};
+		std::stringstream ss(config["started"].as<std::string>());
+		ss >> std::get_time(&tm, "%Y-%m-%d %H:%M:%S");
+		tm.tm_isdst = 0; // TODO: it is taken in local winter time. Should be taken in UTC
+		_started = duration_cast<milliseconds>(system_clock::from_time_t(std::mktime(&tm)).time_since_epoch());
 	}
 	milliseconds intoFrame = _started % seconds(_secondsPerFrame); // Time into first frame to align frames on correct boundary
 	_started -= intoFrame;
@@ -99,7 +103,6 @@ void QGImage::startNewFrame(bool incrementTime) {
 		break;
 	}
 
-	// TODO: fix started on secondsperframe boundary and fix currentline if necessary
 	if (incrementTime) _started += std::chrono::seconds(_secondsPerFrame);
 	_drawTimeScale();
 
