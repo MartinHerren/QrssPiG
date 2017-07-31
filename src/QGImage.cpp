@@ -74,9 +74,15 @@ void QGImage::configure(const YAML::Node &config) {
 	if (config["started"]) {
 		std::tm tm = {};
 		std::stringstream ss(config["started"].as<std::string>());
-		ss >> std::get_time(&tm, "%Y-%m-%d %H:%M:%S");
-		tm.tm_isdst = 0; // TODO: it is taken in local winter time. Should be taken in UTC
+		ss >> std::get_time(&tm, "%Y-%m-%dT%H:%M:%SZ");
+		// mktime takes time in local time. Should be taken in UTC, patched below
 		_started = duration_cast<milliseconds>(system_clock::from_time_t(std::mktime(&tm)).time_since_epoch());
+
+		// Calculate difference from UTC and local winter time to fix _started
+		time_t t0 = time(nullptr);
+
+		// Fix started time to be in UTC
+		_started += seconds(mktime(localtime(&t0)) - mktime(gmtime(&t0)));
 	}
 	milliseconds intoFrame = _started % seconds(_secondsPerFrame); // Time into first frame to align frames on correct boundary
 	_started -= intoFrame;
