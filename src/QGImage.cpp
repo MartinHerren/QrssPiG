@@ -8,7 +8,6 @@
 QGImage::QGImage(long int sampleRate, long int baseFreq, int fftSize, int fftOverlap): _sampleRate(sampleRate), _baseFreq(baseFreq), N(fftSize), _overlap(fftOverlap) {
 	_im = nullptr;
 	_imBuffer = nullptr;
-	_imBufferSize = 0;
 	_c = nullptr;
 	_cd = 0;
 	_started = std::chrono::milliseconds(0);
@@ -142,18 +141,20 @@ QGImage::Status QGImage::addLine(const std::complex<double> *fft) {
 	return Status::Ok;
 }
 
-void QGImage::save2Buffer() { // TODO ? return buffer and size ?
+char *QGImage::getFrame(int *frameSize, std::string &frameName) {
 	if (_imBuffer) gdFree(_imBuffer);
 
-	_imBuffer = (char *)gdImagePngPtr(_im, &_imBufferSize);
-}
+	// TODO: check if pointer always the same, so call once only
+	_imBuffer = (char *)gdImagePngPtr(_im, frameSize);
 
-void QGImage::save(const std::string &fileName) {
-	FILE *pngout;
+	time_t t = std::chrono::duration_cast<std::chrono::seconds>(_started).count();
+	std::tm *tm = {};
+	tm = std::gmtime(&t);
+	char s[21];
+	std::strftime(s, sizeof(s), "%FT%TZ", tm);
+	frameName = std::string(s) + "_" + std::to_string(_baseFreq) + "Hz.png";
 
-	pngout = fopen(fileName.c_str(), "wb");
-	gdImagePng(_im, pngout);
-	fclose(pngout);
+	return _imBuffer;
 }
 
 // Private members

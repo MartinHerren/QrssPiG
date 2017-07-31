@@ -233,16 +233,19 @@ void QrssPiG::_computeFft() {
 }
 
 void QrssPiG::_pushImage() {
-	std::string s("test");
-
 	try {
-		_im->save2Buffer();
-		if (_up) _up->push(s + "_" + std::to_string(_frameIndex) + ".png", _im->getBuffer(), _im->getBufferSize());
+		int frameSize;
+		std::string frameName;
+		char * frame;
+
+		frame = _im->getFrame(&frameSize, frameName);
+		if (_up) _up->push(frameName, frame, frameSize);
+std::cout << "pushed " << frameName << std::endl;
+
 		_im->startNewFrame();
-std::cout << "pushed" << std::endl;
 	} catch (const std::exception &e) {
 		std::cerr << "Error pushing file: " << e.what() << std::endl;
 	}
-	
+
 	_frameIndex++;
 }

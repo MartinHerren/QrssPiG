@@ -17,14 +17,10 @@ public:
 	~QGImage();
 
 	void configure(const YAML::Node &config);
+
 	void startNewFrame(bool incrementTime = true);
-
 	Status addLine(const std::complex<double> *fft);
-	void save2Buffer();
-	void save(const std::string &fileName);
-
-	char *getBuffer() { return _imBuffer; };
-	int getBufferSize() { return _imBufferSize;} ;
+	char *getFrame(int *frameSize, std::string &frameName);
 
 private:
 	void _init();
@@ -64,7 +60,6 @@ private:
 	// Internal data
 	gdImagePtr _im;
 	char *_imBuffer;
-	int _imBufferSize;
 	int *_c;
 	int _cd; // Color depth
 	std::chrono::milliseconds _started; // current frame start
