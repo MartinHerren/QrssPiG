@@ -102,7 +102,8 @@ QrssPiG::~QrssPiG() {
 		_im->addLine(_fftOut);
 	} catch (const std::exception &e) {};
 
-	_pushImage();
+	// Push and wait on dtor
+	_pushImage(true);
 
 	if (_hannW) delete [] _hannW;
 	if (_fft) delete _fft;
@@ -232,15 +233,16 @@ void QrssPiG::_computeFft() {
 	if (_im->addLine(_fftOut) == QGImage::Status::FrameReady) _pushImage();
 }
 
-void QrssPiG::_pushImage() {
+void QrssPiG::_pushImage(bool wait) {
 	try {
 		int frameSize;
 		std::string frameName;
 		char * frame;
 
 		frame = _im->getFrame(&frameSize, frameName);
-		if (_up) _up->push(frameName, frame, frameSize);
-std::cout << "pushed " << frameName << std::endl;
+
+std::cout << "pushing " << frameName << std::endl;
+		if (_up) _up->push(frameName, frame, frameSize, wait);
 
 		_im->startNewFrame();
 	} catch (const std::exception &e) {

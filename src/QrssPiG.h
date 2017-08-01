@@ -30,7 +30,7 @@ private:
 
 	void _addIQ(std::complex<double> iq);
 	void _computeFft();
-	void _pushImage();
+	void _pushImage(bool wait = false);
 
 private:
 	// FFT size

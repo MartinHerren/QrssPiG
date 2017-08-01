@@ -9,8 +9,8 @@ public:
 	QGLocalUploader(const std::string &dir = "./");
 	~QGLocalUploader();
 
-	void push(const std::string &fileName, const char *data, int dataSize);
-
 private:
+	void _pushThreadImpl(const std::string &fileName, const char *data, int dataSize);
+	
 	std::string _dir;
 };
