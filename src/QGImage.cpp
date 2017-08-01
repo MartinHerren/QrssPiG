@@ -74,7 +74,14 @@ void QGImage::configure(const YAML::Node &config) {
 	if (config["started"]) {
 		std::tm tm = {};
 		std::stringstream ss(config["started"].as<std::string>());
-		ss >> std::get_time(&tm, "%Y-%m-%dT%H:%M:%SZ");
+
+		//ss >> std::get_time(&tm, "%Y-%m-%dT%H:%M:%SZ"); // std::get_time() not supported on Travis' Ubuntu 14.04 build system
+		std::string c; // to hold separators
+		ss >> std::setw(4) >> tm.tm_year >> std::setw(1) >> c >> std::setw(2) >> tm.tm_mon >> std::setw(1) >> c >> std::setw(2) >> tm.tm_mday >> std::setw(1) >> c
+			>> std::setw(2) >> tm.tm_hour >> std::setw(1) >> c >> std::setw(2) >> tm.tm_min >> std::setw(1) >> c >> std::setw(2) >> tm.tm_sec >> std::setw(1) >> c;
+		tm.tm_year -= 1900; // Fix to years since 1900s
+		tm.tm_mon -= 1; // Fix to 0-11 range
+
 		// mktime takes time in local time. Should be taken in UTC, patched below
 		_started = duration_cast<milliseconds>(system_clock::from_time_t(std::mktime(&tm)).time_since_epoch());
 
