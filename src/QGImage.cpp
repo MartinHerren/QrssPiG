@@ -12,8 +12,6 @@ QGImage::QGImage(long int sampleRate, long int baseFreq, int fftSize, int fftOve
 	_cd = 0;
 	_started = std::chrono::milliseconds(0);
 	_currentLine = 0;
-
-	configure(YAML::Load("")); // Start with default config
 }
 
 QGImage::~QGImage() {

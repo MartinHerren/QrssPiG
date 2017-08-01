@@ -32,6 +32,8 @@ QrssPiG::QrssPiG(const std::string &format, int sampleRate, int N, const std::st
 	}
 
 	_init();
+
+	_im->configure(YAML::Load("")); // Start with default config
 }
 
 QrssPiG::QrssPiG(const std::string &configFile) : QrssPiG() {
@@ -78,6 +80,8 @@ QrssPiG::QrssPiG(const std::string &configFile) : QrssPiG() {
 		YAML::Node output = config["output"];
 
 		_im->configure(output);
+	} else {
+		_im->configure(YAML::Load("")); // Start with default config
 	}
 
 	if (config["upload"]) {
