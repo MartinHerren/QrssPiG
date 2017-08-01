@@ -113,12 +113,13 @@ QrssPiG::~QrssPiG() {
 }
 
 void QrssPiG::run() {
+	_running = true;
 	std::cin >> std::noskipws;
 
 	switch (_format) {
 		case Format::U8IQ: {
 			unsigned char i, q;
-			while (std::cin) {
+			while (std::cin && _running) {
 				i = std::cin.get();
 				q = std::cin.get();
 				_addIQ(std::complex<double>((i - 128) / 128., (q - 128) / 128.));
@@ -128,7 +129,7 @@ void QrssPiG::run() {
 
 		case Format::S8IQ: {
 			signed char i, q;
-			while (std::cin) {
+			while (std::cin && _running) {
 				i = std::cin.get();
 				q = std::cin.get();
 				_addIQ(std::complex<double>(i / 128., q / 128.));
@@ -138,7 +139,7 @@ void QrssPiG::run() {
 
 		case Format::U16IQ: {
 			unsigned short int i, q;
-			while (std::cin) {
+			while (std::cin && _running) {
 				i = std::cin.get();
 				i += std::cin.get() << 8;
 				q = std::cin.get();
@@ -150,7 +151,7 @@ void QrssPiG::run() {
 
 		case Format::S16IQ: {
 			signed short int i, q;
-			while (std::cin) {
+			while (std::cin && _running) {
 				i = std::cin.get();
 				i += std::cin.get() << 8;
 				q = std::cin.get();

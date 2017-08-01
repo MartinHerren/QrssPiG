@@ -24,6 +24,8 @@ public:
 
 	void run();
 
+	void stop() { _running = false; };
+
 private:
 	void _addUploader(const YAML::Node &uploader);
 	void _init();
@@ -32,7 +34,6 @@ private:
 	void _computeFft();
 	void _pushImage(bool wait = false);
 
-private:
 	// FFT size
 	int _N;
 	int _overlap; // 0: no overlap, 1: 1/2, 2: 2/3...
@@ -55,4 +56,6 @@ private:
 	QGUploader *_up;
 
 	int _frameIndex;
+
+	volatile bool _running;
 };

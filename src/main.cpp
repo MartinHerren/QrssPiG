@@ -1,11 +1,16 @@
 #include <boost/program_options.hpp>
+#include <csignal>
 
 #include "QrssPiG.h"
 
-int main(int argc, char *argv[]) {
-	QrssPiG *pig;
+QrssPiG *gPig = nullptr;
 
-	srand((unsigned) time(NULL));
+void signalHandler(int signal) { gPig->stop(); }
+
+int main(int argc, char *argv[]) {
+	signal(SIGINT, signalHandler);
+	signal(SIGTERM, signalHandler);
+	signal(SIGABRT, signalHandler);
 
 	try {
 		using namespace boost::program_options;
@@ -32,7 +37,7 @@ int main(int argc, char *argv[]) {
 		if (vm.count("configfile")) {
 			std::string configFile = vm["configfile"].as<std::string>();
 
-			pig = new QrssPiG(configFile);
+			gPig = new QrssPiG(configFile);
 		} else {
 			std::string format = "rtlsdr";
 			int sampleRate = 2000;
@@ -65,16 +70,16 @@ int main(int argc, char *argv[]) {
 				sshPort = vm["sshport"].as<int>();
 			}
 
-			pig = new QrssPiG(format, sampleRate, 2048, directory, sshHost, sshUser, sshPort);
+			gPig = new QrssPiG(format, sampleRate, 2048, directory, sshHost, sshUser, sshPort);
 		}
 	} catch (const boost::program_options::error &ex) {
 		std::cerr << ex.what() << std::endl;
 		exit(-1);
 	}
 
-	pig->run();
+	gPig->run();
 
-	delete pig;
+	delete gPig;
 
 	return 0;
 }
