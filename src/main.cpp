@@ -1,6 +1,7 @@
 #include <boost/program_options.hpp>
 #include <csignal>
 
+#include "Config.h"
 #include "QrssPiG.h"
 
 QrssPiG *gPig = nullptr;
@@ -8,6 +9,7 @@ QrssPiG *gPig = nullptr;
 void signalHandler(int signal) { gPig->stop(); }
 
 int main(int argc, char *argv[]) {
+	std::cout << QrssPiG_NAME << " v" << QrssPiG_VERSION_MAJOR << "." << QrssPiG_VERSION_MINOR << "." << QrssPiG_VERSION_PATCH << std::endl;
 	signal(SIGINT, signalHandler);
 	signal(SIGTERM, signalHandler);
 	signal(SIGABRT, signalHandler);
