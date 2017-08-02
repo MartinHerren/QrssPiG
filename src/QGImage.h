@@ -65,6 +65,10 @@ private:
 	std::chrono::milliseconds _started; // current frame start
 	int _currentLine;
 
+	std::string _qrsspigString;
+	int _qrsspigLabelBase;
+	int _qrsspigLabelWidth;
+	int _qrsspigLabelHeight;
 	int _freqLabelWidth;
 	int _freqLabelHeight;
 	int _dBLabelWidth;
