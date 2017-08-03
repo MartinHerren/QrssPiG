@@ -1,17 +1,18 @@
 #include "QGImage.h"
+#include "Config.h"
 
 #include <iomanip>
 #include <stdexcept>
 #include <string>
 #include <math.h>
 
-QGImage::QGImage(int sampleRate, int baseFreq, int N): _sampleRate(sampleRate), _baseFreq(baseFreq), N(N) {
-	_c = nullptr;
-	_imBuffer = nullptr;
-	_imBufferSize = 0;
+QGImage::QGImage(long int sampleRate, long int baseFreq, int fftSize, int fftOverlap): _sampleRate(sampleRate), _baseFreq(baseFreq), N(fftSize), _overlap(fftOverlap) {
 	_im = nullptr;
-
-	configure(YAML::Load("")); // Start with default config
+	_imBuffer = nullptr;
+	_c = nullptr;
+	_cd = 0;
+	_started = std::chrono::milliseconds(0);
+	_currentLine = 0;
 }
 
 QGImage::~QGImage() {
@@ -20,10 +21,6 @@ QGImage::~QGImage() {
 
 void QGImage::configure(const YAML::Node &config) {
 	_free();
-
-	// Configure size TODO use secondes per frame ?
-	_size = 600;
-	if (config["framesize"]) _size = config["framesize"].as<int>();
 
 	// Configure orientation
 	_orientation = Orientation::Horizontal;
@@ -35,24 +32,44 @@ void QGImage::configure(const YAML::Node &config) {
 		else throw std::runtime_error("QGImage::configure: output orientation unrecognized");
 	}
 
+	// Configure and calculate size
+	_secondsPerFrame = 10 * 60;
+	if (config["minutesperframe"]) _secondsPerFrame = config["minutesperframe"].as<int>() *  60;
+	if (config["secondsperframe"]) _secondsPerFrame = config["secondsperframe"].as<int>();
+	_size = (_secondsPerFrame * _sampleRate) / (N - _overlap);
+
 	// Configure font
 	_font = "ttf-dejavu/DejaVuSans.ttf";
+	if (config["font"]) _font = config["font"].as<std::string>();
 	_fontSize = 8;
+	if (config["fontsize"]) _fontSize = config["fontsize"].as<int>();
 
-	// Configure freq range, default value doesn't depend on base freq. In config file freq is given as absolute frequency unless freqrel is set to true
-	bool fRel = false;
-	_fMin = (0 * N) / _sampleRate;
-	_fMax = (2500 * N) / _sampleRate;
-	if (config["freqrel"]) fRel = config["freqrel"].as<bool>();
-	if (fRel) {
-		if (config["freqmin"]) _fMin = (config["freqmin"].as<int>() * N) / _sampleRate;
-		if (config["freqmin"]) _fMin = (config["freqmin"].as<int>() * N) / _sampleRate;
-	} else {
-		if (config["freqmax"]) _fMax = ((config["freqmax"].as<int>() - _baseFreq) * N) / _sampleRate;
-		if (config["freqmax"]) _fMax = ((config["freqmax"].as<int>() - _baseFreq) * N) / _sampleRate;
+	// Configure freq range, default value to full range of positive and negative
+	_fMin = -N / 2;
+	_fMax = N / 2;
+	if (config["freqmin"]) {
+		long int f = config["freqmin"].as<long int>();
+
+		if ((f >= -_sampleRate / 2) && (f <= _sampleRate / 2)) {
+			_fMin = (int)((f * N) / _sampleRate);
+		} else if ((f - _baseFreq >= -_sampleRate / 2) && (f - _baseFreq <= _sampleRate / 2)) {
+			_fMin = (int)(((f - _baseFreq) * N) / _sampleRate);
+		} else {
+			throw std::runtime_error("QGImage::configure: freqmin out of range");
+		}
 	}
-	if ((_fMin < -N / 2 + 1) || (_fMin > N / 2 - 1)) throw std::runtime_error("QGImage::configure: freqmin out of range");
-	if ((_fMax < -N / 2 + 1) || (_fMax > N / 2 - 1)) throw std::runtime_error("QGImage::configure: freqmax out of range");
+	if (config["freqmax"]) {
+		long int f = config["freqmax"].as<long int>();
+
+		if ((f >= -_sampleRate / 2) && (f <= _sampleRate / 2)) {
+			_fMax = (int)((f * N) / _sampleRate);
+		} else if ((f - _baseFreq >= -_sampleRate / 2) && (f - _baseFreq <= _sampleRate / 2)) {
+			_fMax = (int)(((f - _baseFreq) * N) / _sampleRate);
+		} else {
+			throw std::runtime_error("QGImage::configure: freqmax out of range");
+		}
+	}
+	if (_fMin >= _fMax) std::runtime_error("QGImage::configure: freqmin must be lower than freqmax");
 	_fDelta = _fMax - _fMin;
 
 	// Configure db range
@@ -62,12 +79,58 @@ void QGImage::configure(const YAML::Node &config) {
 	if (config["dBmax"]) _dBmax = config["dBmax"].as<int>();
 	_dBdelta = _dBmax - _dBmin;
 
+	// Optionally don't align frames
+	bool align = true;
+	if (config["noalign"]) {
+		std::string s = config["noalign"].as<std::string>();
+		if ((s.compare("true") == 0) || (s.compare("yes") == 0)) align = false;
+		else if ((s.compare("false") == 0) || (s.compare("no") == 0)) align = true;
+		else throw std::runtime_error("QGImage::configure: illegal value for noalign");
+	}
+
+	// Configure start time
+	using namespace std::chrono;
+	_started = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
+	if (config["started"]) {
+		std::tm tm = {};
+		std::stringstream ss(config["started"].as<std::string>());
+
+		//ss >> std::get_time(&tm, "%Y-%m-%dT%H:%M:%SZ"); // std::get_time() not supported on Travis' Ubuntu 14.04 build system
+		std::string c; // to hold separators
+		ss >> std::setw(4) >> tm.tm_year >> std::setw(1) >> c >> std::setw(2) >> tm.tm_mon >> std::setw(1) >> c >> std::setw(2) >> tm.tm_mday >> std::setw(1) >> c
+			>> std::setw(2) >> tm.tm_hour >> std::setw(1) >> c >> std::setw(2) >> tm.tm_min >> std::setw(1) >> c >> std::setw(2) >> tm.tm_sec >> std::setw(1) >> c;
+		tm.tm_year -= 1900; // Fix to years since 1900s
+		tm.tm_mon -= 1; // Fix to 0-11 range
+
+		// mktime takes time in local time. Should be taken in UTC, patched below
+		_started = duration_cast<milliseconds>(system_clock::from_time_t(std::mktime(&tm)).time_since_epoch());
+
+		// Calculate difference from UTC and local winter time to fix _started
+		time_t t0 = time(nullptr);
+
+		// Fix started time to be in UTC
+		_started += seconds(mktime(localtime(&t0)) - mktime(gmtime(&t0)));
+	}
+
+	milliseconds intoFrame = _started % seconds(_secondsPerFrame); // Time into first frame to align frames on correct boundary
+
+	if (align) {
+		_started -= intoFrame;
+	}
+
 	_init();
 	_drawFreqScale();
 	_drawDbScale();
+
+	startNewFrame(false);
+
+	if (align) {
+		// Fix first _currentLine according to intoFrame, must be done after startNewFrame as startNewFrame sets it to zero
+		_currentLine = (intoFrame.count() * _sampleRate) / (1000 * (N - _overlap));
+	}
 }
 
-void QGImage::startFrame(time_t startTime) {
+void QGImage::startNewFrame(bool incrementTime) {
 	switch (_orientation) {
 	case Orientation::Horizontal:
 		gdImageFilledRectangle(_im, _freqLabelWidth + 10, _fDelta, _freqLabelWidth + 10 + _size + 100, 0, gdTrueColor(0, 0, 0));
@@ -78,11 +141,15 @@ void QGImage::startFrame(time_t startTime) {
 		break;
 	}
 
-	_drawTimeScale(startTime);
+	if (incrementTime) _started += std::chrono::seconds(_secondsPerFrame);
+	_drawTimeScale();
+
+	_currentLine = 0;
 }
 
-void QGImage::drawLine(const std::complex<double> *fft, int lineNumber) {
-	if (lineNumber >= _size) return;
+QGImage::Status QGImage::addLine(const std::complex<double> *fft) {
+	if (_currentLine >= _size) return Status::FrameReady;
+
 	int whiteA = gdTrueColorAlpha(255, 255, 255, 125);
 
 	// Draw a data line DC centered
@@ -93,41 +160,62 @@ void QGImage::drawLine(const std::complex<double> *fft, int lineNumber) {
 
 		switch (_orientation) {
 		case Orientation::Horizontal:
-			gdImageSetPixel(_im, _freqLabelWidth + 10 + lineNumber, _fDelta + _fMin - i, _db2Color(v));
+			gdImageSetPixel(_im, _freqLabelWidth + 10 + _currentLine, _fDelta + _fMin - i, _db2Color(v));
 			if (i != _fMin) gdImageLine(_im, _freqLabelWidth + 10 + _size - last, _fDelta + _fMin - i + 1, _freqLabelWidth + 10 + _size - v, _fDelta + _fMin - i, whiteA);
 			break;
 
 		case Orientation::Vertical:
-			gdImageSetPixel(_im, _dBLabelWidth + 10 + i, _freqLabelHeight + 10 + lineNumber, _db2Color(v));
-			if (i > 0) gdImageLine(_im, _dBLabelWidth + 10 + i - 1, _freqLabelHeight + 10 + _size - last, _dBLabelWidth + 10 + i, _freqLabelHeight + 10 + _size - v, whiteA);
+			gdImageSetPixel(_im, _dBLabelWidth + 10 - _fMin + i, _freqLabelHeight + 10 + _currentLine, _db2Color(v));
+			if (i != _fMin) gdImageLine(_im, _dBLabelWidth + 10 - _fMin + i - 1, _freqLabelHeight + 10 + _size - last, _dBLabelWidth + 10 - _fMin + i, _freqLabelHeight + 10 + _size - v, whiteA);
 			break;
 		}
 
 		last = v;
 	}
+
+	_currentLine++;
+
+	if (_currentLine >= _size) return Status::FrameReady;
+
+	return Status::Ok;
 }
 
-void QGImage::save2Buffer() { // TODO ? return buffer and size ?
+char *QGImage::getFrame(int *frameSize, std::string &frameName) {
 	if (_imBuffer) gdFree(_imBuffer);
 
-	_imBuffer = (char *)gdImagePngPtr(_im, &_imBufferSize);
-}
+	// _imBuffer is usually constant, but frameSize changes
+	// _imBuffer might change in case of realloc, so don't cache its value
+	_imBuffer = (char *)gdImagePngPtr(_im, frameSize);
 
-void QGImage::save(const std::string &fileName) {
-	FILE *pngout;
+	time_t t = std::chrono::duration_cast<std::chrono::seconds>(_started).count();
+	std::tm *tm = {};
+	tm = std::gmtime(&t);
+	char s[21];
+	std::strftime(s, sizeof(s), "%FT%TZ", tm);
+	frameName = std::string(s) + "_" + std::to_string(_baseFreq) + "Hz.png";
 
-	pngout = fopen(fileName.c_str(), "wb");
-	gdImagePng(_im, pngout);
-	fclose(pngout);
+	return _imBuffer;
 }
 
 // Private members
 void QGImage::_init() {
-	// Calculate max bounding boxes for labels
+	int white = gdTrueColor(255, 255, 255);
+	// Calculate max bounding boxes for labels, check font existence on first call
 	int brect[8];
+
+	std::stringstream ss;
+	ss << QrssPiG_NAME << " v" << QrssPiG_VERSION_MAJOR << "." << QrssPiG_VERSION_MINOR << "." << QrssPiG_VERSION_PATCH;
+	_qrsspigString = ss.str();
+	char * err = gdImageStringFT(nullptr, brect, 0, (char *)_font.c_str(), _fontSize, 0, 0, 0, const_cast<char *>(_qrsspigString.c_str()));
+	if (err) throw std::runtime_error(err);
+	_qrsspigLabelBase = brect[1];
+	_qrsspigLabelWidth = brect[2] - brect[0];
+	_qrsspigLabelHeight = brect[1] - brect[7];
+
 	gdImageStringFT(nullptr, brect, 0, (char *)_font.c_str(), _fontSize, 0, 0, 0, (char *)"000000000Hz");
 	_freqLabelWidth = brect[2] - brect[0];
 	_freqLabelHeight = brect[1] - brect[7];
+
 	gdImageStringFT(nullptr, brect, 0, (char *)_font.c_str(), _fontSize, 0, 0, 0, (char *)"-100dB");
 	_dBLabelWidth = brect[2] - brect[0];
 	_dBLabelHeight = brect[1] - brect[7];
@@ -135,11 +223,13 @@ void QGImage::_init() {
 	// Allocate canvas
 	switch (_orientation) {
 	case Orientation::Horizontal:
-		_im = gdImageCreateTrueColor(_freqLabelWidth + 10 + _size + 100 + 10 + _freqLabelWidth, _fDelta + 10 + _dBLabelHeight);
+		_im = gdImageCreateTrueColor(_freqLabelWidth + 10 + _size + 100 + 10 + _freqLabelWidth, _fDelta + 10 + _dBLabelHeight + _qrsspigLabelHeight);
+		gdImageStringFT(_im, brect, white, const_cast<char *>(_font.c_str()), _fontSize, 0, _freqLabelWidth + 10 + _size + 100 + 10 + _freqLabelWidth - _qrsspigLabelWidth, _fDelta + 10 + _qrsspigLabelHeight + _qrsspigLabelHeight - _qrsspigLabelBase, const_cast<char *>(_qrsspigString.c_str()));
 		break;
 
 	case Orientation::Vertical:
-		_im = gdImageCreateTrueColor(_dBLabelWidth + 10 + _fDelta, _freqLabelHeight + 10 + _size + 100 + 10 + _freqLabelHeight);
+		_im = gdImageCreateTrueColor(_dBLabelWidth + 10 + _fDelta, _freqLabelHeight + 10 + _size + 100 + 10 + _freqLabelHeight + _qrsspigLabelHeight);
+		gdImageStringFT(_im, brect, white, const_cast<char *>(_font.c_str()), _fontSize, 0, _dBLabelWidth + 10 + _fDelta - _qrsspigLabelWidth, _freqLabelHeight + 10 + _size + 100 + 10 + _freqLabelHeight + _qrsspigLabelHeight - _qrsspigLabelBase, const_cast<char *>(_qrsspigString.c_str()));
 		break;
 	}
 
@@ -152,6 +242,8 @@ void QGImage::_init() {
 	for (int i = 0; i <= 255; i+= 4) _c[ii++] = gdImageColorAllocate(_im, 0, i, 255);
 	for (int i = 0; i <= 255; i+= 4) _c[ii++] = gdImageColorAllocate(_im, i, 255, 255 - i);
 	for (int i = 0; i <= 255; i+= 4) _c[ii++] = gdImageColorAllocate(_im, 255, 255 - i, 0);
+
+	_currentLine = 0;
 }
 
 void QGImage::_free() {
@@ -168,6 +260,7 @@ void QGImage::_free() {
 void QGImage::_drawFreqScale() {
 	int topLeftX, topLeftY, topLeftX2, topLeftY2;
 	int tickStep, labelStep;
+	int black = gdTrueColor(0, 0, 0);
 	int white = gdTrueColor(255, 255, 255);
 
 	// Clear zones and set topLeft corners
@@ -178,8 +271,8 @@ void QGImage::_drawFreqScale() {
 		topLeftY2 = 0;
 		tickStep = 10;
 		labelStep = tickStep * 10;
-		gdImageFilledRectangle(_im, topLeftX, topLeftY, topLeftX + _freqLabelWidth + 10, topLeftY + _fDelta, gdTrueColor(0, 0, 0));
-		gdImageFilledRectangle(_im, topLeftX2, topLeftY2, topLeftX2 + 10 + _freqLabelWidth, topLeftY2 + _fDelta, gdTrueColor(0, 0, 0));
+		gdImageFilledRectangle(_im, topLeftX, topLeftY, topLeftX + _freqLabelWidth + 10, topLeftY + _fDelta, black);
+		gdImageFilledRectangle(_im, topLeftX2, topLeftY2, topLeftX2 + 10 + _freqLabelWidth, topLeftY2 + _fDelta, black);
 	} else {
 		topLeftX = _dBLabelWidth + 10;
 		topLeftY = 0;
@@ -187,18 +280,18 @@ void QGImage::_drawFreqScale() {
 		topLeftY2 = _freqLabelHeight + 10 + _size + 100;
 		tickStep = 10;
 		labelStep = tickStep * 10;
-		gdImageFilledRectangle(_im, topLeftX, topLeftY, topLeftX + _fDelta, topLeftY + _freqLabelWidth + 10, gdTrueColor(0, 0, 0));
-		gdImageFilledRectangle(_im, topLeftX2, topLeftY2, topLeftX2 + _fDelta, topLeftY2 + _freqLabelWidth + 10, gdTrueColor(0, 0, 0));
+		gdImageFilledRectangle(_im, topLeftX, topLeftY, topLeftX + _fDelta, topLeftY + _freqLabelHeight + 10, black);
+		gdImageFilledRectangle(_im, topLeftX2, topLeftY2, topLeftX2 + _fDelta, topLeftY2 + _freqLabelHeight + 10, black);
 	}
 
-	// Freq labels
+	// Freq labels with long ticks
 	for (int i = _fMin; i < _fMax; i += labelStep) {
 		std::stringstream f;
 		f << (_baseFreq + (i * _sampleRate) / N) << "Hz";
 
 		// Calculate text's bounding box
 		int brect[8];
-		gdImageStringFT(nullptr, brect, white, (char *)_font.c_str(), _fontSize, 0, 0, 0, (char *)f.str().c_str());
+		gdImageStringFT(nullptr, brect, 0, (char *)_font.c_str(), _fontSize, 0, 0, 0, (char *)f.str().c_str());
 
 		// Cache key data as they will be overriden when rendering first string
 		int x = brect[0], y = brect[1], w = brect[2] - brect[0], h = brect[1] - brect[7];
@@ -206,20 +299,24 @@ void QGImage::_drawFreqScale() {
 		if (_orientation == Orientation::Horizontal) {
 			gdImageStringFT(_im, brect, white, (char *)_font.c_str(), _fontSize, 0, topLeftX + _freqLabelWidth - w, topLeftY + _fDelta + _fMin - i - y + .5 * h, (char *)f.str().c_str());
 			gdImageStringFT(_im, brect, white, (char *)_font.c_str(), _fontSize, 0, topLeftX2 + 10, topLeftY2 + _fDelta + _fMin - i - y + .5 * h, (char *)f.str().c_str());
+			gdImageLine(_im, topLeftX + _freqLabelWidth, topLeftY + _fDelta + _fMin - i, topLeftX + _freqLabelWidth + 9, topLeftY + _fDelta + _fMin - i, white);
+			gdImageLine(_im, topLeftX2, topLeftY2 + _fDelta + _fMin - i, topLeftX2 + 9, topLeftY2 + _fDelta + _fMin - i, white);
 		} else {
-			gdImageStringFT(_im, brect, white, (char *)_font.c_str(), _fontSize, 0, topLeftX + i - w/2, topLeftY + _freqLabelHeight - x, (char *)f.str().c_str());
-			gdImageStringFT(_im, brect, white, (char *)_font.c_str(), _fontSize, 0, topLeftX2 + i - w/2, topLeftY2 + 10 + _freqLabelHeight - x, (char *)f.str().c_str());
+			gdImageStringFT(_im, brect, white, (char *)_font.c_str(), _fontSize, 0, topLeftX - _fMin + i - w/2, topLeftY + _freqLabelHeight, (char *)f.str().c_str());
+			gdImageStringFT(_im, brect, white, (char *)_font.c_str(), _fontSize, 0, topLeftX2 - _fMin + i - w/2, topLeftY2 + 10 + _freqLabelHeight, (char *)f.str().c_str());
+			gdImageLine(_im, topLeftX - _fMin + i, _freqLabelHeight, topLeftX - _fMin + i, _freqLabelHeight + 9, white);
+			gdImageLine(_im, topLeftX2 - _fMin + i, _freqLabelHeight + 10 + _size + 100, topLeftX2 - _fMin + i, _freqLabelHeight + 10 + _size + 100 + 9, white);
 		}
 	}
 
-	// Tick markersA
+	// Small tick markers
 	for (int i = _fMin; i < _fMax; i += tickStep) {
 		if (_orientation == Orientation::Horizontal) {
-			gdImageLine(_im, topLeftX + _freqLabelWidth + 1, topLeftY + _fDelta + _fMin - i, topLeftX + _freqLabelWidth + 9, topLeftY + _fDelta + _fMin - i, white);
-			gdImageLine(_im, topLeftX2 + 1, topLeftY2 + _fDelta + _fMin - i, topLeftX2 + 9, topLeftY2 + _fDelta + _fMin - i, white);
+			gdImageLine(_im, topLeftX + _freqLabelWidth + 5, topLeftY + _fDelta + _fMin - i, topLeftX + _freqLabelWidth + 9, topLeftY + _fDelta + _fMin - i, white);
+			gdImageLine(_im, topLeftX2, topLeftY2 + _fDelta + _fMin - i, topLeftX2 + 4, topLeftY2 + _fDelta + _fMin - i, white);
 		} else {
-			gdImageLine(_im, topLeftX + i, _freqLabelHeight + 1, topLeftX + i, _freqLabelHeight + 9, white);
-			gdImageLine(_im, topLeftX2 + i, _freqLabelHeight + 10 + _size + 100 + 1, topLeftX2 + i, _freqLabelHeight + 10 + _size + 100 + 9, white);
+			gdImageLine(_im, topLeftX - _fMin + i, _freqLabelHeight + 5, topLeftX - _fMin + i, _freqLabelHeight + 9, white);
+			gdImageLine(_im, topLeftX2 - _fMin + i, _freqLabelHeight + 10 + _size + 100, topLeftX2 - _fMin + i, _freqLabelHeight + 10 + _size + 100 + 4, white);
 		}
 	}
 }
@@ -227,6 +324,7 @@ void QGImage::_drawFreqScale() {
 void QGImage::_drawDbScale() {
 	int topLeftX, topLeftY;
 	int tickStep, labelStep;
+	int black = gdTrueColor(0, 0, 0);
 	int white = gdTrueColor(255, 255, 255);
 
 	// Clear zone and set topLeft corner
@@ -235,46 +333,48 @@ void QGImage::_drawDbScale() {
 		topLeftY = _fDelta;
 		tickStep = 10;
 		labelStep = tickStep * 3;
-		gdImageFilledRectangle(_im, topLeftX, topLeftY, topLeftX + 100, topLeftY + 10 + _dBLabelHeight, gdTrueColor(0, 0, 0));
+		gdImageFilledRectangle(_im, topLeftX, topLeftY, topLeftX + 100, topLeftY + 10 + _dBLabelHeight, black);
 	} else {
 		topLeftX = 0;
 		topLeftY = _freqLabelHeight + 10 + _size;
 		tickStep = 10;
 		labelStep = tickStep;
-		gdImageFilledRectangle(_im, topLeftX, topLeftY, topLeftX + _dBLabelWidth + 10, topLeftY + 100, gdTrueColor(0, 0, 0));
+		gdImageFilledRectangle(_im, topLeftX, topLeftY, topLeftX + _dBLabelWidth + 10, topLeftY + 100, black);
 	}
 
 	// Render graph scale (hard coded to full range -100dB-0dB)
 
-	// dB labels
+	// dB labels with long ticks
 	for (int i = 0; i >= -100; i -= labelStep) {
 		std::stringstream text;
 		text << i << "dB";
 
 		// Calculate text's bounding box
 		int brect[8];
-		gdImageStringFT(nullptr, brect, white, (char *)_font.c_str(), 8, 0, 0, 0, (char *)text.str().c_str());
+		gdImageStringFT(nullptr, brect, white, (char *)_font.c_str(), _fontSize, 0, 0, 0, (char *)text.str().c_str());
 
 		// Fix position according to bounding box to be nicely aligned with tick-markers
 		int x, y;
 
 		if (_orientation == Orientation::Horizontal) {
-			x = topLeftX - i - 0.5 * (brect[2] - brect[0]);
+			x = topLeftX - i - .5 * (brect[2] - brect[0]);
 			y = topLeftY + 10 - brect[7];
+			gdImageLine(_im, topLeftX - i, topLeftY + 10, topLeftX - i, topLeftY + 7, white);
 		} else {
 			x = topLeftX +_dBLabelWidth - brect[2];
 			y = topLeftY - i - .5 * (brect[1] + brect[7]);
+			gdImageLine(_im, topLeftX + _dBLabelWidth, topLeftY - i, topLeftX + _dBLabelWidth + 3, topLeftY - i, white);
 		}
 
-		gdImageStringFT(_im, brect, white, (char *)_font.c_str(), 8, 0, x, y, (char *)text.str().c_str());
+		gdImageStringFT(_im, brect, white, (char *)_font.c_str(), _fontSize, 0, x, y, (char *)text.str().c_str());
 	}
 
-	// Tick markers
+	// Small tick markers
 	for (int i = 0; i >= -100; i -= tickStep) {
 		if (_orientation == Orientation::Horizontal)
-			gdImageLine(_im, topLeftX - i, topLeftY + 10, topLeftX - i, topLeftY + 7, white);
+			gdImageLine(_im, topLeftX - i, topLeftY + 8, topLeftX - i, topLeftY + 7, white);
 		else
-			gdImageLine(_im, topLeftX + _dBLabelWidth, topLeftY - i, topLeftX + _dBLabelWidth + 3, topLeftY - i, white);
+			gdImageLine(_im, topLeftX + _dBLabelWidth + 2, topLeftY - i, topLeftX + _dBLabelWidth + 3, topLeftY - i, white);
 	}
 
 	// Indicator bar for dBmin-max range
@@ -294,7 +394,65 @@ void QGImage::_drawDbScale() {
 	}
 }
 
-void QGImage::_drawTimeScale(time_t startTime) {
+void QGImage::_drawTimeScale() {
+	int topLeftX, topLeftY;
+	int tickStep, labelStep;
+	int black = gdTrueColor(0, 0, 0);
+	int white = gdTrueColor(255, 255, 255);
+
+	// Clear zone and set topLeft corner
+	if (_orientation == Orientation::Horizontal) {
+		topLeftX = _freqLabelWidth + 10;
+		topLeftY = _fDelta;
+		tickStep = 10;
+		labelStep = 100;
+		gdImageFilledRectangle(_im, 0, topLeftY + 10, topLeftX, topLeftY + 10 + _dBLabelHeight, black);
+		gdImageFilledRectangle(_im, topLeftX, topLeftY, topLeftX + _size, topLeftY + 10 + _dBLabelHeight, black);
+	} else {
+		topLeftX = 0;
+		topLeftY = _freqLabelHeight + 10;
+		tickStep = 10;
+		labelStep = 100;
+		gdImageFilledRectangle(_im, topLeftX, topLeftY - 10, topLeftX + _dBLabelWidth + 10, topLeftY, black);
+		gdImageFilledRectangle(_im, topLeftX, topLeftY, topLeftX + _dBLabelWidth + 10, topLeftY + _size, black);
+	}
+
+	// Time labels with long ticks
+	for (int i = 0; i < _size; i += labelStep) {
+		std::chrono::milliseconds t = _started + std::chrono::seconds((i * (N - _overlap)) / _sampleRate);
+		int hh = std::chrono::duration_cast<std::chrono::hours>(t).count() % 24;
+		int mm = std::chrono::duration_cast<std::chrono::minutes>(t).count() % 60;
+		int ss = std::chrono::duration_cast<std::chrono::seconds>(t).count() % 60;
+		std::stringstream s;
+		s << std::setfill('0') << std::setw(2) << hh << ":" << std::setw(2) << mm << ":" << std::setw(2) << ss;
+
+		// Calculatre text's bounding box
+		int brect[8];
+		gdImageStringFT(nullptr, brect, white, (char *)_font.c_str(), _fontSize, 0, 0, 0, (char *)s.str().c_str());
+
+		// Fix position according to bounding box
+		int x, y;
+
+		if (_orientation == Orientation::Horizontal) {
+			x = topLeftX + i - .5 * (brect[2] - brect[0]);
+			y = topLeftY + 10 - brect[7];
+			gdImageLine(_im, topLeftX + i, topLeftY, topLeftX + i, topLeftY + 9, white);
+		} else {
+			x = topLeftX + _dBLabelWidth - brect[2];
+			y = topLeftY + i - .5 * (brect[1] + brect[7]);
+			gdImageLine(_im, topLeftX + _dBLabelWidth, topLeftY + i, topLeftX + _dBLabelWidth + 9, topLeftY + i, white);
+		}
+
+		gdImageStringFT(_im, brect, white, (char *)_font.c_str(), _fontSize, 0, x, y, (char *)s.str().c_str());
+	}
+
+	// Small tick markers
+	for (int i = 0; i < _size; i+= tickStep) {
+		if (_orientation == Orientation::Horizontal)
+			gdImageLine(_im, topLeftX + i, topLeftY, topLeftX + i, topLeftY + 4, white);
+		else
+			gdImageLine(_im, topLeftX + _dBLabelWidth + 5, topLeftY + i, topLeftX + _dBLabelWidth + 9, topLeftY + i, white);
+	}
 }
 
 int QGImage::_db2Color(double v) {

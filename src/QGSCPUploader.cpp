@@ -18,7 +18,7 @@ QGSCPUploader::QGSCPUploader(const std::string &host, const std::string &user, c
 QGSCPUploader::~QGSCPUploader() {
 }
 
-void QGSCPUploader::push(const std::string &fileName, const char *data, int dataSize) {
+void QGSCPUploader::_pushThreadImpl(const std::string &fileName, const char *data, int dataSize) {
 	ssh_session ssh;
 
 	int verbosity = SSH_LOG_PROTOCOL;

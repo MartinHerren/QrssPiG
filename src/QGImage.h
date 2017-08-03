@@ -1,8 +1,8 @@
 #pragma once
 
-#include <iostream>
-
+#include <chrono>
 #include <complex> // Must be included before fftw3
+#include <iostream>
 
 #include <fftw3.h>
 #include <gd.h>
@@ -11,19 +11,16 @@
 class QGImage {
 public:
 	enum class Orientation { Horizontal, Vertical };
+	enum class Status { Ok, FrameReady };
 
-	QGImage(int sampleRate, int baseFreq, int N);
+	QGImage(long int sampleRate, long int baseFreq, int fftSize, int fftOverlap);
 	~QGImage();
 
 	void configure(const YAML::Node &config);
-	void startFrame(time_t startTime);
 
-	void drawLine(const std::complex<double> *fft, int lineNumber);
-	void save2Buffer();
-	void save(const std::string &fileName);
-
-	char *getBuffer() { return _imBuffer; };
-	int getBufferSize() { return _imBufferSize;} ;
+	void startNewFrame(bool incrementTime = true);
+	Status addLine(const std::complex<double> *fft);
+	char *getFrame(int *frameSize, std::string &frameName);
 
 private:
 	void _init();
@@ -31,18 +28,20 @@ private:
 
 	void _drawFreqScale();
 	void _drawDbScale();
-	void _drawTimeScale(time_t startTime);
+	void _drawTimeScale();
 
 	int _db2Color(double v);
 
 	// Params given at constructor time, cannot be changed
-	int _sampleRate;
-	int _baseFreq;
+	long int _sampleRate;
+	long int _baseFreq;
 	int N;
+	int _overlap;
 
 	// Configuration
-	int _size;
 	Orientation _orientation;
+	int _secondsPerFrame;
+	int _size;
 
 	std::string _font;
 	int _fontSize;
@@ -61,10 +60,15 @@ private:
 	// Internal data
 	gdImagePtr _im;
 	char *_imBuffer;
-	int _imBufferSize;
 	int *_c;
 	int _cd; // Color depth
+	std::chrono::milliseconds _started; // current frame start
+	int _currentLine;
 
+	std::string _qrsspigString;
+	int _qrsspigLabelBase;
+	int _qrsspigLabelWidth;
+	int _qrsspigLabelHeight;
 	int _freqLabelWidth;
 	int _freqLabelHeight;
 	int _dBLabelWidth;

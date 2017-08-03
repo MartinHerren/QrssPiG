@@ -1,17 +1,19 @@
-N: 4096
 input:
   format: hackrf
   samplerate: 8000
   basefreq: 10000000
+processing:
+  fft: 4096
+  fftoverlap: 7
 output:
   orientation: horizontal
-  freqrel: true
-  freqmin: 0
-  freqmax: 2500
+  minutesperframe: 10
+  font: "ttf-dejavu/DejaVuSans.ttf"
+  fontsize: 8
+  freqmin: 300
+  freqmax: 2700
   dBmin: -30
   dBmax: 0
-  secondsperframe: 1200
-  framesize: 500
 upload:
   - type: local
     dir: /tmp
