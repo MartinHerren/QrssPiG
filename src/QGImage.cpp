@@ -79,6 +79,15 @@ void QGImage::configure(const YAML::Node &config) {
 	if (config["dBmax"]) _dBmax = config["dBmax"].as<int>();
 	_dBdelta = _dBmax - _dBmin;
 
+	// Optionally don't align frames
+	bool align = true;
+	if (config["noalign"]) {
+		std::string s = config["noalign"].as<std::string>();
+		if ((s.compare("true") == 0) || (s.compare("yes") == 0)) align = false;
+		else if ((s.compare("false") == 0) || (s.compare("no") == 0)) align = true;
+		else throw std::runtime_error("QGImage::configure: illegal value for noalign");
+	}
+
 	// Configure start time
 	using namespace std::chrono;
 	_started = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
@@ -102,8 +111,12 @@ void QGImage::configure(const YAML::Node &config) {
 		// Fix started time to be in UTC
 		_started += seconds(mktime(localtime(&t0)) - mktime(gmtime(&t0)));
 	}
+
 	milliseconds intoFrame = _started % seconds(_secondsPerFrame); // Time into first frame to align frames on correct boundary
-	_started -= intoFrame;
+
+	if (align) {
+		_started -= intoFrame;
+	}
 
 	_init();
 	_drawFreqScale();
@@ -111,8 +124,10 @@ void QGImage::configure(const YAML::Node &config) {
 
 	startNewFrame(false);
 
-	// Fix first _currentLine according to intoFrame;
-	_currentLine = (intoFrame.count() * _sampleRate) / (1000 * (N - _overlap));
+	if (align) {
+		// Fix first _currentLine according to intoFrame, must be done after startNewFrame as startNewFrame sets it to zero
+		_currentLine = (intoFrame.count() * _sampleRate) / (1000 * (N - _overlap));
+	}
 }
 
 void QGImage::startNewFrame(bool incrementTime) {
