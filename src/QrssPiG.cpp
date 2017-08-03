@@ -189,15 +189,11 @@ void QrssPiG::_addUploader(const YAML::Node &uploader) {
 		if (uploader["user"]) user = uploader["user"].as<std::string>();
 		if (uploader["dir"]) dir = uploader["dir"].as<std::string>();
 
-		std::cout << "SCP uploader" << std::endl;
-
 		_up = new QGSCPUploader(host, user, dir, port);
 	} else if (type.compare("local") == 0) {
 		std::string dir = "./";
 
 		if (uploader["dir"]) dir = uploader["dir"].as<std::string>();
-
-		std::cout << "Local uploader" << std::endl;
 
 		_up = new QGLocalUploader(dir);
 	}
