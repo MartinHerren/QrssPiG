@@ -44,20 +44,32 @@ void QGImage::configure(const YAML::Node &config) {
 	_fontSize = 8;
 	if (config["fontsize"]) _fontSize = config["fontsize"].as<int>();
 
-	// Configure freq range, default value doesn't depend on base freq. In config file freq is given as absolute frequency unless freqrel is set to true
-	bool fRel = false;
-	_fMin = (0 * N) / _sampleRate;
-	_fMax = (2500 * N) / _sampleRate;
-	if (config["freqrel"]) fRel = config["freqrel"].as<bool>();
-	if (fRel) {
-		if (config["freqmin"]) _fMin = (int)((config["freqmin"].as<long int>() * N) / _sampleRate);
-		if (config["freqmax"]) _fMax = (int)((config["freqmax"].as<long int>() * N) / _sampleRate);
-	} else {
-		if (config["freqmin"]) _fMin = (int)(((config["freqmin"].as<long int>() - _baseFreq) * N) / _sampleRate);
-		if (config["freqmax"]) _fMax = (int)(((config["freqmax"].as<long int>() - _baseFreq) * N) / _sampleRate);
+	// Configure freq range, default value to full range of positive and negative
+	_fMin = -N / 2;
+	_fMax = N / 2;
+	if (config["freqmin"]) {
+		long int f = config["freqmin"].as<long int>();
+
+		if ((f >= -_sampleRate / 2) && (f <= _sampleRate / 2)) {
+			_fMin = (int)((f * N) / _sampleRate);
+		} else if ((f - _baseFreq >= -_sampleRate / 2) && (f - _baseFreq <= _sampleRate / 2)) {
+			_fMin = (int)(((f - _baseFreq) * N) / _sampleRate);
+		} else {
+			throw std::runtime_error("QGImage::configure: freqmin out of range");
+		}
 	}
-	if ((_fMin < -N / 2 + 1) || (_fMin > N / 2 - 1)) throw std::runtime_error("QGImage::configure: freqmin out of range");
-	if ((_fMax < -N / 2 + 1) || (_fMax > N / 2 - 1)) throw std::runtime_error("QGImage::configure: freqmax out of range");
+	if (config["freqmax"]) {
+		long int f = config["freqmax"].as<long int>();
+
+		if ((f >= -_sampleRate / 2) && (f <= _sampleRate / 2)) {
+			_fMax = (int)((f * N) / _sampleRate);
+		} else if ((f - _baseFreq >= -_sampleRate / 2) && (f - _baseFreq <= _sampleRate / 2)) {
+			_fMax = (int)(((f - _baseFreq) * N) / _sampleRate);
+		} else {
+			throw std::runtime_error("QGImage::configure: freqmax out of range");
+		}
+	}
+	if (_fMin >= _fMax) std::runtime_error("QGImage::configure: freqmin must be lower than freqmax");
 	_fDelta = _fMax - _fMin;
 
 	// Configure db range
@@ -156,7 +168,8 @@ QGImage::Status QGImage::addLine(const std::complex<double> *fft) {
 char *QGImage::getFrame(int *frameSize, std::string &frameName) {
 	if (_imBuffer) gdFree(_imBuffer);
 
-	// TODO: check if pointer always the same, so call once only
+	// _imBuffer is usually constant, but frameSize changes
+	// _imBuffer might change in case of realloc, so don't cache its value
 	_imBuffer = (char *)gdImagePngPtr(_im, frameSize);
 
 	time_t t = std::chrono::duration_cast<std::chrono::seconds>(_started).count();

@@ -9,10 +9,9 @@ output:
   orientation: horizontal
   minutesperframe: 10
   font: "ttf-dejavu/DejaVuSans.ttf"
-  fontsize: 16
-  freqrel: true
-  freqmin: 0
-  freqmax: 2500
+  fontsize: 8
+  freqmin: 300
+  freqmax: 2700
   dBmin: -30
   dBmax: 0
 upload:
