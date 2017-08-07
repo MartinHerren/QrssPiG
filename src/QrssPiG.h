@@ -3,6 +3,7 @@
 #include <complex>
 #include <iostream>
 #include <string>
+#include <vector>
 
 #include <yaml-cpp/yaml.h>
 
@@ -53,7 +54,7 @@ private:
 	std::complex<double> *_fftOut;
 
 	QGImage *_im;
-	QGUploader *_up;
+	std::vector<QGUploader*> _uploaders;
 
 	int _frameIndex;
 

@@ -9,8 +9,7 @@
 QrssPiG::QrssPiG() :
 	_format(Format::U8IQ),
 	_sampleRate(2000),
-	_baseFreq(0),
-	_up(nullptr) {
+	_baseFreq(0) {
 		_N = 2048;
 		_overlap = (3 * _N) / 4;
 }
@@ -26,9 +25,9 @@ QrssPiG::QrssPiG(const std::string &format, int sampleRate, int N, const std::st
 	_sampleRate = sampleRate;
 
 	if (sshHost.length()) {
-		_up = new QGSCPUploader(sshHost, sshUser, dir, sshPort);
+		_uploaders.push_back(new QGSCPUploader(sshHost, sshUser, dir, sshPort));
 	} else {
-		_up = new QGLocalUploader(dir);
+		_uploaders.push_back(new QGLocalUploader(dir));
 	}
 
 	_init();
@@ -113,7 +112,7 @@ QrssPiG::~QrssPiG() {
 	if (_fft) delete _fft;
 	if (_in) fftw_free(_in);
 	if (_im) delete _im;
-	if (_up) delete _up;
+	for (auto up: _uploaders) delete up;
 }
 
 void QrssPiG::run() {
@@ -175,9 +174,6 @@ void QrssPiG::_addUploader(const YAML::Node &uploader) {
 
 	std::string type = uploader["type"].as<std::string>();
 
-	// TODO remove once multiple uploader supported
-	if (_up) delete _up;
-
 	if (type.compare("scp") == 0) {
 		std::string host = "localhost";
 		int port = 22; // TODO: use 0 to force uploader to take default port ?
@@ -189,13 +185,13 @@ void QrssPiG::_addUploader(const YAML::Node &uploader) {
 		if (uploader["user"]) user = uploader["user"].as<std::string>();
 		if (uploader["dir"]) dir = uploader["dir"].as<std::string>();
 
-		_up = new QGSCPUploader(host, user, dir, port);
+		_uploaders.push_back(new QGSCPUploader(host, user, dir, port));
 	} else if (type.compare("local") == 0) {
 		std::string dir = "./";
 
 		if (uploader["dir"]) dir = uploader["dir"].as<std::string>();
 
-		_up = new QGLocalUploader(dir);
+		_uploaders.push_back(new QGLocalUploader(dir));
 	}
 }
 
@@ -243,7 +239,7 @@ void QrssPiG::_pushImage(bool wait) {
 		frame = _im->getFrame(&frameSize, frameName);
 
 std::cout << "pushing " << frameName << std::endl;
-		if (_up) _up->push(frameName, frame, frameSize, wait);
+		for (auto up: _uploaders) up->push(frameName, frame, frameSize, wait);
 
 		_im->startNewFrame();
 	} catch (const std::exception &e) {
