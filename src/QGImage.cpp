@@ -396,62 +396,84 @@ void QGImage::_drawDbScale() {
 
 void QGImage::_drawTimeScale() {
 	int topLeftX, topLeftY;
-	int tickStep, labelStep;
+	int secondsPerLabel = 10, labelDivs = 10;
 	int black = gdTrueColor(0, 0, 0);
 	int white = gdTrueColor(255, 255, 255);
+	double k = (double)(_sampleRate) / (N - _overlap); // pixels = seconds * k
 
 	// Clear zone and set topLeft corner
 	if (_orientation == Orientation::Horizontal) {
 		topLeftX = _freqLabelWidth + 10;
 		topLeftY = _fDelta;
-		tickStep = 10;
-		labelStep = 100;
 		gdImageFilledRectangle(_im, 0, topLeftY + 10, topLeftX, topLeftY + 10 + _dBLabelHeight, black);
 		gdImageFilledRectangle(_im, topLeftX, topLeftY, topLeftX + _size, topLeftY + 10 + _dBLabelHeight, black);
 	} else {
 		topLeftX = 0;
 		topLeftY = _freqLabelHeight + 10;
-		tickStep = 10;
-		labelStep = 100;
 		gdImageFilledRectangle(_im, topLeftX, topLeftY - 10, topLeftX + _dBLabelWidth + 10, topLeftY, black);
 		gdImageFilledRectangle(_im, topLeftX, topLeftY, topLeftX + _dBLabelWidth + 10, topLeftY + _size, black);
 	}
 
+	// Calculate text's max bounding box to determine label spacing
+	// TODO calculate once on config (secondsPerLabel and labelDivs)
+	// TODO calculate correction factor on label once
+	// TODO check different values of correction value 1.2-1.5
+	int brect[8];
+	gdImageStringFT(nullptr, brect, 0, (char *)_font.c_str(), _fontSize, 0, 0, 0, const_cast<char *>("00:00:00"));
+	int maxLabelW = brect[2] - brect[0];
+
+	if ((1 * k > (3 * maxLabelW) / 2)) { secondsPerLabel = 1; labelDivs = 10; }
+	else if ((2 * k > (3 * maxLabelW) / 2)) { secondsPerLabel = 2; labelDivs = 2; }
+	else if ((5 * k > (3 * maxLabelW) / 2)) { secondsPerLabel = 5; labelDivs = 5; }
+	else if ((10 * k > (3 * maxLabelW) / 2)) { secondsPerLabel = 10; labelDivs = 10; }
+	else if ((15 * k > (3 * maxLabelW) / 2)) { secondsPerLabel = 15; labelDivs = 3; }
+	else if ((30 * k > (3 * maxLabelW) / 2)) { secondsPerLabel = 30; labelDivs = 3; }
+	else if ((60 * k > (3 * maxLabelW) / 2)) { secondsPerLabel = 60; labelDivs = 6; }
+	else if ((120 * k > (3 * maxLabelW) / 2)) { secondsPerLabel = 120; labelDivs = 2; }
+	else if ((300 * k > (3 * maxLabelW) / 2)) { secondsPerLabel = 300; labelDivs = 5; }
+	else if ((600 * k > (3 * maxLabelW) / 2)) { secondsPerLabel = 600; labelDivs = 10; }
+	else if ((900 * k > (3 * maxLabelW) / 2)) { secondsPerLabel = 900; labelDivs = 3; }
+	else if ((1800 * k > (3 * maxLabelW) / 2)) { secondsPerLabel = 1800; labelDivs = 3; }
+	else { secondsPerLabel = 3600; labelDivs = 6; }
+
 	// Time labels with long ticks
-	for (int i = 0; i < _size; i += labelStep) {
-		std::chrono::milliseconds t = _started + std::chrono::seconds((i * (N - _overlap)) / _sampleRate);
-		int hh = std::chrono::duration_cast<std::chrono::hours>(t).count() % 24;
-		int mm = std::chrono::duration_cast<std::chrono::minutes>(t).count() % 60;
-		int ss = std::chrono::duration_cast<std::chrono::seconds>(t).count() % 60;
+	for (int t = 0; t < _secondsPerFrame; t += secondsPerLabel) {
+		int l = t * k; // Line number of label
+
+		std::chrono::milliseconds ms = _started + std::chrono::seconds(t);
+		int hh = std::chrono::duration_cast<std::chrono::hours>(ms).count() % 24;
+		int mm = std::chrono::duration_cast<std::chrono::minutes>(ms).count() % 60;
+		int ss = std::chrono::duration_cast<std::chrono::seconds>(ms).count() % 60;
 		std::stringstream s;
 		s << std::setfill('0') << std::setw(2) << hh << ":" << std::setw(2) << mm << ":" << std::setw(2) << ss;
 
 		// Calculatre text's bounding box
-		int brect[8];
-		gdImageStringFT(nullptr, brect, white, (char *)_font.c_str(), _fontSize, 0, 0, 0, (char *)s.str().c_str());
+		gdImageStringFT(nullptr, brect, white, (char *)_font.c_str(), _fontSize, 0, 0, 0, const_cast<char *>(s.str().c_str()));
 
 		// Fix position according to bounding box
 		int x, y;
 
 		if (_orientation == Orientation::Horizontal) {
-			x = topLeftX + i - .5 * (brect[2] - brect[0]);
+			x = topLeftX + l - .5 * (brect[2] - brect[0]);
 			y = topLeftY + 10 - brect[7];
-			gdImageLine(_im, topLeftX + i, topLeftY, topLeftX + i, topLeftY + 9, white);
+			gdImageLine(_im, topLeftX + l, topLeftY, topLeftX + l, topLeftY + 9, white);
 		} else {
 			x = topLeftX + _dBLabelWidth - brect[2];
-			y = topLeftY + i - .5 * (brect[1] + brect[7]);
-			gdImageLine(_im, topLeftX + _dBLabelWidth, topLeftY + i, topLeftX + _dBLabelWidth + 9, topLeftY + i, white);
+			y = topLeftY + l - .5 * (brect[1] + brect[7]);
+			gdImageLine(_im, topLeftX + _dBLabelWidth, topLeftY + l, topLeftX + _dBLabelWidth + 9, topLeftY + l, white);
 		}
 
-		gdImageStringFT(_im, brect, white, (char *)_font.c_str(), _fontSize, 0, x, y, (char *)s.str().c_str());
+		gdImageStringFT(_im, brect, white, (char *)_font.c_str(), _fontSize, 0, x, y, const_cast<char *>(s.str().c_str()));
 	}
 
 	// Small tick markers
-	for (int i = 0; i < _size; i+= tickStep) {
+	for (int t = 0; t < _secondsPerFrame; t += secondsPerLabel / labelDivs) {
+		int l = t * k; // Line number of label
+
 		if (_orientation == Orientation::Horizontal)
-			gdImageLine(_im, topLeftX + i, topLeftY, topLeftX + i, topLeftY + 4, white);
+			gdImageLine(_im, topLeftX + l, topLeftY, topLeftX + l, topLeftY + 4, white);
 		else
-			gdImageLine(_im, topLeftX + _dBLabelWidth + 5, topLeftY + i, topLeftX + _dBLabelWidth + 9, topLeftY + i, white);
+			gdImageLine(_im, topLeftX + _dBLabelWidth + 5, topLeftY + l, topLeftX + _dBLabelWidth + 9, topLeftY + l, white);
 	}
 }
 
