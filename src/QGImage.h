@@ -28,6 +28,7 @@ private:
 
 	void _drawFreqScale();
 	void _drawDbScale();
+	void _computeTimeScale();
 	void _drawTimeScale();
 
 	int _db2Color(double v);
@@ -65,10 +66,16 @@ private:
 	std::chrono::milliseconds _started; // current frame start
 	int _currentLine;
 
+	double _timeK;
+
 	std::string _qrsspigString;
 	int _qrsspigLabelBase;
 	int _qrsspigLabelWidth;
 	int _qrsspigLabelHeight;
+
+	int _secondsPerTimeLabel;
+	int _timeLabelDivs;
+
 	int _freqLabelWidth;
 	int _freqLabelHeight;
 	int _dBLabelWidth;

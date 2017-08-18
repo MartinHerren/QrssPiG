@@ -13,6 +13,9 @@ QGImage::QGImage(long int sampleRate, long int baseFreq, int fftSize, int fftOve
 	_cd = 0;
 	_started = std::chrono::milliseconds(0);
 	_currentLine = 0;
+
+	// Time constant use for mapping time to line
+	_timeK = (double)(_sampleRate) / (N - _overlap); // pixels = seconds * k
 }
 
 QGImage::~QGImage() {
@@ -36,7 +39,7 @@ void QGImage::configure(const YAML::Node &config) {
 	_secondsPerFrame = 10 * 60;
 	if (config["minutesperframe"]) _secondsPerFrame = config["minutesperframe"].as<int>() *  60;
 	if (config["secondsperframe"]) _secondsPerFrame = config["secondsperframe"].as<int>();
-	_size = (_secondsPerFrame * _sampleRate) / (N - _overlap);
+	_size = _secondsPerFrame * _timeK;
 
 	// Configure font
 	_font = "ttf-dejavu/DejaVuSans.ttf";
@@ -121,12 +124,12 @@ void QGImage::configure(const YAML::Node &config) {
 	_init();
 	_drawFreqScale();
 	_drawDbScale();
-
+	_computeTimeScale();
 	startNewFrame(false);
 
 	if (align) {
 		// Fix first _currentLine according to intoFrame, must be done after startNewFrame as startNewFrame sets it to zero
-		_currentLine = (intoFrame.count() * _sampleRate) / (1000 * (N - _overlap));
+		_currentLine = (intoFrame.count() * _timeK) / 1000;
 	}
 }
 
@@ -212,11 +215,15 @@ void QGImage::_init() {
 	_qrsspigLabelWidth = brect[2] - brect[0];
 	_qrsspigLabelHeight = brect[1] - brect[7];
 
-	gdImageStringFT(nullptr, brect, 0, (char *)_font.c_str(), _fontSize, 0, 0, 0, (char *)"000000000Hz");
+	gdImageStringFT(nullptr, brect, 0, (char *)_font.c_str(), _fontSize, 0, 0, 0, const_cast<char *>("000000000Hz"));
 	_freqLabelWidth = brect[2] - brect[0];
 	_freqLabelHeight = brect[1] - brect[7];
 
-	gdImageStringFT(nullptr, brect, 0, (char *)_font.c_str(), _fontSize, 0, 0, 0, (char *)"-100dB");
+	if (_orientation == Orientation::Horizontal) { // Ugly hack, using timelabel width for dB width until general layout code is done
+		gdImageStringFT(nullptr, brect, 0, (char *)_font.c_str(), _fontSize, 0, 0, 0, const_cast<char *>("-100dB"));
+	} else {
+		gdImageStringFT(nullptr, brect, 0, (char *)_font.c_str(), _fontSize, 0, 0, 0, const_cast<char *>("00:00:00"));
+	}
 	_dBLabelWidth = brect[2] - brect[0];
 	_dBLabelHeight = brect[1] - brect[7];
 
@@ -394,12 +401,38 @@ void QGImage::_drawDbScale() {
 	}
 }
 
+void QGImage::_computeTimeScale() {
+	// Calculate text's max bounding box to determine label spacing
+	int brect[8];
+	gdImageStringFT(nullptr, brect, 0, (char *)_font.c_str(), _fontSize, 0, 0, 0, const_cast<char *>("00:00:00"));
+
+	int maxLabelSize;
+	if (_orientation == Orientation::Horizontal) {
+		maxLabelSize = (6 * (brect[2] - brect[0])) / 5;
+	} else {
+		maxLabelSize = 3 * (brect[1] - brect[7]);
+	}
+
+	// Search finest label interval without overlap
+	if (1 * _timeK > maxLabelSize) { _secondsPerTimeLabel = 1; _timeLabelDivs = 10; }
+	else if (2 * _timeK > maxLabelSize) { _secondsPerTimeLabel = 2; _timeLabelDivs = 2; }
+	else if (5 * _timeK > maxLabelSize) { _secondsPerTimeLabel = 5; _timeLabelDivs = 5; }
+	else if (10 * _timeK > maxLabelSize) { _secondsPerTimeLabel = 10; _timeLabelDivs = 10; }
+	else if (15 * _timeK > maxLabelSize) { _secondsPerTimeLabel = 15; _timeLabelDivs = 3; }
+	else if (30 * _timeK > maxLabelSize) { _secondsPerTimeLabel = 30; _timeLabelDivs = 3; }
+	else if (60 * _timeK > maxLabelSize) { _secondsPerTimeLabel = 60; _timeLabelDivs = 6; }
+	else if (120 * _timeK > maxLabelSize) { _secondsPerTimeLabel = 120; _timeLabelDivs = 2; }
+	else if (300 * _timeK > maxLabelSize) { _secondsPerTimeLabel = 300; _timeLabelDivs = 5; }
+	else if (600 * _timeK > maxLabelSize) { _secondsPerTimeLabel = 600; _timeLabelDivs = 10; }
+	else if (900 * _timeK > maxLabelSize) { _secondsPerTimeLabel = 900; _timeLabelDivs = 3; }
+	else if (1800 * _timeK > maxLabelSize) { _secondsPerTimeLabel = 1800; _timeLabelDivs = 3; }
+	else { _secondsPerTimeLabel = 3600; _timeLabelDivs = 6; }
+}
+
 void QGImage::_drawTimeScale() {
 	int topLeftX, topLeftY;
-	int secondsPerLabel = 10, labelDivs = 10;
 	int black = gdTrueColor(0, 0, 0);
 	int white = gdTrueColor(255, 255, 255);
-	double k = (double)(_sampleRate) / (N - _overlap); // pixels = seconds * k
 
 	// Clear zone and set topLeft corner
 	if (_orientation == Orientation::Horizontal) {
@@ -414,31 +447,9 @@ void QGImage::_drawTimeScale() {
 		gdImageFilledRectangle(_im, topLeftX, topLeftY, topLeftX + _dBLabelWidth + 10, topLeftY + _size, black);
 	}
 
-	// Calculate text's max bounding box to determine label spacing
-	// TODO calculate once on config (secondsPerLabel and labelDivs)
-	// TODO calculate correction factor on label once
-	// TODO check different values of correction value 1.2-1.5
-	int brect[8];
-	gdImageStringFT(nullptr, brect, 0, (char *)_font.c_str(), _fontSize, 0, 0, 0, const_cast<char *>("00:00:00"));
-	int maxLabelW = brect[2] - brect[0];
-
-	if ((1 * k > (3 * maxLabelW) / 2)) { secondsPerLabel = 1; labelDivs = 10; }
-	else if ((2 * k > (3 * maxLabelW) / 2)) { secondsPerLabel = 2; labelDivs = 2; }
-	else if ((5 * k > (3 * maxLabelW) / 2)) { secondsPerLabel = 5; labelDivs = 5; }
-	else if ((10 * k > (3 * maxLabelW) / 2)) { secondsPerLabel = 10; labelDivs = 10; }
-	else if ((15 * k > (3 * maxLabelW) / 2)) { secondsPerLabel = 15; labelDivs = 3; }
-	else if ((30 * k > (3 * maxLabelW) / 2)) { secondsPerLabel = 30; labelDivs = 3; }
-	else if ((60 * k > (3 * maxLabelW) / 2)) { secondsPerLabel = 60; labelDivs = 6; }
-	else if ((120 * k > (3 * maxLabelW) / 2)) { secondsPerLabel = 120; labelDivs = 2; }
-	else if ((300 * k > (3 * maxLabelW) / 2)) { secondsPerLabel = 300; labelDivs = 5; }
-	else if ((600 * k > (3 * maxLabelW) / 2)) { secondsPerLabel = 600; labelDivs = 10; }
-	else if ((900 * k > (3 * maxLabelW) / 2)) { secondsPerLabel = 900; labelDivs = 3; }
-	else if ((1800 * k > (3 * maxLabelW) / 2)) { secondsPerLabel = 1800; labelDivs = 3; }
-	else { secondsPerLabel = 3600; labelDivs = 6; }
-
 	// Time labels with long ticks
-	for (int t = 0; t < _secondsPerFrame; t += secondsPerLabel) {
-		int l = t * k; // Line number of label
+	for (int t = 0; t < _secondsPerFrame; t += _secondsPerTimeLabel) {
+		int l = t * _timeK; // Line number of label
 
 		std::chrono::milliseconds ms = _started + std::chrono::seconds(t);
 		int hh = std::chrono::duration_cast<std::chrono::hours>(ms).count() % 24;
@@ -448,6 +459,7 @@ void QGImage::_drawTimeScale() {
 		s << std::setfill('0') << std::setw(2) << hh << ":" << std::setw(2) << mm << ":" << std::setw(2) << ss;
 
 		// Calculatre text's bounding box
+		int brect[8];
 		gdImageStringFT(nullptr, brect, white, (char *)_font.c_str(), _fontSize, 0, 0, 0, const_cast<char *>(s.str().c_str()));
 
 		// Fix position according to bounding box
@@ -467,8 +479,8 @@ void QGImage::_drawTimeScale() {
 	}
 
 	// Small tick markers
-	for (int t = 0; t < _secondsPerFrame; t += secondsPerLabel / labelDivs) {
-		int l = t * k; // Line number of label
+	for (int t = 0; t < _secondsPerFrame; t += _secondsPerTimeLabel / _timeLabelDivs) {
+		int l = t * _timeK; // Line number of label
 
 		if (_orientation == Orientation::Horizontal)
 			gdImageLine(_im, topLeftX + l, topLeftY, topLeftX + l, topLeftY + 4, white);
