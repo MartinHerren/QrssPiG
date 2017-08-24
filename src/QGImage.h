@@ -58,12 +58,16 @@ private:
 	double _dBmax;
 	double _dBdelta;
 
+	// Frame alignement and start
+	bool _alignFrame;
+	std::chrono::milliseconds _started;
+	std::chrono::milliseconds _startedIntoFrame;
+
 	// Internal data
 	gdImagePtr _im;
 	char *_imBuffer;
 	int *_c;
 	int _cd; // Color depth
-	std::chrono::milliseconds _started; // current frame start
 	int _currentLine;
 
 	double _timeK;

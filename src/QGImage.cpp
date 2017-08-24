@@ -83,11 +83,11 @@ void QGImage::configure(const YAML::Node &config) {
 	_dBdelta = _dBmax - _dBmin;
 
 	// Optionally don't align frames
-	bool align = true;
+	_alignFrame = true;
 	if (config["noalign"]) {
 		std::string s = config["noalign"].as<std::string>();
-		if ((s.compare("true") == 0) || (s.compare("yes") == 0)) align = false;
-		else if ((s.compare("false") == 0) || (s.compare("no") == 0)) align = true;
+		if ((s.compare("true") == 0) || (s.compare("yes") == 0)) _alignFrame = false;
+		else if ((s.compare("false") == 0) || (s.compare("no") == 0)) _alignFrame = true;
 		else throw std::runtime_error("QGImage::configure: illegal value for noalign");
 	}
 
@@ -115,10 +115,10 @@ void QGImage::configure(const YAML::Node &config) {
 		_started += seconds(mktime(localtime(&t0)) - mktime(gmtime(&t0)));
 	}
 
-	milliseconds intoFrame = _started % seconds(_secondsPerFrame); // Time into first frame to align frames on correct boundary
+	_startedIntoFrame = _started % seconds(_secondsPerFrame); // Time into first frame to align frames on correct boundary
 
-	if (align) {
-		_started -= intoFrame;
+	if (_alignFrame) {
+		_started -= _startedIntoFrame;
 	}
 
 	_init();
@@ -127,9 +127,9 @@ void QGImage::configure(const YAML::Node &config) {
 	_computeTimeScale();
 	startNewFrame(false);
 
-	if (align) {
+	if (_alignFrame) {
 		// Fix first _currentLine according to intoFrame, must be done after startNewFrame as startNewFrame sets it to zero
-		_currentLine = (intoFrame.count() * _timeK) / 1000;
+		_currentLine = (_startedIntoFrame.count() * _timeK) / 1000;
 	}
 }
 
@@ -447,8 +447,10 @@ void QGImage::_drawTimeScale() {
 		gdImageFilledRectangle(_im, topLeftX, topLeftY, topLeftX + _dBLabelWidth + 10, topLeftY + _size, black);
 	}
 
+	int t0 = 0;
 	// Time labels with long ticks
-	for (int t = 0; t < _secondsPerFrame; t += _secondsPerTimeLabel) {
+	if (_alignFrame == false) t0 = _secondsPerTimeLabel - _startedIntoFrame.count() / 1000;
+	for (int t = t0; t < _secondsPerFrame; t += _secondsPerTimeLabel) {
 		int l = t * _timeK; // Line number of label
 
 		std::chrono::milliseconds ms = _started + std::chrono::seconds(t);
@@ -479,7 +481,8 @@ void QGImage::_drawTimeScale() {
 	}
 
 	// Small tick markers
-	for (int t = 0; t < _secondsPerFrame; t += _secondsPerTimeLabel / _timeLabelDivs) {
+	if (_alignFrame == false) t0 = _secondsPerTimeLabel / _timeLabelDivs - _startedIntoFrame.count() / 1000;
+	for (int t = t0; t < _secondsPerFrame; t += _secondsPerTimeLabel / _timeLabelDivs) {
 		int l = t * _timeK; // Line number of label
 
 		if (_orientation == Orientation::Horizontal)
