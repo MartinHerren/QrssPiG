@@ -13,6 +13,7 @@ target_link_libraries(QrssPiG fftw3)
 target_link_libraries(QrssPiG gd)
 target_link_libraries(QrssPiG ssh)
 target_link_libraries(QrssPiG yaml-cpp)
+target_link_libraries(QrssPiG hackrf)
 
 add_executable (IQGen IQGen.cpp)
 target_link_libraries(IQGen boost_program_options)
