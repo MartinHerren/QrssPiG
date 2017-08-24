@@ -28,6 +28,7 @@ if (LIBLIQUIDSDR_FOUND)
 	target_link_libraries(QrssPiG ${LIBLIQUIDSDR_LIBRARY})
 	set(HAVE_LIBLIQUIDSDR 1)
 endif (LIBLIQUIDSDR_FOUND)
+target_link_libraries(QrssPiG hackrf)
 
 add_executable (IQGen IQGen.cpp)
 target_link_libraries(IQGen boost_program_options)
