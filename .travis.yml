@@ -17,6 +17,7 @@ addons:
       - libyaml-cpp-dev
       - libfreetype6-dev
       - librtfilter-dev
+      - libhackrf-dev
 
 script:
   - mkdir -p build && cd build && cmake .. && cmake --build .
