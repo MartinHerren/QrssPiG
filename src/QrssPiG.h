@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 
+#include <libhackrf/hackrf.h>
 #include <yaml-cpp/yaml.h>
 
 #include "QGFft.h"
@@ -28,7 +29,9 @@ public:
 	void stop() { _running = false; };
 
 private:
+	void _openHackRF(int index);
 	void _addUploader(const YAML::Node &uploader);
+
 	void _init();
 
 	void _addIQ(std::complex<double> iq);
@@ -38,6 +41,9 @@ private:
 	// FFT size
 	int _N;
 	int _overlap; // 0: no overlap, 1: 1/2, 2: 2/3...
+
+	// Input
+	hackrf_device *_hackrf;
 
 	// Data format
 	Format _format;
