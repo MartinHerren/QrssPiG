@@ -448,8 +448,15 @@ void QGImage::_drawTimeScale() {
 	}
 
 	int t0 = 0;
+
 	// Time labels with long ticks
-	if (_alignFrame == false) t0 = _secondsPerTimeLabel - _startedIntoFrame.count() / 1000;
+	
+	// Realign lablels on non-aligned frames
+	if (_alignFrame == false) {
+		t0 = _secondsPerTimeLabel - _startedIntoFrame.count() / 1000;
+		while (t0 < 0) t0 += _secondsPerTimeLabel;
+	}
+
 	for (int t = t0; t < _secondsPerFrame; t += _secondsPerTimeLabel) {
 		int l = t * _timeK; // Line number of label
 
@@ -481,7 +488,13 @@ void QGImage::_drawTimeScale() {
 	}
 
 	// Small tick markers
-	if (_alignFrame == false) t0 = _secondsPerTimeLabel / _timeLabelDivs - _startedIntoFrame.count() / 1000;
+	
+	// Realign ticks on non-aligned frames
+	if (_alignFrame == false) {
+		t0 = _secondsPerTimeLabel / _timeLabelDivs - _startedIntoFrame.count() / 1000;
+		while (t0 < 0) t0 += _secondsPerTimeLabel / _timeLabelDivs;
+	}
+
 	for (int t = t0; t < _secondsPerFrame; t += _secondsPerTimeLabel / _timeLabelDivs) {
 		int l = t * _timeK; // Line number of label
 
