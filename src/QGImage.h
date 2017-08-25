@@ -26,6 +26,7 @@ private:
 	void _init();
 	void _free();
 
+	void _computeFreqScale();
 	void _drawFreqScale();
 	void _drawDbScale();
 	void _computeTimeScale();
@@ -70,6 +71,8 @@ private:
 	int _cd; // Color depth
 	int _currentLine;
 
+	// Constants to go from hertz/seconds to pixel
+	double _freqK;
 	double _timeK;
 
 	std::string _qrsspigString;
@@ -77,6 +80,8 @@ private:
 	int _qrsspigLabelWidth;
 	int _qrsspigLabelHeight;
 
+	int _hertzPerFreqLabel;
+	int _freqLabelDivs;
 	int _secondsPerTimeLabel;
 	int _timeLabelDivs;
 

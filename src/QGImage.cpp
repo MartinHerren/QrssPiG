@@ -14,8 +14,9 @@ QGImage::QGImage(long int sampleRate, long int baseFreq, int fftSize, int fftOve
 	_started = std::chrono::milliseconds(0);
 	_currentLine = 0;
 
-	// Time constant use for mapping time to line
-	_timeK = (double)(_sampleRate) / (N - _overlap); // pixels = seconds * k
+	// Freq/time constants used for mapping freq/time to pixel
+	_freqK = (double)(N) / (_sampleRate); // pixels = freq * _freqK
+	_timeK = (double)(_sampleRate) / (N - _overlap); // pixels = seconds * _timeK
 }
 
 QGImage::~QGImage() {
@@ -122,9 +123,12 @@ void QGImage::configure(const YAML::Node &config) {
 	}
 
 	_init();
+
+	_computeFreqScale();
 	_drawFreqScale();
 	_drawDbScale();
 	_computeTimeScale();
+
 	startNewFrame(false);
 
 	if (_alignFrame) {
@@ -264,9 +268,36 @@ void QGImage::_free() {
 	_im = nullptr;
 }
 
+void QGImage::_computeFreqScale() {
+	// Calculate text's max bounding box to determine label spacing
+	int brect[8];
+	gdImageStringFT(nullptr, brect, 0, const_cast<char *>(_font.c_str()), _fontSize, 0, 0, 0, const_cast<char *>("999999999MHz"));
+
+	int maxLabelSize;
+	if (_orientation == Orientation::Horizontal) {
+		maxLabelSize = 3 * (brect[1] - brect[7]);
+	} else {
+		maxLabelSize = (6 * (brect[2] - brect[0])) / 5;
+	}
+
+	// Search finest label interval withoug overlap
+	if (1 * _freqK > maxLabelSize) { _hertzPerFreqLabel = 1; _freqLabelDivs = 10; }
+	else if (2 * _freqK > maxLabelSize) { _hertzPerFreqLabel = 2; _freqLabelDivs = 2; }
+	else if (5 * _freqK > maxLabelSize) { _hertzPerFreqLabel = 5; _freqLabelDivs = 5; }
+	else if (10 * _freqK > maxLabelSize) { _hertzPerFreqLabel = 10; _freqLabelDivs = 10; }
+	else if (25 * _freqK > maxLabelSize) { _hertzPerFreqLabel = 25; _freqLabelDivs = 5; }
+	else if (50 * _freqK > maxLabelSize) { _hertzPerFreqLabel = 50; _freqLabelDivs = 10; }
+	else if (100 * _freqK > maxLabelSize) { _hertzPerFreqLabel = 100; _freqLabelDivs = 10; }
+	else if (250 * _freqK > maxLabelSize) { _hertzPerFreqLabel = 250; _freqLabelDivs = 5; }
+	else if (500 * _freqK > maxLabelSize) { _hertzPerFreqLabel = 500; _freqLabelDivs = 10; }
+	else if (1000 * _freqK > maxLabelSize) { _hertzPerFreqLabel = 1000; _freqLabelDivs = 10; }
+	else if (2500 * _freqK > maxLabelSize) { _hertzPerFreqLabel = 2500; _freqLabelDivs = 5; }
+	else if (5000 * _freqK > maxLabelSize) { _hertzPerFreqLabel = 5000; _freqLabelDivs = 10; }
+	else { _hertzPerFreqLabel = 10000; _freqLabelDivs = 10; }
+}
+
 void QGImage::_drawFreqScale() {
 	int topLeftX, topLeftY, topLeftX2, topLeftY2;
-	int tickStep, labelStep;
 	int black = gdTrueColor(0, 0, 0);
 	int white = gdTrueColor(255, 255, 255);
 
@@ -276,8 +307,6 @@ void QGImage::_drawFreqScale() {
 		topLeftY = 0;
 		topLeftX2 = _freqLabelWidth + 10 + _size + 100;
 		topLeftY2 = 0;
-		tickStep = 10;
-		labelStep = tickStep * 10;
 		gdImageFilledRectangle(_im, topLeftX, topLeftY, topLeftX + _freqLabelWidth + 10, topLeftY + _fDelta, black);
 		gdImageFilledRectangle(_im, topLeftX2, topLeftY2, topLeftX2 + 10 + _freqLabelWidth, topLeftY2 + _fDelta, black);
 	} else {
@@ -285,45 +314,53 @@ void QGImage::_drawFreqScale() {
 		topLeftY = 0;
 		topLeftX2 = _dBLabelWidth + 10;
 		topLeftY2 = _freqLabelHeight + 10 + _size + 100;
-		tickStep = 10;
-		labelStep = tickStep * 10;
 		gdImageFilledRectangle(_im, topLeftX, topLeftY, topLeftX + _fDelta, topLeftY + _freqLabelHeight + 10, black);
 		gdImageFilledRectangle(_im, topLeftX2, topLeftY2, topLeftX2 + _fDelta, topLeftY2 + _freqLabelHeight + 10, black);
 	}
 
+	int f0;
+
 	// Freq labels with long ticks
-	for (int i = _fMin; i < _fMax; i += labelStep) {
-		std::stringstream f;
-		f << (_baseFreq + (i * _sampleRate) / N) << "Hz";
+	f0 = ((int)(_fMin / _freqK - 1) / _hertzPerFreqLabel) * _hertzPerFreqLabel + _hertzPerFreqLabel;
+
+	for (int f = f0; f <= _fMax / _freqK + 1; f += _hertzPerFreqLabel) { // + 1 to include high freq label
+		int p = f * _freqK; // Position of label
+
+		std::stringstream s;
+		s << (_baseFreq + f) << "Hz";
 
 		// Calculate text's bounding box
 		int brect[8];
-		gdImageStringFT(nullptr, brect, 0, (char *)_font.c_str(), _fontSize, 0, 0, 0, (char *)f.str().c_str());
+		gdImageStringFT(nullptr, brect, 0, (char *)_font.c_str(), _fontSize, 0, 0, 0, (char *)s.str().c_str());
 
 		// Cache key data as they will be overriden when rendering first string
 		int x = brect[0], y = brect[1], w = brect[2] - brect[0], h = brect[1] - brect[7];
 
 		if (_orientation == Orientation::Horizontal) {
-			gdImageStringFT(_im, brect, white, (char *)_font.c_str(), _fontSize, 0, topLeftX + _freqLabelWidth - w, topLeftY + _fDelta + _fMin - i - y + .5 * h, (char *)f.str().c_str());
-			gdImageStringFT(_im, brect, white, (char *)_font.c_str(), _fontSize, 0, topLeftX2 + 10, topLeftY2 + _fDelta + _fMin - i - y + .5 * h, (char *)f.str().c_str());
-			gdImageLine(_im, topLeftX + _freqLabelWidth, topLeftY + _fDelta + _fMin - i, topLeftX + _freqLabelWidth + 9, topLeftY + _fDelta + _fMin - i, white);
-			gdImageLine(_im, topLeftX2, topLeftY2 + _fDelta + _fMin - i, topLeftX2 + 9, topLeftY2 + _fDelta + _fMin - i, white);
+			gdImageStringFT(_im, brect, white, (char *)_font.c_str(), _fontSize, 0, topLeftX + _freqLabelWidth - w, topLeftY + _fDelta + _fMin - p - y + .5 * h, (char *)s.str().c_str());
+			gdImageStringFT(_im, brect, white, (char *)_font.c_str(), _fontSize, 0, topLeftX2 + 10, topLeftY2 + _fDelta + _fMin - p - y + .5 * h, (char *)s.str().c_str());
+			gdImageLine(_im, topLeftX + _freqLabelWidth, topLeftY + _fDelta + _fMin - p, topLeftX + _freqLabelWidth + 9, topLeftY + _fDelta + _fMin - p, white);
+			gdImageLine(_im, topLeftX2, topLeftY2 + _fDelta + _fMin - p, topLeftX2 + 9, topLeftY2 + _fDelta + _fMin - p, white);
 		} else {
-			gdImageStringFT(_im, brect, white, (char *)_font.c_str(), _fontSize, 0, topLeftX - _fMin + i - w/2, topLeftY + _freqLabelHeight, (char *)f.str().c_str());
-			gdImageStringFT(_im, brect, white, (char *)_font.c_str(), _fontSize, 0, topLeftX2 - _fMin + i - w/2, topLeftY2 + 10 + _freqLabelHeight, (char *)f.str().c_str());
-			gdImageLine(_im, topLeftX - _fMin + i, _freqLabelHeight, topLeftX - _fMin + i, _freqLabelHeight + 9, white);
-			gdImageLine(_im, topLeftX2 - _fMin + i, _freqLabelHeight + 10 + _size + 100, topLeftX2 - _fMin + i, _freqLabelHeight + 10 + _size + 100 + 9, white);
+			gdImageStringFT(_im, brect, white, (char *)_font.c_str(), _fontSize, 0, topLeftX - _fMin + p - w/2, topLeftY + _freqLabelHeight, (char *)s.str().c_str());
+			gdImageStringFT(_im, brect, white, (char *)_font.c_str(), _fontSize, 0, topLeftX2 - _fMin + p - w/2, topLeftY2 + 10 + _freqLabelHeight, (char *)s.str().c_str());
+			gdImageLine(_im, topLeftX - _fMin + p, _freqLabelHeight, topLeftX - _fMin + p, _freqLabelHeight + 9, white);
+			gdImageLine(_im, topLeftX2 - _fMin + p, _freqLabelHeight + 10 + _size + 100, topLeftX2 - _fMin + p, _freqLabelHeight + 10 + _size + 100 + 9, white);
 		}
 	}
 
 	// Small tick markers
-	for (int i = _fMin; i < _fMax; i += tickStep) {
+	f0 = ((int)(_fMin / _freqK - 1) / (_hertzPerFreqLabel / _freqLabelDivs)) * (_hertzPerFreqLabel / _freqLabelDivs) + (_hertzPerFreqLabel / _freqLabelDivs);
+
+	for (int f = f0; f <= _fMax / _freqK + 1; f += _hertzPerFreqLabel / _freqLabelDivs) {
+		int p = f * _freqK; // Position of label
+
 		if (_orientation == Orientation::Horizontal) {
-			gdImageLine(_im, topLeftX + _freqLabelWidth + 5, topLeftY + _fDelta + _fMin - i, topLeftX + _freqLabelWidth + 9, topLeftY + _fDelta + _fMin - i, white);
-			gdImageLine(_im, topLeftX2, topLeftY2 + _fDelta + _fMin - i, topLeftX2 + 4, topLeftY2 + _fDelta + _fMin - i, white);
+			gdImageLine(_im, topLeftX + _freqLabelWidth + 5, topLeftY + _fDelta + _fMin - p, topLeftX + _freqLabelWidth + 9, topLeftY + _fDelta + _fMin - p, white);
+			gdImageLine(_im, topLeftX2, topLeftY2 + _fDelta + _fMin - p, topLeftX2 + 4, topLeftY2 + _fDelta + _fMin - p, white);
 		} else {
-			gdImageLine(_im, topLeftX - _fMin + i, _freqLabelHeight + 5, topLeftX - _fMin + i, _freqLabelHeight + 9, white);
-			gdImageLine(_im, topLeftX2 - _fMin + i, _freqLabelHeight + 10 + _size + 100, topLeftX2 - _fMin + i, _freqLabelHeight + 10 + _size + 100 + 4, white);
+			gdImageLine(_im, topLeftX - _fMin + p, _freqLabelHeight + 5, topLeftX - _fMin + p, _freqLabelHeight + 9, white);
+			gdImageLine(_im, topLeftX2 - _fMin + p, _freqLabelHeight + 10 + _size + 100, topLeftX2 - _fMin + p, _freqLabelHeight + 10 + _size + 100 + 4, white);
 		}
 	}
 }
@@ -404,7 +441,7 @@ void QGImage::_drawDbScale() {
 void QGImage::_computeTimeScale() {
 	// Calculate text's max bounding box to determine label spacing
 	int brect[8];
-	gdImageStringFT(nullptr, brect, 0, (char *)_font.c_str(), _fontSize, 0, 0, 0, const_cast<char *>("00:00:00"));
+	gdImageStringFT(nullptr, brect, 0, const_cast<char *>(_font.c_str()), _fontSize, 0, 0, 0, const_cast<char *>("00:00:00"));
 
 	int maxLabelSize;
 	if (_orientation == Orientation::Horizontal) {
