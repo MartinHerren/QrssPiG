@@ -6,7 +6,7 @@
 
 class QGSCPUploader: public QGUploader {
 public:
-	QGSCPUploader(const std::string &host = "localhost", const std::string &user = "", const std::string &dir = "./", int port = 0);
+	QGSCPUploader(bool pushIntermediate, const std::string &host = "localhost", const std::string &user = "", const std::string &dir = "./", int port = 0);
 	~QGSCPUploader();
 
 private:

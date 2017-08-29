@@ -4,8 +4,8 @@
 #include <iostream>
 #include <stdexcept>
 
-QGLocalUploader::QGLocalUploader(const std::string &dir) :
-	QGUploader(),
+QGLocalUploader::QGLocalUploader(bool pushIntermediate, const std::string &dir) :
+	QGUploader(pushIntermediate),
 	_dir(dir) {
 }
 
