@@ -6,7 +6,7 @@
 
 class QGLocalUploader: public QGUploader {
 public:
-	QGLocalUploader(const std::string &dir = "./");
+	QGLocalUploader(bool pushIntermediate, const std::string &dir = "./");
 	~QGLocalUploader();
 
 private:

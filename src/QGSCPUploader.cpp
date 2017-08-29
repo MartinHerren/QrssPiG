@@ -6,8 +6,8 @@
 #include <libssh/libssh.h>
 //#include <libssh/libsshpp.hpp> // Not available in debian jessie, available in stretch
 
-QGSCPUploader::QGSCPUploader(const std::string &host, const std::string &user, const std::string &dir, int port) :
-	QGUploader(),
+QGSCPUploader::QGSCPUploader(bool pushIntermediate, const std::string &host, const std::string &user, const std::string &dir, int port) :
+	QGUploader(pushIntermediate),
 	_host(host),
 	_user(user),
 	_dir(dir),
