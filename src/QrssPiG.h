@@ -34,6 +34,7 @@ private:
 
 	void _addIQ(std::complex<float> iq);
 	void _computeFft();
+	void _pushIntermediateImage();
 	void _pushImage(bool wait = false);
 
 	// Input data format

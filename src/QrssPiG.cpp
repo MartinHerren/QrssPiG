@@ -37,9 +37,9 @@ QrssPiG::QrssPiG(const std::string &format, int sampleRate, int N, const std::st
 	_sampleRate = sampleRate;
 
 	if (sshHost.length()) {
-		_uploaders.push_back(new QGSCPUploader(sshHost, sshUser, dir, sshPort));
+		_uploaders.push_back(new QGSCPUploader(false, sshHost, sshUser, dir, sshPort));
 	} else {
-		_uploaders.push_back(new QGLocalUploader(dir));
+		_uploaders.push_back(new QGLocalUploader(false, dir));
 	}
 
 	_init();
@@ -252,6 +252,14 @@ void QrssPiG::run() {
 void QrssPiG::_addUploader(const YAML::Node &uploader) {
 	if (!uploader["type"]) throw std::runtime_error("YAML: uploader must have a type");
 
+	bool pushIntermediate = false;
+	if (uploader["intermediate"]) {
+		std::string s = uploader["intermediate"].as<std::string>();
+		if ((s.compare("true") == 0) || (s.compare("yes") == 0)) pushIntermediate = true;
+		else if ((s.compare("false") == 0) || (s.compare("no") == 0)) pushIntermediate = false;
+		else throw std::runtime_error("YAML: uploader, intermediate value unknown");
+	}
+
 	std::string type = uploader["type"].as<std::string>();
 
 	if (type.compare("scp") == 0) {
@@ -265,13 +273,13 @@ void QrssPiG::_addUploader(const YAML::Node &uploader) {
 		if (uploader["user"]) user = uploader["user"].as<std::string>();
 		if (uploader["dir"]) dir = uploader["dir"].as<std::string>();
 
-		_uploaders.push_back(new QGSCPUploader(host, user, dir, port));
+		_uploaders.push_back(new QGSCPUploader(pushIntermediate, host, user, dir, port));
 	} else if (type.compare("local") == 0) {
 		std::string dir = "./";
 
 		if (uploader["dir"]) dir = uploader["dir"].as<std::string>();
 
-		_uploaders.push_back(new QGLocalUploader(dir));
+		_uploaders.push_back(new QGLocalUploader(pushIntermediate, dir));
 	}
 }
 
@@ -314,7 +322,33 @@ void QrssPiG::_addIQ(std::complex<float> iq) {
 void QrssPiG::_computeFft() {
 	for (int i = 0; i < _N; i++) _fftIn[i] = _resampled[i] * _hannW[i / 2];
 	_fft->process();
-	if (_im->addLine(_fftOut) == QGImage::Status::FrameReady) _pushImage();
+
+	switch(_im->addLine(_fftOut)) {
+	case QGImage::Status::IntermediateReady:
+		_pushIntermediateImage();
+		break;
+
+	case QGImage::Status::FrameReady:
+		_pushImage();
+		break;
+
+	default:
+		break;
+	}
+}
+
+void QrssPiG::_pushIntermediateImage() {
+	try {
+		int frameSize;
+		std::string frameName;
+		char * frame;
+
+		frame = _im->getFrame(&frameSize, frameName);
+
+std::cout << "pushing intermediate" << frameName << std::endl;
+		for (auto up: _uploaders) up->pushIntermediate(frameName, frame, frameSize);
+	} catch (const std::exception &e) {
+	}
 }
 
 void QrssPiG::_pushImage(bool wait) {

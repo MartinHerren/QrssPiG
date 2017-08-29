@@ -11,7 +11,7 @@
 class QGImage {
 public:
 	enum class Orientation { Horizontal, Vertical };
-	enum class Status { Ok, FrameReady };
+	enum class Status { Ok, IntermediateReady, FrameReady };
 
 	QGImage(int fftSize, int fftOverlap);
 	~QGImage();
