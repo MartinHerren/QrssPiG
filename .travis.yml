@@ -16,6 +16,7 @@ addons:
       - libfftw3-dev
       - libyaml-cpp-dev
       - libfreetype6-dev
+      - libusb-dev
       - libhackrf-dev
 
 before_install:
