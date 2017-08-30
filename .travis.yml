@@ -18,5 +18,8 @@ addons:
       - libfreetype6-dev
       - libhackrf-dev
 
+before_install:
+  - ./install-libhackrf.sh
+
 script:
   - mkdir -p build && cd build && cmake .. && cmake --build .
