@@ -17,6 +17,7 @@ addons:
       - libyaml-cpp-dev
       - libfreetype6-dev
       - librtfilter-dev
+      - libusb-dev
       - libhackrf-dev
 
 before_install:
