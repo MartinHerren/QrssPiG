@@ -16,3 +16,7 @@ target_link_libraries(QrssPiG yaml-cpp)
 
 add_executable (IQGen IQGen.cpp)
 target_link_libraries(IQGen boost_program_options)
+
+add_executable (TestDownSampler TestDownSampler.cpp QGDownSampler.cpp)
+target_link_libraries(TestDownSampler rtfilter)
+target_link_libraries(TestDownSampler liquid)

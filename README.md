@@ -27,7 +27,8 @@ It depends on following dev libs:
  - libfftw3-dev
  - libyaml-cpp-dev
  - libfreetype6-dev
- - (librtlsdr-dev)
+ - librtfilter-dev
+ - libliquid-dev
 
 To build:
 ```
