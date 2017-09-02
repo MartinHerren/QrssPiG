@@ -16,6 +16,8 @@ addons:
       - libfftw3-dev
       - libyaml-cpp-dev
       - libfreetype6-dev
+      - librtfilter-dev
+      - libliquid-dev
 
 script:
   - mkdir -p build && cd build && cmake .. && cmake --build .
