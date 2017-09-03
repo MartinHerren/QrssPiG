@@ -2,11 +2,12 @@
 
 class QGDownSampler {
 public:
-	QGDownSampler(unsigned int rate);
+	QGDownSampler(float rate);
 	~QGDownSampler();
 
 	void testRTFilter();
+	void testLiquidDsp();
 
 private:
-	unsigned int _rate;
+	float _rate;
 };
