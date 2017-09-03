@@ -15,14 +15,14 @@ QGDownSampler::~QGDownSampler() {
 }
 
 void QGDownSampler::testRTFilter() {
-	std::complex<float> *inP = new std::complex<float>[2*1024+15];
-	std::complex<float> *outP = new std::complex<float>[2*1024+15];
+	std::complex<float> *inP = new std::complex<float>[1024+15];
+	std::complex<float> *outP = new std::complex<float>[1024+15];
 	std::complex<float> *in = (std::complex<float>*)(((uintptr_t)inP + 15) & ~(uintptr_t)0xf);
 	std::complex<float> *out = (std::complex<float>*)(((uintptr_t)outP + 15) & ~(uintptr_t)0xf);
 
 	std::cout << "Rate: " << _rate << std::endl;
 
-	hfilter f = rtf_create_downsampler(2, RTF_CFLOAT, _rate);
+	hfilter f = rtf_create_downsampler(1, RTF_CFLOAT, _rate);
 
 	for (int chunkSize = 1; chunkSize <= 128; chunkSize *= 2) {
 		using namespace std::chrono;
@@ -33,7 +33,7 @@ void QGDownSampler::testRTFilter() {
 
 		for (int i = 0; i < (1000*1000)/chunkSize; i++) {
 			it += chunkSize;
-			ot += rtf_filter(f, in + 1, out, chunkSize);
+			ot += rtf_filter(f, in, out, chunkSize);
 		}
 		milliseconds stop = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
 		int t = stop.count() - start.count();
@@ -49,8 +49,8 @@ void QGDownSampler::testRTFilter() {
 }
 
 void QGDownSampler::testLiquidDsp() {
-	std::complex<float> *inP = new std::complex<float>[2*1024+15];
-	std::complex<float> *outP = new std::complex<float>[2*1024+15];
+	std::complex<float> *inP = new std::complex<float>[1024+15];
+	std::complex<float> *outP = new std::complex<float>[1024+15];
 	std::complex<float> *in = (std::complex<float>*)(((uintptr_t)inP + 15) & ~(uintptr_t)0xf);
 	std::complex<float> *out = (std::complex<float>*)(((uintptr_t)outP + 15) & ~(uintptr_t)0xf);
 
