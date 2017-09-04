@@ -10,7 +10,7 @@
 
 QGDownSampler::QGDownSampler(float rate, unsigned int cs): _rate(rate), _cs(cs) {
 	_inAllocated = new std::complex<float>[_cs+15]; // +15 to be able to enforce 16byte alignement
-	_outAllocated = new std::complex<float>[(int)ceil(1.1/_rate*_cs)+15]; // 10% safe for flexible filter output
+	_outAllocated = new std::complex<float>[(int)ceil(1.1/(int)_rate*_cs)+15]; // 10% safe for flexible filter output
 	_in = (std::complex<float>*)(((uintptr_t)_inAllocated + 15) & ~(uintptr_t)0xf);
 	_out = (std::complex<float>*)(((uintptr_t)_outAllocated + 15) & ~(uintptr_t)0xf);
 }
@@ -23,7 +23,7 @@ QGDownSampler::~QGDownSampler() {
 void QGDownSampler::testRTFilter() {
 	hfilter f = rtf_create_downsampler(1, RTF_CFLOAT, _rate);
 
-	for (unsigned int chunkSize = 1; chunkSize <= _cs; chunkSize *= 2) {
+	for (unsigned int chunkSize = 1; chunkSize <= (_cs > 64 ? 64 : _cs); chunkSize *= 2) {
 		using namespace std::chrono;
 		milliseconds start = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
 
