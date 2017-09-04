@@ -27,9 +27,11 @@ target_link_libraries(IQGen boost_program_options)
 add_executable (TestDownSampler TestDownSampler.cpp QGDownSampler.cpp)
 if (LIBRTFILTER_FOUND)
 	target_link_libraries(TestDownSampler ${LIBRTFILTER_LIBRARY})
+	set(HAVE_LIBRTFILTER 1)
 endif (LIBRTFILTER_FOUND)
 if (LIBLIQUIDSDR_FOUND)
 	target_link_libraries(TestDownSampler ${LIBLIQUIDSDR_LIBRARY})
+	set(HAVE_LIBLIQUIDSDR 1)
 endif (LIBLIQUIDSDR_FOUND)
 
 # Generate and include Config.h

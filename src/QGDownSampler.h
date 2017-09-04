@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Config.h"
+
 #include <complex>
 
 class QGDownSampler {
@@ -7,8 +9,12 @@ public:
 	QGDownSampler(float rate, unsigned int cs);
 	~QGDownSampler();
 
+#ifdef HAVE_LIBRTFILTER
 	void testRTFilter();
+#endif // HAVE_LIBRTFILTER
+#ifdef HAVE_LIBLIQUIDSDR
 	void testLiquidDsp();
+#endif // HAVE_LIBLIQUIDSDR
 
 private:
 	float _rate;

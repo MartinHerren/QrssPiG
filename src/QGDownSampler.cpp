@@ -2,10 +2,14 @@
 
 #include <chrono>
 #include <iostream>
+#ifdef HAVE_LIBLIQUIDSDR
 #include <liquid/liquid.h>
+#endif // HAVE_LIBLIQUIDSDR
 #include <math.h>
+#ifdef HAVE_LIBRTFILTER
 #include <rtf_common.h>
 #include <rtfilter.h>
+#endif // HAVE_LIBRTFILTER
 #include <stdexcept>
 
 QGDownSampler::QGDownSampler(float rate, unsigned int cs): _rate(rate), _cs(cs) {
@@ -20,6 +24,7 @@ QGDownSampler::~QGDownSampler() {
 	delete [] _outAllocated;
 }
 
+#ifdef HAVE_LIBRTFILTER
 void QGDownSampler::testRTFilter() {
 	hfilter f = rtf_create_downsampler(1, RTF_CFLOAT, _rate);
 
@@ -45,7 +50,9 @@ void QGDownSampler::testRTFilter() {
 
 	rtf_destroy_filter(f);
 }
+#endif // HAVE_LIBRTFILTER
 
+#ifdef HAVE_LIBLIQUIDSDR
 void QGDownSampler::testLiquidDsp() {
 	resamp_crcf q = resamp_crcf_create(1./_rate, 13, .45, 60., 32);
 
@@ -72,3 +79,4 @@ void QGDownSampler::testLiquidDsp() {
 
 	resamp_crcf_destroy(q);
 }
+#endif // HAVE_LIBLIQUIDSDR
