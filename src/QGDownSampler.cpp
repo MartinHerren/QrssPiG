@@ -1,82 +1,77 @@
 #include "QGDownSampler.h"
 
-#include <chrono>
 #include <iostream>
-#ifdef HAVE_LIBLIQUIDSDR
-#include <liquid/liquid.h>
-#endif // HAVE_LIBLIQUIDSDR
 #include <math.h>
-#ifdef HAVE_LIBRTFILTER
-#include <rtf_common.h>
-#include <rtfilter.h>
-#endif // HAVE_LIBRTFILTER
 #include <stdexcept>
 
+#ifdef HAVE_LIBLIQUIDSDR
+#else
+#ifdef HAVE_LIBRTFILTER
+#include <rtf_common.h>
+#endif // HAVE_LIBRTFILTER
+#endif // HAVE_LIBLIQUIDSDR
+
 QGDownSampler::QGDownSampler(float rate, unsigned int cs): _rate(rate), _cs(cs) {
-	_inAllocated = new std::complex<float>[_cs+15]; // +15 to be able to enforce 16byte alignement
-	_outAllocated = new std::complex<float>[(int)ceil(1.1/(int)_rate*_cs)+15]; // 10% safe for flexible filter output
-	_in = (std::complex<float>*)(((uintptr_t)_inAllocated + 15) & ~(uintptr_t)0xf);
-	_out = (std::complex<float>*)(((uintptr_t)_outAllocated + 15) & ~(uintptr_t)0xf);
+#ifdef HAVE_LIBLIQUIDSDR
+	_liquidSdrResampler = resamp_crcf_create(1./_rate, 13, .45, 60., 32);
+#else
+#ifdef HAVE_LIBRTFILTER
+	_rtFilterResampler = rtf_create_downsampler(1, RTF_CFLOAT, _rate);
+#else
+	_counter = 0;
+	_counterLimit = (unsigned int)floor(_rate);
+#endif // HAVE_LIBRTFILTER
+#endif // HAVE_LIBLIQUIDSDR
 }
 
 QGDownSampler::~QGDownSampler() {
-	delete [] _inAllocated;
-	delete [] _outAllocated;
-}
-
+#ifdef HAVE_LIBLIQUIDSDR
+	resamp_crcf_destroy(_liquidSdrResampler);
+#else
 #ifdef HAVE_LIBRTFILTER
-void QGDownSampler::testRTFilter() {
-	hfilter f = rtf_create_downsampler(1, RTF_CFLOAT, _rate);
-
-	for (unsigned int chunkSize = 1; chunkSize <= (_cs > 64 ? 64 : _cs); chunkSize *= 2) {
-		using namespace std::chrono;
-		milliseconds start = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
-
-		int it = 0;
-		int ot = 0;
-		int mo = 0;
-
-		for (unsigned int i = 0; i < (8*1000*1000)/chunkSize; i++) {
-			it += chunkSize;
-			int o = rtf_filter(f, _in, _out, chunkSize);
-			ot += o;
-			if (o > mo) mo = o;
-		}
-		milliseconds stop = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
-		int t = stop.count() - start.count();
-
-		std::cout << "cs: " << chunkSize << " " << it << " " << ot << " " << ((float)it/ot) << " " << t << "ms " << (8*1000./t) << "MS/s " << mo << std::endl;
-	}
-
-	rtf_destroy_filter(f);
-}
+	rtf_destroy_filter(_rtFilterResampler);
 #endif // HAVE_LIBRTFILTER
+#endif // HAVE_LIBLIQUIDSDR
+}
+
+float QGDownSampler::getRealRate() {
+#ifdef HAVE_LIBLIQUIDSDR
+	return _rate;
+#else
+#ifdef HAVE_LIBRTFILTER
+	return floor(_rate);
+#else
+	return floor(_rate);
+#endif // HAVE_LIBRTFILTER
+#endif // HAVE_LIBLIQUIDSDR
+}
+
+unsigned int QGDownSampler::process(std::complex<float> *in, unsigned int inSize, std::complex<float> *out) {
+	unsigned int remSize = inSize;
+	unsigned int outSize = 0;
+
+	while (remSize) {
+		unsigned int i = (remSize > _cs) ? _cs : remSize;
+		unsigned int o = 0;
 
 #ifdef HAVE_LIBLIQUIDSDR
-void QGDownSampler::testLiquidDsp() {
-	resamp_crcf q = resamp_crcf_create(1./_rate, 13, .45, 60., 32);
-
-	for (unsigned int chunkSize = 1; chunkSize <= _cs; chunkSize *= 2) {
-		using namespace std::chrono;
-		milliseconds start = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
-
-		int it = 0;
-		int ot = 0;
-		unsigned int mo = 0;
-		
-		for (unsigned int i = 0; i < (8*1000*1000)/chunkSize; i++) {
-			it += chunkSize;
-			unsigned int o;
-			resamp_crcf_execute_block(q, _in, chunkSize, _out, &o);
-			ot += o;
-			if (o > mo) mo = o;
+		resamp_crcf_execute_block(_liquidSdrResampler, in, i, out, &o);
+#else
+#ifdef HAVE_LIBRTFILTER
+		o = rtf_filter(_rtFilterResampler, in, out, i);
+#else
+		for (i = 0; i < remSize; i++) { // Reuse i, so outer while loop will run only once
+			if (!_counter++) out[o++] = in[i];
+			if (_counter >= _counterLimit) _counter = 0;
 		}
-		milliseconds stop = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
-		int t = stop.count() - start.count();
+#endif // HAVE_LIBRTFILTER
+#endif // HAVE_LIBLIQUIDSDR
 
-		std::cout << "cs: " << chunkSize << " " << it << " " << ot << " " << ((float)it/ot) << " " << t << "ms " << (8*1000./t) << "MS/s " << mo << std::endl;
+		remSize -= i;
+		outSize += o;
+		//in += i;
+		//out += o;
 	}
 
-	resamp_crcf_destroy(q);
+	return outSize;
 }
-#endif // HAVE_LIBLIQUIDSDR

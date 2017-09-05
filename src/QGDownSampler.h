@@ -4,25 +4,35 @@
 
 #include <complex>
 
+#ifdef HAVE_LIBLIQUIDSDR
+#include <liquid/liquid.h>
+#else
+#ifdef HAVE_LIBRTFILTER
+#include <rtfilter.h>
+#endif // HAVE_LIBRTFILTER
+#endif // HAVE_LIBLIQUIDSDR
+
 class QGDownSampler {
 public:
 	QGDownSampler(float rate, unsigned int cs);
 	~QGDownSampler();
 
-#ifdef HAVE_LIBRTFILTER
-	void testRTFilter();
-#endif // HAVE_LIBRTFILTER
-#ifdef HAVE_LIBLIQUIDSDR
-	void testLiquidDsp();
-#endif // HAVE_LIBLIQUIDSDR
+	float getRealRate();
+	unsigned int process(std::complex<float> *in, unsigned int inSize, std::complex<float> *out);
 
 private:
 	float _rate;
 	unsigned int _cs;
 
 	// internal
-	std::complex<float> *_inAllocated;
-	std::complex<float> *_outAllocated;
-	std::complex<float> *_in;
-	std::complex<float> *_out;
+#ifdef HAVE_LIBLIQUIDSDR
+	resamp_crcf _liquidSdrResampler;
+#else
+#ifdef HAVE_LIBRTFILTER
+	hfilter _rtFilterResampler;
+#else
+	unsigned int _counter;
+	unsigned int _counterLimit;
+#endif // HAVE_LIBRTFILTER
+#endif // HAVE_LIBLIQUIDSDR
 };
