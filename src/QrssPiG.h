@@ -7,6 +7,7 @@
 
 #include <yaml-cpp/yaml.h>
 
+#include "QGDownSampler.h"
 #include "QGFft.h"
 #include "QGImage.h"
 #include "QGUploader.h"
@@ -43,6 +44,8 @@ private:
 	Format _format;
 	int _sampleRate;
 	int _baseFreq;
+
+	QGDownSampler *_resampler;
 
 	double *_hannW;
 	QGFft *_fft;

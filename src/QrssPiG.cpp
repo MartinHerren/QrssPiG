@@ -9,7 +9,10 @@
 QrssPiG::QrssPiG() :
 	_format(Format::U8IQ),
 	_sampleRate(2000),
-	_baseFreq(0) {
+	_baseFreq(0),
+	_resampler(nullptr),
+	_hannW(nullptr),
+	_fft(nullptr) {
 		_N = 2048;
 		_overlap = (3 * _N) / 4;
 }
@@ -113,6 +116,7 @@ QrssPiG::~QrssPiG() {
 	if (_in) fftw_free(_in);
 	if (_im) delete _im;
 	for (auto up: _uploaders) delete up;
+	if (_resampler) delete _resampler;
 }
 
 void QrssPiG::run() {
