@@ -113,7 +113,8 @@ QrssPiG::~QrssPiG() {
 
 	if (_hannW) delete [] _hannW;
 	if (_fft) delete _fft;
-	if (_in) fftw_free(_in);
+	if (_input) fftw_free(_input);
+	if (_resampled) fftw_free(_resampled);
 	if (_im) delete _im;
 	for (auto up: _uploaders) delete up;
 	if (_resampler) delete _resampler;
@@ -200,36 +201,40 @@ void QrssPiG::_addUploader(const YAML::Node &uploader) {
 }
 
 void QrssPiG::_init() {
+	// TODO compute correct _input and _resampled size, taking into account chunksize and resampling rate.
+	// _resampled must be bigger to take into account overflowing by amount yelding from a resmpled chunksize
+	_input = (std::complex<float>*)fftw_malloc(sizeof(std::complex<float>) * _N);
+	_resampled = (std::complex<float>*)fftw_malloc(sizeof(std::complex<float>) * _N);
 	_fft = new QGFft(_N);
 
-	_in = (std::complex<double>*)fftw_malloc(sizeof(std::complex<double>) * _N);
 	_fftIn = _fft->getInputBuffer();
 	_fftOut = _fft->getFftBuffer();
 
 	_im = new QGImage(_sampleRate, _baseFreq, _N, _overlap);
 
-	_hannW = new double[_N];
+	_hannW = new float[_N];
 
 	for (int i = 0; i < _N/2; i++) {
 		_hannW[i] = .5 * (1 - cos((2 * M_PI * i) / (_N / 2 - 1)));
 	}
 
-	_idx = 0;
+	_inputIndex = 0;
+	_resampledIndex = 0;
 	_frameIndex = 0;
 }
 
 void QrssPiG::_addIQ(std::complex<double> iq) {
-	_in[_idx++] = iq;
+	_input[_inputIndex++] = iq;
 
-	if (_idx >= _N) {
+	if (_inputIndex >= _N) {
 		_computeFft();
-		for (auto i = 0; i < _overlap; i++) _in[i] = _in[_N - _overlap + i];
-		_idx = _overlap;
+		for (auto i = 0; i < _overlap; i++) _input[i] = _input[_N - _overlap + i];
+		_inputIndex = _overlap;
 	}
 }
 
 void QrssPiG::_computeFft() {
-	for (int i = 0; i < _N; i++) _fftIn[i] = _in[i] * _hannW[i / 2];
+	for (int i = 0; i < _N; i++) _fftIn[i] = _input[i] * _hannW[i / 2];
 	_fft->process();
 	if (_im->addLine(_fftOut) == QGImage::Status::FrameReady) _pushImage();
 }

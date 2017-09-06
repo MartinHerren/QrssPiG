@@ -47,12 +47,14 @@ private:
 
 	QGDownSampler *_resampler;
 
-	double *_hannW;
+	float *_hannW;
 	QGFft *_fft;
 
-	int _idx; // Current sample index in fft input
+	int _inputIndex;
+	int _resampledIndex;
 
-	std::complex<double> *_in;
+	std::complex<float> *_input;
+	std::complex<float> *_resampled;
 	std::complex<double> *_fftIn;
 	std::complex<double> *_fftOut;
 
