@@ -46,6 +46,25 @@ float QGDownSampler::getRealRate() {
 #endif // HAVE_LIBLIQUIDSDR
 }
 
+unsigned int QGDownSampler::processChunk(std::complex<float> *in, std::complex<float> *out) {
+	unsigned int outSize = 0;
+
+#ifdef HAVE_LIBLIQUIDSDR
+	resamp_crcf_execute_block(_liquidSdrResampler, in, _cs, out, &outSize);
+#else
+#ifdef HAVE_LIBRTFILTER
+	outSize = rtf_filter(_rtFilterResampler, in, out, _cs);
+#else
+	for (int i = 0; i < _cs; i++) { // Reuse i, so outer while loop will run only once
+		if (!_counter++) out[outSize++] = in[i];
+		if (_counter >= _counterLimit) _counter = 0;
+	}
+#endif // HAVE_LIBRTFILTER
+#endif // HAVE_LIBLIQUIDSDR
+
+	return outSize;
+}
+
 unsigned int QGDownSampler::process(std::complex<float> *in, unsigned int inSize, std::complex<float> *out) {
 	unsigned int remSize = inSize;
 	unsigned int outSize = 0;
@@ -69,8 +88,8 @@ unsigned int QGDownSampler::process(std::complex<float> *in, unsigned int inSize
 
 		remSize -= i;
 		outSize += o;
-		//in += i;
-		//out += o;
+		in += i;
+		out += o;
 	}
 
 	return outSize;

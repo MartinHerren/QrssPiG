@@ -8,11 +8,18 @@
 
 QrssPiG::QrssPiG() :
 	_format(Format::U8IQ),
-	_sampleRate(2000),
+	_sampleRate(48000),
 	_baseFreq(0),
-	_resampler(nullptr),
+	_chunkSize(32),
+	_resampleRate(6000),
+	_input(nullptr),
+	_resampled(nullptr),
 	_hannW(nullptr),
-	_fft(nullptr) {
+	_fftIn(nullptr),
+	_fftOut(nullptr),
+	_resampler(nullptr),
+	_fft(nullptr),
+	_im(nullptr) {
 		_N = 2048;
 		_overlap = (3 * _N) / 4;
 }
@@ -65,6 +72,8 @@ QrssPiG::QrssPiG(const std::string &configFile) : QrssPiG() {
 
 		YAML::Node processing = config["processing"];
 
+		if (processing["chunksize"]) _chunkSize = processing["chunksize"].as<int>();
+		if (processing["resamplerate"]) _resampleRate = processing["resamplerate"].as<int>();
 		if (processing["fft"]) _N = processing["fft"].as<int>();
 		if (processing["fftoverlap"]) {
 			int o = processing["fftoverlap"].as<int>();
@@ -114,7 +123,7 @@ QrssPiG::~QrssPiG() {
 	if (_hannW) delete [] _hannW;
 	if (_fft) delete _fft;
 	if (_input) fftwf_free(_input);
-	if (_resampled) fftwf_free(_resampled);
+	if (_resampled && (_resampled != _input)) fftwf_free(_resampled); // When no resampling is used both pointer point to the same buffer
 	if (_im) delete _im;
 	for (auto up: _uploaders) delete up;
 	if (_resampler) delete _resampler;
@@ -201,40 +210,61 @@ void QrssPiG::_addUploader(const YAML::Node &uploader) {
 }
 
 void QrssPiG::_init() {
-	// TODO compute correct _input and _resampled size, taking into account chunksize and resampling rate.
-	// _resampled must be bigger to take into account overflowing by amount yelding from a resmpled chunksize
-	_input = (std::complex<float>*)fftwf_malloc(sizeof(std::complex<float>) * _N);
-	_resampled = (std::complex<float>*)fftwf_malloc(sizeof(std::complex<float>) * _N);
-	_fft = new QGFft(_N);
-
-	_fftIn = _fft->getInputBuffer();
-	_fftOut = _fft->getFftBuffer();
-
-	_im = new QGImage(_sampleRate, _baseFreq, _N, _overlap);
+	if (_resampleRate && (_sampleRate != _resampleRate)) {
+		_resampler = new QGDownSampler((float)_sampleRate/(float)_resampleRate, _chunkSize);
+		_input = (std::complex<float>*)fftwf_malloc(sizeof(std::complex<float>) * _chunkSize);
+		// Add provision to add a full resampled chunksize (+10% + 4 due to variable resampler output) when only one sample left before reaching N
+		_resampled = (std::complex<float>*)fftwf_malloc(sizeof(std::complex<float>) * (_N + (1.1 * _chunkSize / _resampler->getRealRate() + 4) - 1));
+		_inputIndexThreshold = _chunkSize; // Trig when input size reaches chunksize to start resampling
+	} else {
+		// Add provision to add a full chunksize when only one sample left before reaching N
+		_input = (std::complex<float>*)fftwf_malloc(sizeof(std::complex<float>) * (_N + _chunkSize - 1));
+		_resampled = _input;
+		_inputIndexThreshold = _N; // Trig when input size reaches N to start fft
+	}
+	_inputIndex = 0;
+	_resampledIndex = 0;
 
 	_hannW = new float[_N];
-
 	for (int i = 0; i < _N/2; i++) {
 		_hannW[i] = .5 * (1 - cos((2 * M_PI * i) / (_N / 2 - 1)));
 	}
 
-	_inputIndex = 0;
-	_resampledIndex = 0;
+	_fft = new QGFft(_N);
+	_fftIn = _fft->getInputBuffer();
+	_fftOut = _fft->getFftBuffer();
+
+	_im = new QGImage(_sampleRate / (_resampler ? _resampler->getRealRate() : 1), _baseFreq, _N, _overlap);
+
 	_frameIndex = 0;
 }
 
 void QrssPiG::_addIQ(std::complex<float> iq) {
 	_input[_inputIndex++] = iq;
 
-	if (_inputIndex >= _N) {
-		_computeFft();
-		for (auto i = 0; i < _overlap; i++) _input[i] = _input[_N - _overlap + i];
-		_inputIndex = _overlap;
+	if (_inputIndex >= _inputIndexThreshold) {
+		if (_resampler) {
+			// Adding 1 sample, we know _inputIndex == _inputIndexThreshold == _chunksSize, and not bigger
+			_resampledIndex += _resampler->processChunk(_input, _resampled + _resampledIndex);
+			_inputIndex = 0;
+
+			if (_resampledIndex >= _N) {
+				_computeFft();
+				// TODO: Usually adds at most 1 sample, so we know _inputIndex == _inputIndexThreshold == _N, and not bigger
+				for (auto i = 0; i < _overlap; i++) _resampled[i] = _resampled[_N - _overlap + i];
+				_resampledIndex = _overlap;
+			}
+		} else {
+			_computeFft();
+			// Adding 1 sample, we know _inputIndex == _inputIndexThreshold == _N, and not bigger
+			for (auto i = 0; i < _overlap; i++) _input[i] = _input[_N - _overlap + i];
+			_inputIndex = _overlap;
+		}
 	}
 }
 
 void QrssPiG::_computeFft() {
-	for (int i = 0; i < _N; i++) _fftIn[i] = _input[i] * _hannW[i / 2];
+	for (int i = 0; i < _N; i++) _fftIn[i] = _resampled[i] * _hannW[i / 2];
 	_fft->process();
 	if (_im->addLine(_fftOut) == QGImage::Status::FrameReady) _pushImage();
 }

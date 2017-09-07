@@ -36,28 +36,29 @@ private:
 	void _computeFft();
 	void _pushImage(bool wait = false);
 
-	// FFT size
-	int _N;
-	int _overlap; // 0: no overlap, 1: 1/2, 2: 2/3...
-
-	// Data format
+	// Input data format
 	Format _format;
 	int _sampleRate;
 	int _baseFreq;
 
-	QGDownSampler *_resampler;
+	// Processing
+	int _chunkSize;
+	int _resampleRate;
+	int _N;
+	int _overlap; // 0: no overlap, 1: 1/2, 2: 2/3...
 
-	float *_hannW;
-	QGFft *_fft;
-
+	// Processing buffer
 	int _inputIndex;
+	int _inputIndexThreshold;
 	int _resampledIndex;
-
 	std::complex<float> *_input;
 	std::complex<float> *_resampled;
+	float *_hannW;
 	std::complex<float> *_fftIn;
 	std::complex<float> *_fftOut;
 
+	QGDownSampler *_resampler;
+	QGFft *_fft;
 	QGImage *_im;
 	std::vector<QGUploader*> _uploaders;
 
