@@ -113,8 +113,8 @@ QrssPiG::~QrssPiG() {
 
 	if (_hannW) delete [] _hannW;
 	if (_fft) delete _fft;
-	if (_input) fftw_free(_input);
-	if (_resampled) fftw_free(_resampled);
+	if (_input) fftwf_free(_input);
+	if (_resampled) fftwf_free(_resampled);
 	if (_im) delete _im;
 	for (auto up: _uploaders) delete up;
 	if (_resampler) delete _resampler;
@@ -130,7 +130,7 @@ void QrssPiG::run() {
 			while (std::cin && _running) {
 				i = std::cin.get();
 				q = std::cin.get();
-				_addIQ(std::complex<double>((i - 128) / 128., (q - 128) / 128.));
+				_addIQ(std::complex<float>((i - 128) / 128., (q - 128) / 128.));
 			}
 			break;
 		}
@@ -140,7 +140,7 @@ void QrssPiG::run() {
 			while (std::cin && _running) {
 				i = std::cin.get();
 				q = std::cin.get();
-				_addIQ(std::complex<double>(i / 128., q / 128.));
+				_addIQ(std::complex<float>(i / 128., q / 128.));
 			}
 			break;
 		}
@@ -152,7 +152,7 @@ void QrssPiG::run() {
 				i += std::cin.get() << 8;
 				q = std::cin.get();
 				q += std::cin.get() << 8;
-				_addIQ(std::complex<double>((i - 32768) / 32768., (q - 32768) / 32768.));
+				_addIQ(std::complex<float>((i - 32768) / 32768., (q - 32768) / 32768.));
 			}
 			break;
 		}
@@ -164,7 +164,7 @@ void QrssPiG::run() {
 				i += std::cin.get() << 8;
 				q = std::cin.get();
 				q += std::cin.get() << 8;
-				_addIQ(std::complex<double>(i / 32768., q / 32768.));
+				_addIQ(std::complex<float>(i / 32768., q / 32768.));
 			}
 			break;
 		}
@@ -203,8 +203,8 @@ void QrssPiG::_addUploader(const YAML::Node &uploader) {
 void QrssPiG::_init() {
 	// TODO compute correct _input and _resampled size, taking into account chunksize and resampling rate.
 	// _resampled must be bigger to take into account overflowing by amount yelding from a resmpled chunksize
-	_input = (std::complex<float>*)fftw_malloc(sizeof(std::complex<float>) * _N);
-	_resampled = (std::complex<float>*)fftw_malloc(sizeof(std::complex<float>) * _N);
+	_input = (std::complex<float>*)fftwf_malloc(sizeof(std::complex<float>) * _N);
+	_resampled = (std::complex<float>*)fftwf_malloc(sizeof(std::complex<float>) * _N);
 	_fft = new QGFft(_N);
 
 	_fftIn = _fft->getInputBuffer();
@@ -223,7 +223,7 @@ void QrssPiG::_init() {
 	_frameIndex = 0;
 }
 
-void QrssPiG::_addIQ(std::complex<double> iq) {
+void QrssPiG::_addIQ(std::complex<float> iq) {
 	_input[_inputIndex++] = iq;
 
 	if (_inputIndex >= _N) {

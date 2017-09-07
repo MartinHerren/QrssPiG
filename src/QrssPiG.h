@@ -32,7 +32,7 @@ private:
 	void _addUploader(const YAML::Node &uploader);
 	void _init();
 
-	void _addIQ(std::complex<double> iq);
+	void _addIQ(std::complex<float> iq);
 	void _computeFft();
 	void _pushImage(bool wait = false);
 
@@ -55,8 +55,8 @@ private:
 
 	std::complex<float> *_input;
 	std::complex<float> *_resampled;
-	std::complex<double> *_fftIn;
-	std::complex<double> *_fftOut;
+	std::complex<float> *_fftIn;
+	std::complex<float> *_fftOut;
 
 	QGImage *_im;
 	std::vector<QGUploader*> _uploaders;

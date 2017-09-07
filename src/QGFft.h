@@ -8,13 +8,13 @@ public:
 	QGFft(int N);
 	~QGFft();
 
-	std::complex<double> *getInputBuffer() { return _in; };
-	std::complex<double> *getFftBuffer() { return _out; };
+	std::complex<float> *getInputBuffer() { return _in; };
+	std::complex<float> *getFftBuffer() { return _out; };
 
 	void process();
 
 private:
-	fftw_plan _p;
-	std::complex<double> *_in;
-	std::complex<double> *_out;
+	fftwf_plan _p;
+	std::complex<float> *_in;
+	std::complex<float> *_out;
 };

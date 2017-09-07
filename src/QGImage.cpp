@@ -15,8 +15,8 @@ QGImage::QGImage(long int sampleRate, long int baseFreq, int fftSize, int fftOve
 	_currentLine = 0;
 
 	// Freq/time constants used for mapping freq/time to pixel
-	_freqK = (double)(N) / (_sampleRate); // pixels = freq * _freqK
-	_timeK = (double)(_sampleRate) / (N - _overlap); // pixels = seconds * _timeK
+	_freqK = (float)(N) / (_sampleRate); // pixels = freq * _freqK
+	_timeK = (float)(_sampleRate) / (N - _overlap); // pixels = seconds * _timeK
 }
 
 QGImage::~QGImage() {
@@ -154,16 +154,16 @@ void QGImage::startNewFrame(bool incrementTime) {
 	_currentLine = 0;
 }
 
-QGImage::Status QGImage::addLine(const std::complex<double> *fft) {
+QGImage::Status QGImage::addLine(const std::complex<float> *fft) {
 	if (_currentLine >= _size) return Status::FrameReady;
 
 	int whiteA = gdTrueColorAlpha(255, 255, 255, 125);
 
 	// Draw a data line DC centered
-	double last;
+	float last;
 
 	for (int i = _fMin; i < _fMax; i++) {
-		double v = 10 * log10(abs(fft[(i + N) % N]) / N); // Current value, DC centered
+		float v = 10 * log10(abs(fft[(i + N) % N]) / N); // Current value, DC centered
 
 		switch (_orientation) {
 		case Orientation::Horizontal:
@@ -428,7 +428,7 @@ void QGImage::_drawDbScale() {
 		gdImageLine(_im, topLeftX + _dBLabelWidth + 4, topLeftY - _dBmin, topLeftX +_dBLabelWidth + 4, topLeftY - _dBmax, white);
 
 	// Color bar
-	for (double i = -100.; i <= 0.; i++) {
+	for (float i = -100.; i <= 0.; i++) {
 		int c = _db2Color(i);
 
 		if (_orientation == Orientation::Horizontal)
@@ -542,7 +542,7 @@ void QGImage::_drawTimeScale() {
 	}
 }
 
-int QGImage::_db2Color(double v) {
+int QGImage::_db2Color(float v) {
 	if (v < _dBmin) v = _dBmin;
 	if (v > _dBmax) v = _dBmax;
 
