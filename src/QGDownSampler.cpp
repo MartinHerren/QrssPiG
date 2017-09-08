@@ -13,7 +13,7 @@
 
 QGDownSampler::QGDownSampler(float rate, unsigned int cs): _rate(rate), _cs(cs) {
 #ifdef HAVE_LIBLIQUIDSDR
-	_liquidSdrResampler = resamp_crcf_create(1./_rate, 13, .45, 60., 32);
+	_liquidSdrResampler = resamp_crcf_create(1./_rate, 1000, .5/_rate, 60., 32);
 #else
 #ifdef HAVE_LIBRTFILTER
 	_rtFilterResampler = rtf_create_downsampler(1, RTF_CFLOAT, _rate);
