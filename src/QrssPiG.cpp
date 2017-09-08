@@ -130,6 +130,7 @@ QrssPiG::~QrssPiG() {
 }
 
 void QrssPiG::run() {
+	char b[8192];
 	_running = true;
 	std::cin >> std::noskipws;
 
@@ -137,9 +138,12 @@ void QrssPiG::run() {
 		case Format::U8IQ: {
 			unsigned char i, q;
 			while (std::cin && _running) {
-				i = std::cin.get();
-				q = std::cin.get();
-				_addIQ(std::complex<float>((i - 128) / 128., (q - 128) / 128.));
+				std::cin.read(b, 8192);
+				for (int j = 0; j < 8192;) {
+					i = b[j++];
+					q = b[j++];
+					_addIQ(std::complex<float>((i - 128) / 128., (q - 128) / 128.));
+				}
 			}
 			break;
 		}
@@ -147,9 +151,12 @@ void QrssPiG::run() {
 		case Format::S8IQ: {
 			signed char i, q;
 			while (std::cin && _running) {
-				i = std::cin.get();
-				q = std::cin.get();
-				_addIQ(std::complex<float>(i / 128., q / 128.));
+				std::cin.read(b, 8192);
+				for (int j = 0; j < 8192;) {
+					i = b[j++];
+					q = b[j++];
+					_addIQ(std::complex<float>(i / 128., q / 128.));
+				}
 			}
 			break;
 		}
@@ -157,11 +164,14 @@ void QrssPiG::run() {
 		case Format::U16IQ: {
 			unsigned short int i, q;
 			while (std::cin && _running) {
-				i = std::cin.get();
-				i += std::cin.get() << 8;
-				q = std::cin.get();
-				q += std::cin.get() << 8;
-				_addIQ(std::complex<float>((i - 32768) / 32768., (q - 32768) / 32768.));
+				std::cin.read(b, 8192);
+				for (int j = 0; j < 8192;) {
+					i = b[j++];
+					i += b[j++] << 8;
+					q = b[j++];
+					q += b[j++] << 8;
+					_addIQ(std::complex<float>((i - 32768) / 32768., (q - 32768) / 32768.));
+				}
 			}
 			break;
 		}
@@ -169,11 +179,14 @@ void QrssPiG::run() {
 		case Format::S16IQ: {
 			signed short int i, q;
 			while (std::cin && _running) {
-				i = std::cin.get();
-				i += std::cin.get() << 8;
-				q = std::cin.get();
-				q += std::cin.get() << 8;
-				_addIQ(std::complex<float>(i / 32768., q / 32768.));
+				std::cin.read(b, 8192);
+				for (int j = 0; j < 8192;) {
+					i = b[j++];
+					i += b[j++] << 8;
+					q = b[j++];
+					q += b[j++] << 8;
+					_addIQ(std::complex<float>(i / 32768., q / 32768.));
+				}
 			}
 			break;
 		}
