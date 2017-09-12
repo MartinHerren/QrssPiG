@@ -85,6 +85,7 @@ private:
 	int _secondsPerTimeLabel;
 	int _timeLabelDivs;
 
+	int _markerSize;
 	int _freqLabelWidth;
 	int _freqLabelHeight;
 	int _dBLabelWidth;
