@@ -33,6 +33,7 @@ QrssPiG::QrssPiG(const std::string &format, int sampleRate, int N, const std::st
 
 	_N = N;
 	_sampleRate = sampleRate;
+	_resampleRate = 0;
 
 	if (sshHost.length()) {
 		_uploaders.push_back(new QGSCPUploader(sshHost, sshUser, dir, sshPort));

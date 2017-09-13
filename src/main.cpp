@@ -22,7 +22,7 @@ int main(int argc, char *argv[]) {
 		("help,h", "Help screen")
 		("configfile,c", value<std::string>(), "Config file")
 		("format,F", value<std::string>()->default_value("rtlsdr"), "Format, 'rtlsdr' or 'hackrf'")
-		("samplerate,s", value<int>()->default_value(2000), "Samplerate in S/s")
+		("samplerate,s", value<int>()->default_value(6000), "Samplerate in S/s")
 		("directory,d", value<std::string>()->default_value("./"), "Output directory")
 		("sshhost,o", value<std::string>()->default_value(""), "Ssh host")
 		("sshuser,u", value<std::string>()->default_value(""), "Ssh user")
@@ -42,7 +42,7 @@ int main(int argc, char *argv[]) {
 			gPig = new QrssPiG(configFile);
 		} else {
 			std::string format = "rtlsdr";
-			int sampleRate = 2000;
+			int sampleRate = 6000;
 			std::string directory;
 			std::string sshHost;
 			std::string sshUser;
