@@ -1,0 +1,8 @@
+ - Integrated resampling using libliquid, optionally librtfilter can also be
+ used
+ - Support intermediate saving
+ - Smarter frequency and time label spacing
+
+v0.1.0:
+ - Initial release
+
