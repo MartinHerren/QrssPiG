@@ -19,7 +19,7 @@ public:
 	void configure(const YAML::Node &config);
 
 	void startNewFrame(bool incrementTime = true);
-	Status addLine(const std::complex<double> *fft);
+	Status addLine(const std::complex<float> *fft);
 	char *getFrame(int *frameSize, std::string &frameName);
 
 private:
@@ -32,7 +32,7 @@ private:
 	void _computeTimeScale();
 	void _drawTimeScale();
 
-	int _db2Color(double v);
+	int _db2Color(float v);
 
 	// Params given at constructor time, cannot be changed
 	long int _sampleRate;
@@ -55,9 +55,9 @@ private:
 	int _fDelta;
 
 	// Covered dB range. Only used for waterfall colormapping, not in spectro graph yet
-	double _dBmin;
-	double _dBmax;
-	double _dBdelta;
+	float _dBmin;
+	float _dBmax;
+	float _dBdelta;
 
 	// Frame alignement and start
 	bool _alignFrame;
@@ -72,8 +72,8 @@ private:
 	int _currentLine;
 
 	// Constants to go from hertz/seconds to pixel
-	double _freqK;
-	double _timeK;
+	float _freqK;
+	float _timeK;
 
 	std::string _qrsspigString;
 	int _qrsspigLabelBase;

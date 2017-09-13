@@ -1,18 +1,47 @@
-# Generate and include Config.h
-configure_file ("Config.h.in" "${PROJECT_BINARY_DIR}/Config.h")
-include_directories("${PROJECT_BINARY_DIR}")
-
 # Set compiler options
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -pedantic -Wextra")
 add_definitions(-std=c++11)
 
-add_executable (QrssPiG main.cpp QrssPiG.cpp QGFft.cpp QGImage.cpp QGUploader.cpp QGLocalUploader.cpp QGSCPUploader.cpp)
+# Look for optional packages
+find_package(LibRTFilter)
+if (LIBRTFILTER_FOUND)
+	include_directories(${LIBRTFILTER_INCLUDE_DIR})
+endif (LIBRTFILTER_FOUND)
+
+find_package(LibLiquidSDR)
+if (LIBLIQUIDSDR_FOUND)
+	include_directories(${LIBLIQUIDSDR_INCLUDE_DIR})
+endif (LIBLIQUIDSDR_FOUND)
+
+add_executable (QrssPiG main.cpp QrssPiG.cpp QGDownSampler.cpp QGFft.cpp QGImage.cpp QGUploader.cpp QGLocalUploader.cpp QGSCPUploader.cpp)
 target_link_libraries(QrssPiG pthread)
 target_link_libraries(QrssPiG boost_program_options)
-target_link_libraries(QrssPiG fftw3)
+target_link_libraries(QrssPiG fftw3f)
 target_link_libraries(QrssPiG gd)
 target_link_libraries(QrssPiG ssh)
 target_link_libraries(QrssPiG yaml-cpp)
+if (LIBRTFILTER_FOUND)
+	target_link_libraries(QrssPiG ${LIBRTFILTER_LIBRARY})
+	set(HAVE_LIBRTFILTER 1)
+endif (LIBRTFILTER_FOUND)
+if (LIBLIQUIDSDR_FOUND)
+	target_link_libraries(QrssPiG ${LIBLIQUIDSDR_LIBRARY})
+	set(HAVE_LIBLIQUIDSDR 1)
+endif (LIBLIQUIDSDR_FOUND)
 
 add_executable (IQGen IQGen.cpp)
 target_link_libraries(IQGen boost_program_options)
+
+add_executable (TestDownSampler TestDownSampler.cpp QGDownSampler.cpp)
+if (LIBRTFILTER_FOUND)
+	target_link_libraries(TestDownSampler ${LIBRTFILTER_LIBRARY})
+	set(HAVE_LIBRTFILTER 1)
+endif (LIBRTFILTER_FOUND)
+if (LIBLIQUIDSDR_FOUND)
+	target_link_libraries(TestDownSampler ${LIBLIQUIDSDR_LIBRARY})
+	set(HAVE_LIBLIQUIDSDR 1)
+endif (LIBLIQUIDSDR_FOUND)
+
+# Generate and include Config.h
+configure_file ("Config.h.in" "${PROJECT_BINARY_DIR}/Config.h")
+include_directories("${PROJECT_BINARY_DIR}")
