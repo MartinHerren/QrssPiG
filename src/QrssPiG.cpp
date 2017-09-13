@@ -261,12 +261,11 @@ void QrssPiG::_addIQ(std::complex<float> iq) {
 			// Adding 1 sample, we know _inputIndex == _inputIndexThreshold == _chunksSize, and not bigger
 			_resampledIndex += _resampler->processChunk(_input, _resampled + _resampledIndex);
 			_inputIndex = 0;
-
 			if (_resampledIndex >= _N) {
 				_computeFft();
 				// TODO: Usually adds at most 1 sample, so we know _inputIndex == _inputIndexThreshold == _N, and not bigger
-				for (auto i = 0; i < _overlap; i++) _resampled[i] = _resampled[_N - _overlap + i];
-				_resampledIndex = _overlap;
+				for (auto i = 0; i < _overlap + _resampledIndex - _N; i++) _resampled[i] = _resampled[_N - _overlap + i];
+				_resampledIndex = _overlap + _resampledIndex - _N;
 			}
 		} else {
 			_computeFft();
