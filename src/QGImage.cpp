@@ -47,6 +47,7 @@ void QGImage::configure(const YAML::Node &config) {
 	if (config["font"]) _font = config["font"].as<std::string>();
 	_fontSize = 8;
 	if (config["fontsize"]) _fontSize = config["fontsize"].as<int>();
+	_markerSize = ceil(1.2 * _fontSize);
 
 	// Configure freq range, default value to full range of positive and negative
 	_fMin = -N / 2;
@@ -140,11 +141,11 @@ void QGImage::configure(const YAML::Node &config) {
 void QGImage::startNewFrame(bool incrementTime) {
 	switch (_orientation) {
 	case Orientation::Horizontal:
-		gdImageFilledRectangle(_im, _freqLabelWidth + 10, _fDelta, _freqLabelWidth + 10 + _size + 100, 0, gdTrueColor(0, 0, 0));
+		gdImageFilledRectangle(_im, _freqLabelWidth + _markerSize, _fDelta, _freqLabelWidth + _markerSize + _size + 100, 0, gdTrueColor(0, 0, 0));
 		break;
 
 	case Orientation::Vertical:
-		gdImageFilledRectangle(_im, _dBLabelWidth + 10, _freqLabelHeight + 10 + _size + 100, _dBLabelWidth + 10 + _fDelta, _freqLabelHeight + 10, gdTrueColor(0, 0, 0));
+		gdImageFilledRectangle(_im, _dBLabelWidth + _markerSize, _freqLabelHeight + _markerSize + _size + 100, _dBLabelWidth + _markerSize + _fDelta, _freqLabelHeight + _markerSize, gdTrueColor(0, 0, 0));
 		break;
 	}
 
@@ -163,17 +164,18 @@ QGImage::Status QGImage::addLine(const std::complex<float> *fft) {
 	float last;
 
 	for (int i = _fMin; i < _fMax; i++) {
+		// TODO: evaluate to do this in fft class once, for multi-image support
 		float v = 10 * log10(abs(fft[(i + N) % N]) / N); // Current value, DC centered
 
 		switch (_orientation) {
 		case Orientation::Horizontal:
-			gdImageSetPixel(_im, _freqLabelWidth + 10 + _currentLine, _fDelta + _fMin - i, _db2Color(v));
-			if (i != _fMin) gdImageLine(_im, _freqLabelWidth + 10 + _size - last, _fDelta + _fMin - i + 1, _freqLabelWidth + 10 + _size - v, _fDelta + _fMin - i, whiteA);
+			gdImageSetPixel(_im, _freqLabelWidth + _markerSize + _currentLine, _fDelta + _fMin - i, _db2Color(v));
+			if (i != _fMin) gdImageLine(_im, _freqLabelWidth + _markerSize + _size - last, _fDelta + _fMin - i + 1, _freqLabelWidth + _markerSize + _size - v, _fDelta + _fMin - i, whiteA);
 			break;
 
 		case Orientation::Vertical:
-			gdImageSetPixel(_im, _dBLabelWidth + 10 - _fMin + i, _freqLabelHeight + 10 + _currentLine, _db2Color(v));
-			if (i != _fMin) gdImageLine(_im, _dBLabelWidth + 10 - _fMin + i - 1, _freqLabelHeight + 10 + _size - last, _dBLabelWidth + 10 - _fMin + i, _freqLabelHeight + 10 + _size - v, whiteA);
+			gdImageSetPixel(_im, _dBLabelWidth + _markerSize - _fMin + i, _freqLabelHeight + _markerSize + _currentLine, _db2Color(v));
+			if (i != _fMin) gdImageLine(_im, _dBLabelWidth + _markerSize - _fMin + i - 1, _freqLabelHeight + _markerSize + _size - last, _dBLabelWidth + _markerSize - _fMin + i, _freqLabelHeight + _markerSize + _size - v, whiteA);
 			break;
 		}
 
@@ -234,13 +236,13 @@ void QGImage::_init() {
 	// Allocate canvas
 	switch (_orientation) {
 	case Orientation::Horizontal:
-		_im = gdImageCreateTrueColor(_freqLabelWidth + 10 + _size + 100 + 10 + _freqLabelWidth, _fDelta + 10 + _dBLabelHeight + _qrsspigLabelHeight);
-		gdImageStringFT(_im, brect, white, const_cast<char *>(_font.c_str()), _fontSize, 0, _freqLabelWidth + 10 + _size + 100 + 10 + _freqLabelWidth - _qrsspigLabelWidth, _fDelta + 10 + _qrsspigLabelHeight + _qrsspigLabelHeight - _qrsspigLabelBase, const_cast<char *>(_qrsspigString.c_str()));
+		_im = gdImageCreateTrueColor(_freqLabelWidth + _markerSize + _size + 100 + _markerSize + _freqLabelWidth, _fDelta + _markerSize + _dBLabelHeight + _qrsspigLabelHeight);
+		gdImageStringFT(_im, brect, white, const_cast<char *>(_font.c_str()), _fontSize, 0, _freqLabelWidth + _markerSize + _size + 100 + _markerSize + _freqLabelWidth - _qrsspigLabelWidth, _fDelta + _markerSize + _qrsspigLabelHeight + _qrsspigLabelHeight - _qrsspigLabelBase, const_cast<char *>(_qrsspigString.c_str()));
 		break;
 
 	case Orientation::Vertical:
-		_im = gdImageCreateTrueColor(_dBLabelWidth + 10 + _fDelta, _freqLabelHeight + 10 + _size + 100 + 10 + _freqLabelHeight + _qrsspigLabelHeight);
-		gdImageStringFT(_im, brect, white, const_cast<char *>(_font.c_str()), _fontSize, 0, _dBLabelWidth + 10 + _fDelta - _qrsspigLabelWidth, _freqLabelHeight + 10 + _size + 100 + 10 + _freqLabelHeight + _qrsspigLabelHeight - _qrsspigLabelBase, const_cast<char *>(_qrsspigString.c_str()));
+		_im = gdImageCreateTrueColor(_dBLabelWidth + _markerSize + _fDelta, _freqLabelHeight + _markerSize + _size + 100 + _markerSize + _freqLabelHeight + _qrsspigLabelHeight);
+		gdImageStringFT(_im, brect, white, const_cast<char *>(_font.c_str()), _fontSize, 0, _dBLabelWidth + _markerSize + _fDelta - _qrsspigLabelWidth, _freqLabelHeight + _markerSize + _size + 100 + _markerSize + _freqLabelHeight + _qrsspigLabelHeight - _qrsspigLabelBase, const_cast<char *>(_qrsspigString.c_str()));
 		break;
 	}
 
@@ -305,17 +307,17 @@ void QGImage::_drawFreqScale() {
 	if (_orientation == Orientation::Horizontal) {
 		topLeftX = 0;
 		topLeftY = 0;
-		topLeftX2 = _freqLabelWidth + 10 + _size + 100;
+		topLeftX2 = _freqLabelWidth + _markerSize + _size + 100;
 		topLeftY2 = 0;
-		gdImageFilledRectangle(_im, topLeftX, topLeftY, topLeftX + _freqLabelWidth + 10, topLeftY + _fDelta, black);
-		gdImageFilledRectangle(_im, topLeftX2, topLeftY2, topLeftX2 + 10 + _freqLabelWidth, topLeftY2 + _fDelta, black);
+		gdImageFilledRectangle(_im, topLeftX, topLeftY, topLeftX + _freqLabelWidth + _markerSize, topLeftY + _fDelta, black);
+		gdImageFilledRectangle(_im, topLeftX2, topLeftY2, topLeftX2 + _markerSize + _freqLabelWidth, topLeftY2 + _fDelta, black);
 	} else {
-		topLeftX = _dBLabelWidth + 10;
+		topLeftX = _dBLabelWidth + _markerSize;
 		topLeftY = 0;
-		topLeftX2 = _dBLabelWidth + 10;
-		topLeftY2 = _freqLabelHeight + 10 + _size + 100;
-		gdImageFilledRectangle(_im, topLeftX, topLeftY, topLeftX + _fDelta, topLeftY + _freqLabelHeight + 10, black);
-		gdImageFilledRectangle(_im, topLeftX2, topLeftY2, topLeftX2 + _fDelta, topLeftY2 + _freqLabelHeight + 10, black);
+		topLeftX2 = _dBLabelWidth + _markerSize;
+		topLeftY2 = _freqLabelHeight + _markerSize + _size + 100;
+		gdImageFilledRectangle(_im, topLeftX, topLeftY, topLeftX + _fDelta, topLeftY + _freqLabelHeight + _markerSize, black);
+		gdImageFilledRectangle(_im, topLeftX2, topLeftY2, topLeftX2 + _fDelta, topLeftY2 + _freqLabelHeight + _markerSize, black);
 	}
 
 	int f0;
@@ -338,14 +340,14 @@ void QGImage::_drawFreqScale() {
 
 		if (_orientation == Orientation::Horizontal) {
 			gdImageStringFT(_im, brect, white, (char *)_font.c_str(), _fontSize, 0, topLeftX + _freqLabelWidth - w, topLeftY + _fDelta + _fMin - p - y + .5 * h, (char *)s.str().c_str());
-			gdImageStringFT(_im, brect, white, (char *)_font.c_str(), _fontSize, 0, topLeftX2 + 10, topLeftY2 + _fDelta + _fMin - p - y + .5 * h, (char *)s.str().c_str());
-			gdImageLine(_im, topLeftX + _freqLabelWidth, topLeftY + _fDelta + _fMin - p, topLeftX + _freqLabelWidth + 9, topLeftY + _fDelta + _fMin - p, white);
-			gdImageLine(_im, topLeftX2, topLeftY2 + _fDelta + _fMin - p, topLeftX2 + 9, topLeftY2 + _fDelta + _fMin - p, white);
+			gdImageStringFT(_im, brect, white, (char *)_font.c_str(), _fontSize, 0, topLeftX2 + _markerSize, topLeftY2 + _fDelta + _fMin - p - y + .5 * h, (char *)s.str().c_str());
+			gdImageLine(_im, topLeftX + _freqLabelWidth, topLeftY + _fDelta + _fMin - p, topLeftX + _freqLabelWidth + _markerSize, topLeftY + _fDelta + _fMin - p, white);
+			gdImageLine(_im, topLeftX2, topLeftY2 + _fDelta + _fMin - p, topLeftX2 + _markerSize, topLeftY2 + _fDelta + _fMin - p, white);
 		} else {
 			gdImageStringFT(_im, brect, white, (char *)_font.c_str(), _fontSize, 0, topLeftX - _fMin + p - w/2, topLeftY + _freqLabelHeight, (char *)s.str().c_str());
-			gdImageStringFT(_im, brect, white, (char *)_font.c_str(), _fontSize, 0, topLeftX2 - _fMin + p - w/2, topLeftY2 + 10 + _freqLabelHeight, (char *)s.str().c_str());
-			gdImageLine(_im, topLeftX - _fMin + p, _freqLabelHeight, topLeftX - _fMin + p, _freqLabelHeight + 9, white);
-			gdImageLine(_im, topLeftX2 - _fMin + p, _freqLabelHeight + 10 + _size + 100, topLeftX2 - _fMin + p, _freqLabelHeight + 10 + _size + 100 + 9, white);
+			gdImageStringFT(_im, brect, white, (char *)_font.c_str(), _fontSize, 0, topLeftX2 - _fMin + p - w/2, topLeftY2 + _markerSize + _freqLabelHeight, (char *)s.str().c_str());
+			gdImageLine(_im, topLeftX - _fMin + p, _freqLabelHeight, topLeftX - _fMin + p, _freqLabelHeight + _markerSize, white);
+			gdImageLine(_im, topLeftX2 - _fMin + p, _freqLabelHeight + _markerSize + _size + 100, topLeftX2 - _fMin + p, _freqLabelHeight + _markerSize + _size + 100 + _markerSize, white);
 		}
 	}
 
@@ -356,11 +358,11 @@ void QGImage::_drawFreqScale() {
 		int p = f * _freqK; // Position of label
 
 		if (_orientation == Orientation::Horizontal) {
-			gdImageLine(_im, topLeftX + _freqLabelWidth + 5, topLeftY + _fDelta + _fMin - p, topLeftX + _freqLabelWidth + 9, topLeftY + _fDelta + _fMin - p, white);
-			gdImageLine(_im, topLeftX2, topLeftY2 + _fDelta + _fMin - p, topLeftX2 + 4, topLeftY2 + _fDelta + _fMin - p, white);
+			gdImageLine(_im, topLeftX + _freqLabelWidth + _markerSize/2, topLeftY + _fDelta + _fMin - p, topLeftX + _freqLabelWidth + _markerSize, topLeftY + _fDelta + _fMin - p, white);
+			gdImageLine(_im, topLeftX2, topLeftY2 + _fDelta + _fMin - p, topLeftX2 + _markerSize/2, topLeftY2 + _fDelta + _fMin - p, white);
 		} else {
-			gdImageLine(_im, topLeftX - _fMin + p, _freqLabelHeight + 5, topLeftX - _fMin + p, _freqLabelHeight + 9, white);
-			gdImageLine(_im, topLeftX2 - _fMin + p, _freqLabelHeight + 10 + _size + 100, topLeftX2 - _fMin + p, _freqLabelHeight + 10 + _size + 100 + 4, white);
+			gdImageLine(_im, topLeftX - _fMin + p, _freqLabelHeight + _markerSize/2, topLeftX - _fMin + p, _freqLabelHeight + _markerSize, white);
+			gdImageLine(_im, topLeftX2 - _fMin + p, _freqLabelHeight + _markerSize + _size + 100, topLeftX2 - _fMin + p, _freqLabelHeight + _markerSize + _size + 100 + _markerSize/2, white);
 		}
 	}
 }
@@ -373,17 +375,17 @@ void QGImage::_drawDbScale() {
 
 	// Clear zone and set topLeft corner
 	if (_orientation == Orientation::Horizontal) {
-		topLeftX = _freqLabelWidth + 10 + _size;
+		topLeftX = _freqLabelWidth + _markerSize + _size;
 		topLeftY = _fDelta;
 		tickStep = 10;
 		labelStep = tickStep * 3;
-		gdImageFilledRectangle(_im, topLeftX, topLeftY, topLeftX + 100, topLeftY + 10 + _dBLabelHeight, black);
+		gdImageFilledRectangle(_im, topLeftX, topLeftY, topLeftX + 100, topLeftY + _markerSize + _dBLabelHeight, black);
 	} else {
 		topLeftX = 0;
-		topLeftY = _freqLabelHeight + 10 + _size;
+		topLeftY = _freqLabelHeight + _markerSize + _size;
 		tickStep = 10;
 		labelStep = tickStep;
-		gdImageFilledRectangle(_im, topLeftX, topLeftY, topLeftX + _dBLabelWidth + 10, topLeftY + 100, black);
+		gdImageFilledRectangle(_im, topLeftX, topLeftY, topLeftX + _dBLabelWidth + _markerSize, topLeftY + 100, black);
 	}
 
 	// Render graph scale (hard coded to full range -100dB-0dB)
@@ -402,8 +404,8 @@ void QGImage::_drawDbScale() {
 
 		if (_orientation == Orientation::Horizontal) {
 			x = topLeftX - i - .5 * (brect[2] - brect[0]);
-			y = topLeftY + 10 - brect[7];
-			gdImageLine(_im, topLeftX - i, topLeftY + 10, topLeftX - i, topLeftY + 7, white);
+			y = topLeftY + _markerSize - brect[7];
+			gdImageLine(_im, topLeftX - i, topLeftY + _markerSize, topLeftX - i, topLeftY + 7, white);
 		} else {
 			x = topLeftX +_dBLabelWidth - brect[2];
 			y = topLeftY - i - .5 * (brect[1] + brect[7]);
@@ -473,22 +475,22 @@ void QGImage::_drawTimeScale() {
 
 	// Clear zone and set topLeft corner
 	if (_orientation == Orientation::Horizontal) {
-		topLeftX = _freqLabelWidth + 10;
+		topLeftX = _freqLabelWidth + _markerSize;
 		topLeftY = _fDelta;
-		gdImageFilledRectangle(_im, 0, topLeftY + 10, topLeftX, topLeftY + 10 + _dBLabelHeight, black);
-		gdImageFilledRectangle(_im, topLeftX, topLeftY, topLeftX + _size, topLeftY + 10 + _dBLabelHeight, black);
+		gdImageFilledRectangle(_im, 0, topLeftY + _markerSize, topLeftX, topLeftY + _markerSize + _dBLabelHeight, black);
+		gdImageFilledRectangle(_im, topLeftX, topLeftY, topLeftX + _size, topLeftY + _markerSize + _dBLabelHeight, black);
 	} else {
 		topLeftX = 0;
-		topLeftY = _freqLabelHeight + 10;
-		gdImageFilledRectangle(_im, topLeftX, topLeftY - 10, topLeftX + _dBLabelWidth + 10, topLeftY, black);
-		gdImageFilledRectangle(_im, topLeftX, topLeftY, topLeftX + _dBLabelWidth + 10, topLeftY + _size, black);
+		topLeftY = _freqLabelHeight + _markerSize;
+		gdImageFilledRectangle(_im, topLeftX, topLeftY - _markerSize, topLeftX + _dBLabelWidth + _markerSize, topLeftY, black);
+		gdImageFilledRectangle(_im, topLeftX, topLeftY, topLeftX + _dBLabelWidth + _markerSize, topLeftY + _size, black);
 	}
 
 	int t0 = 0;
 
 	// Time labels with long ticks
 	
-	// Realign lablels on non-aligned frames
+	// Realign labels on non-aligned frames
 	if (_alignFrame == false) {
 		t0 = _secondsPerTimeLabel - _startedIntoFrame.count() / 1000;
 		while (t0 < 0) t0 += _secondsPerTimeLabel;
@@ -513,12 +515,12 @@ void QGImage::_drawTimeScale() {
 
 		if (_orientation == Orientation::Horizontal) {
 			x = topLeftX + l - .5 * (brect[2] - brect[0]);
-			y = topLeftY + 10 - brect[7];
-			gdImageLine(_im, topLeftX + l, topLeftY, topLeftX + l, topLeftY + 9, white);
+			y = topLeftY + _markerSize - brect[7];
+			gdImageLine(_im, topLeftX + l, topLeftY, topLeftX + l, topLeftY + _markerSize, white);
 		} else {
 			x = topLeftX + _dBLabelWidth - brect[2];
 			y = topLeftY + l - .5 * (brect[1] + brect[7]);
-			gdImageLine(_im, topLeftX + _dBLabelWidth, topLeftY + l, topLeftX + _dBLabelWidth + 9, topLeftY + l, white);
+			gdImageLine(_im, topLeftX + _dBLabelWidth, topLeftY + l, topLeftX + _dBLabelWidth + _markerSize, topLeftY + l, white);
 		}
 
 		gdImageStringFT(_im, brect, white, (char *)_font.c_str(), _fontSize, 0, x, y, const_cast<char *>(s.str().c_str()));
@@ -536,9 +538,9 @@ void QGImage::_drawTimeScale() {
 		int l = t * _timeK; // Line number of label
 
 		if (_orientation == Orientation::Horizontal)
-			gdImageLine(_im, topLeftX + l, topLeftY, topLeftX + l, topLeftY + 4, white);
+			gdImageLine(_im, topLeftX + l, topLeftY, topLeftX + l, topLeftY + _markerSize/2, white);
 		else
-			gdImageLine(_im, topLeftX + _dBLabelWidth + 5, topLeftY + l, topLeftX + _dBLabelWidth + 9, topLeftY + l, white);
+			gdImageLine(_im, topLeftX + _dBLabelWidth + _markerSize/2, topLeftY + l, topLeftX + _dBLabelWidth + _markerSize, topLeftY + l, white);
 	}
 }
 
