@@ -488,7 +488,7 @@ void QGImage::_drawFreqScale() {
 	// Small tick markers
 	f0 = ((int)(_fMin / _freqK - 1) / (_hertzPerFreqLabel / _freqLabelDivs)) * (_hertzPerFreqLabel / _freqLabelDivs);
 
-	for (int f = f0; f <= _fMax / _freqK + 1; f += _hertzPerFreqLabel / _freqLabelDivs) {
+	for (float f = f0; f <= _fMax / _freqK + 1; f += (float)_hertzPerFreqLabel / _freqLabelDivs) {
 		int p = f * _freqK; // Position of label
 
 		if (_orientation == Orientation::Horizontal) {
@@ -770,7 +770,7 @@ void QGImage::_drawTimeScale() {
 		while (t0 < 0) t0 += _secondsPerTimeLabel / _timeLabelDivs;
 	}
 
-	for (int t = t0; t < _secondsPerFrame; t += _secondsPerTimeLabel / _timeLabelDivs) {
+	for (float t = t0; t < _secondsPerFrame; t += (float)_secondsPerTimeLabel / _timeLabelDivs) {
 		int l = t * _timeK; // Line number of label
 
 		if (_orientation == Orientation::Horizontal)
