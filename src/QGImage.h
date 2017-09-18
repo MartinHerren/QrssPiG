@@ -75,19 +75,25 @@ private:
 	float _freqK;
 	float _timeK;
 
-	std::string _qrsspigString;
-	int _qrsspigLabelBase;
-	int _qrsspigLabelWidth;
-	int _qrsspigLabelHeight;
-
+	// Marker and label division
 	int _hertzPerFreqLabel;
 	int _freqLabelDivs;
 	int _secondsPerTimeLabel;
 	int _timeLabelDivs;
 
+	// Max size of markes and labels to allocate canvas
+	std::string _qrsspigString;
+	int _qrsspigLabelWidth;
+	int _qrsspigLabelHeight;
+
+	int _borderSize;
+	int _titleHeight;
+	int _scopeSize;
 	int _markerSize;
 	int _freqLabelWidth;
 	int _freqLabelHeight;
 	int _dBLabelWidth;
 	int _dBLabelHeight;
+	int _timeLabelWidth;
+	int _timeLabelHeight;
 };
