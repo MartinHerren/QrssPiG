@@ -522,15 +522,12 @@ void QGImage::_drawFreqScale() {
 }
 
 void QGImage::_drawDbScale() {
-	int topLeftX, topLeftY;
 	int tickStep, labelStep;
 	int black = gdTrueColor(0, 0, 0);
 	int white = gdTrueColor(255, 255, 255);
 
 	// Clear zone and set topLeft corner
 	if (_orientation == Orientation::Horizontal) {
-		topLeftX = _freqLabelWidth + _markerSize + _size;
-		topLeftY = _fDelta;
 		tickStep = 10;
 		labelStep = tickStep * 3;
 		gdImageFilledRectangle(_im,
@@ -546,8 +543,6 @@ void QGImage::_drawDbScale() {
 			_borderSize + _titleHeight + _markerSize + _fDelta + _markerSize + _dBLabelHeight - 1,
 			black);
 	} else {
-		topLeftX = 0;
-		topLeftY = _freqLabelHeight + _markerSize + _size;
 		tickStep = 10;
 		labelStep = tickStep;
 		gdImageFilledRectangle(_im,
