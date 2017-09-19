@@ -61,6 +61,7 @@ private:
 
 	// Frame alignement and start
 	bool _alignFrame;
+	bool _syncFrames;
 	std::chrono::milliseconds _started;
 	std::chrono::milliseconds _startedIntoFrame;
 

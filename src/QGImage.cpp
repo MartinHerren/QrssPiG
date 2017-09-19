@@ -93,11 +93,15 @@ void QGImage::configure(const YAML::Node &config) {
 	}
 
 	// Configure start time
-	using namespace std::chrono;
-	_started = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
+	_syncFrames = true;
 	if (config["started"]) {
+		using namespace std::chrono;
+
 		std::tm tm = {};
 		std::stringstream ss(config["started"].as<std::string>());
+
+		// Don't attempt to resync on frame start if start time given. Usually start time is only used when processing offline data.
+		_syncFrames = false;
 
 		//ss >> std::get_time(&tm, "%Y-%m-%dT%H:%M:%SZ"); // std::get_time() not supported on Travis' Ubuntu 14.04 build system
 		std::string c; // to hold separators
@@ -116,12 +120,6 @@ void QGImage::configure(const YAML::Node &config) {
 		_started += seconds(mktime(localtime(&t0)) - mktime(gmtime(&t0)));
 	}
 
-	_startedIntoFrame = _started % seconds(_secondsPerFrame); // Time into first frame to align frames on correct boundary
-
-	if (_alignFrame) {
-		_started -= _startedIntoFrame;
-	}
-
 	// Not yet configurable values
 	_markerSize = ceil(1.2 * _fontSize);
 	_borderSize = _markerSize / 2;
@@ -135,11 +133,6 @@ void QGImage::configure(const YAML::Node &config) {
 	_drawFreqScale();
 
 	startNewFrame(false);
-
-	if (_alignFrame) {
-		// Fix first _currentLine according to intoFrame, must be done after startNewFrame as startNewFrame sets it to zero
-		_currentLine = (_startedIntoFrame.count() * _timeK) / 1000;
-	}
 }
 
 void QGImage::startNewFrame(bool incrementTime) {
@@ -177,13 +170,37 @@ void QGImage::startNewFrame(bool incrementTime) {
 		break;
 	}
 
-	if (incrementTime) _started += std::chrono::seconds(_secondsPerFrame);
-	_drawTimeScale();
+	using namespace std::chrono;
 
-	_currentLine = 0;
+	bool backSync = false; // Syncing can bring the current line into the past regarding new current frame, better said the new frame was created to early
+	_started += seconds(_secondsPerFrame);
+
+	if (_syncFrames) {
+		milliseconds s = _started;
+		_started = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
+		backSync = (_started < s) ? true : false;
+		if (incrementTime) std::cout << (_started - s).count() << "ms adjustement on new frame" << std::endl; // TODO: incrementTime is missused as 'not first frame'. Should be renamed as initial use not needed anymore
+	}
+
+	if (_alignFrame) {
+		_startedIntoFrame = _started % seconds(_secondsPerFrame); // Time into frame to align frames on correct boundary
+		if (backSync) _startedIntoFrame -= seconds(_secondsPerFrame); // Negative value
+		_started -= _startedIntoFrame;
+		_currentLine = (_startedIntoFrame.count() * _timeK) / 1000;
+		std::cout << "intoframe: " << _startedIntoFrame.count() << " currentline: " << _currentLine << std::endl;
+	} else {
+		_startedIntoFrame = milliseconds(0);
+		_currentLine = 0;
+	}
+
+	_drawTimeScale();
 }
 
 QGImage::Status QGImage::addLine(const std::complex<float> *fft) {
+	if (_currentLine < 0) {
+		_currentLine++;
+		return Status::Ok;
+	}
 	if (_currentLine >= _size) return Status::FrameReady;
 
 	int whiteA = gdTrueColorAlpha(255, 255, 255, 125);
