@@ -187,7 +187,6 @@ void QGImage::startNewFrame(bool incrementTime) {
 		if (backSync) _startedIntoFrame -= seconds(_secondsPerFrame); // Negative value
 		_started -= _startedIntoFrame;
 		_currentLine = (_startedIntoFrame.count() * _timeK) / 1000;
-		std::cout << "intoframe: " << _startedIntoFrame.count() << " currentline: " << _currentLine << std::endl;
 	} else {
 		_startedIntoFrame = milliseconds(0);
 		_currentLine = 0;
