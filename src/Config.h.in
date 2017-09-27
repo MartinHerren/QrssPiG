@@ -5,3 +5,4 @@
 
 #cmakedefine HAVE_LIBRTFILTER
 #cmakedefine HAVE_LIBLIQUIDSDR
+#cmakedefine HAVE_LIBHACKRF

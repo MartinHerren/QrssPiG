@@ -5,12 +5,12 @@
 #include <string>
 #include <vector>
 
-#include <libhackrf/hackrf.h>
 #include <yaml-cpp/yaml.h>
 
 #include "QGDownSampler.h"
 #include "QGFft.h"
 #include "QGImage.h"
+#include "QGInput.h"
 #include "QGUploader.h"
 
 class QrssPiG {
@@ -30,17 +30,15 @@ public:
 	void stop() { _running = false; };
 
 private:
-	void _openHackRF(int index);
 	void _addUploader(const YAML::Node &uploader);
-
 	void _init();
 
 	void _addIQ(std::complex<float> iq);
 	void _computeFft();
 	void _pushImage(bool wait = false);
 
-	// Input
-	hackrf_device *_hackrf;
+	// Input device
+	QGInput *_inputDevice;
 
 	// Input data format
 	Format _format;

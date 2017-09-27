@@ -18,7 +18,12 @@ if (LIBHACKRF_FOUND)
 	include_directories(${LIBHACKRF_INCLUDE_DIRS})
 endif (LIBHACKRF_FOUND)
 
-add_executable (QrssPiG main.cpp QrssPiG.cpp QGDownSampler.cpp QGFft.cpp QGImage.cpp QGUploader.cpp QGLocalUploader.cpp QGSCPUploader.cpp)
+list(APPEND QRSSPIG_SOURCES  main.cpp QrssPiG.cpp QGDownSampler.cpp QGFft.cpp QGImage.cpp QGUploader.cpp QGLocalUploader.cpp QGSCPUploader.cpp)
+if (LIBHACKRF_FOUND)
+	list(APPEND QRSSPIG_SOURCES QGInputHackRF.cpp)
+endif (LIBHACKRF_FOUND)
+add_executable (QrssPiG ${QRSSPIG_SOURCES})
+
 target_link_libraries(QrssPiG pthread)
 target_link_libraries(QrssPiG boost_program_options)
 target_link_libraries(QrssPiG fftw3f)

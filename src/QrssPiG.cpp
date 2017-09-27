@@ -3,11 +3,17 @@
 #include <stdexcept>
 #include <string>
 
+#include "Config.h"
+
+#ifdef HAVE_LIBHACKRF
+#include "QGInputHackRF.h"
+#endif // HAVE_LIBHACKRF
+
 #include "QGLocalUploader.h"
 #include "QGSCPUploader.h"
 
 QrssPiG::QrssPiG() :
-	_hackrf(nullptr),
+	_inputDevice(nullptr),
 	_format(Format::U8IQ),
 	_sampleRate(48000),
 	_baseFreq(0),
@@ -199,55 +205,6 @@ void QrssPiG::run() {
 // Private members
 //
 
-void QrssPiG::_openHackRF(int index) {
-	int r = hackrf_init();
-
-	if (r != HACKRF_SUCCESS) {
-		std::cout << "HackRF init returned " << r << std::endl;
-	}
-
-	hackrf_device_list_t *l = hackrf_device_list();
-
-	std::cout << "Devices: " << l->devicecount << std::endl;
-
-	r = hackrf_device_list_open(l, index, &_hackrf);
-
-	if (r != HACKRF_SUCCESS) {
-		_hackrf = nullptr;
-		std::cout << "HackRF opening failed: " << r << std::endl;
-		hackrf_exit();
-		return;
-	}
-
-	hackrf_device_list_free(l);
-
-	char v[255];
-	uint8_t vl = 255;
-	hackrf_version_string_read(_hackrf, v, vl);
-
-	std::cout << "Version: " << v << std::endl;
-
-	r = hackrf_set_sample_rate(_hackrf, _sampleRate);
-
-	if (r != HACKRF_SUCCESS) {
-		std::cout << "HackRF setting samplerate failed: " << r << std::endl;
-	}
-
-	r = hackrf_set_freq(_hackrf, _baseFreq);
-
-	if (r != HACKRF_SUCCESS) {
-		std::cout << "HackRF setting frequency failed: " << r << std::endl;
-	}
-
-	r = hackrf_close(_hackrf);
-
-	if (r != HACKRF_SUCCESS) {
-		std::cout << "HackRF closing failed: " << r << std::endl;
-	}
-
-	hackrf_exit();
-}
-
 void QrssPiG::_addUploader(const YAML::Node &uploader) {
 	if (!uploader["type"]) throw std::runtime_error("YAML: uploader must have a type");
 
@@ -302,7 +259,11 @@ void QrssPiG::_init() {
 	_im = new QGImage(_sampleRate / (_resampler ? _resampler->getRealRate() : 1), _baseFreq, _N, _overlap);
 
 	_frameIndex = 0;
-	_openHackRF(0);
+
+#ifdef HAVE_LIBHACKRF
+	_inputDevice = new QGInputHackRF();
+	_inputDevice->open();
+#endif //HAVE_LIBHACKRF
 }
 
 void QrssPiG::_addIQ(std::complex<float> iq) {
