@@ -15,7 +15,7 @@ endif (LIBLIQUIDSDR_FOUND)
 
 find_package(LibHackRF)
 if (LIBHACKRF_FOUND)
-	include_directories(${LIBHACKRF_LIBRARY})
+	include_directories(${LIBHACKRF_INCLUDE_DIRS})
 endif (LIBHACKRF_FOUND)
 
 add_executable (QrssPiG main.cpp QrssPiG.cpp QGDownSampler.cpp QGFft.cpp QGImage.cpp QGUploader.cpp QGLocalUploader.cpp QGSCPUploader.cpp)
