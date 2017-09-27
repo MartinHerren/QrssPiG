@@ -3,29 +3,26 @@
 #include <iostream>
 #include <stdexcept>
 
-QGInputHackRF::QGInputHackRF(): _hackrf(nullptr) {
+QGInputHackRF::QGInputHackRF(const YAML::Node &config): QGInputDevice(config), _hackrf(nullptr) {
+	int r = hackrf_init();
+
+	if (r != HACKRF_SUCCESS) {
+		throw std::runtime_error(std::string("HackRF init returned ") + std::to_string(r));
+	}
 }
 
 QGInputHackRF::~QGInputHackRF() {
+	hackrf_exit();
 }
 
 void QGInputHackRF::open() {
 	int index = 0;
-	int _sampleRate = 0;
-	int _baseFreq = 0;
-
-       	int r = hackrf_init();
-
-	if (r != HACKRF_SUCCESS) {
-		std::cout << "HackRF init returned " << r <<
-		std::endl;
-	}
 
 	hackrf_device_list_t *l = hackrf_device_list();
 
 	std::cout << "Devices: " << l->devicecount << std::endl;
 
-	r = hackrf_device_list_open(l, index, &_hackrf);
+	int r = hackrf_device_list_open(l, index, &_hackrf);
 
 	if (r != HACKRF_SUCCESS) {
 		_hackrf = nullptr; std::cout << "HackRF opening failed: " << r << std::endl;
@@ -58,6 +55,4 @@ void QGInputHackRF::open() {
 	}
 
 	_hackrf = nullptr;
-
-	hackrf_exit();
 }

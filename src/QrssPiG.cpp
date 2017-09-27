@@ -3,12 +3,6 @@
 #include <stdexcept>
 #include <string>
 
-#include "Config.h"
-
-#ifdef HAVE_LIBHACKRF
-#include "QGInputHackRF.h"
-#endif // HAVE_LIBHACKRF
-
 #include "QGLocalUploader.h"
 #include "QGSCPUploader.h"
 
@@ -73,6 +67,13 @@ QrssPiG::QrssPiG(const std::string &configFile) : QrssPiG() {
 
 		if (input["samplerate"]) _sampleRate = input["samplerate"].as<int>();
 		if (input["basefreq"]) _baseFreq = input["basefreq"].as<int>();
+
+		if ((input["device"]) && (input["device"].as<std::string>().compare("stdin"))) {
+			_inputDevice = QGInputDevice::CreateInputDevice(input);
+
+			_sampleRate = _inputDevice->sampleRate();
+			_baseFreq = _inputDevice->baseFreq();
+		}
 	}
 
 	if (config["processing"]) {
@@ -135,6 +136,7 @@ QrssPiG::~QrssPiG() {
 	if (_im) delete _im;
 	for (auto up: _uploaders) delete up;
 	if (_resampler) delete _resampler;
+	if (_inputDevice) delete _inputDevice;
 }
 
 void QrssPiG::run() {
@@ -259,11 +261,6 @@ void QrssPiG::_init() {
 	_im = new QGImage(_sampleRate / (_resampler ? _resampler->getRealRate() : 1), _baseFreq, _N, _overlap);
 
 	_frameIndex = 0;
-
-#ifdef HAVE_LIBHACKRF
-	_inputDevice = new QGInputHackRF();
-	_inputDevice->open();
-#endif //HAVE_LIBHACKRF
 }
 
 void QrssPiG::_addIQ(std::complex<float> iq) {

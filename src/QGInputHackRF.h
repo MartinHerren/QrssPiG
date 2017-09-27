@@ -2,11 +2,11 @@
 
 #include <libhackrf/hackrf.h>
 
-#include "QGInput.h"
+#include "QGInputDevice.h"
 
-class QGInputHackRF: public QGInput {
+class QGInputHackRF: public QGInputDevice {
 public:
-	QGInputHackRF();
+	QGInputHackRF(const YAML::Node &config);
 	~QGInputHackRF();
 
 	void open();

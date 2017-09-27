@@ -10,7 +10,7 @@
 #include "QGDownSampler.h"
 #include "QGFft.h"
 #include "QGImage.h"
-#include "QGInput.h"
+#include "QGInputDevice.h"
 #include "QGUploader.h"
 
 class QrssPiG {
@@ -38,7 +38,7 @@ private:
 	void _pushImage(bool wait = false);
 
 	// Input device
-	QGInput *_inputDevice;
+	QGInputDevice *_inputDevice;
 
 	// Input data format
 	Format _format;
