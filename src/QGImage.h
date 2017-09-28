@@ -26,6 +26,8 @@ private:
 	void _init();
 	void _free();
 
+	void _computeTitleHeight();
+	void _renderTitle();
 	void _computeFreqScale();
 	void _drawFreqScale();
 	void _computeDbScale();
@@ -42,6 +44,9 @@ private:
 	int _overlap;
 
 	// Configuration
+	std::string _title;
+	std::string _qth;
+	
 	Orientation _orientation;
 	int _secondsPerFrame;
 	int _size;

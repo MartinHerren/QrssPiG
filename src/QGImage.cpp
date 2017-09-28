@@ -120,15 +120,22 @@ void QGImage::configure(const YAML::Node &config) {
 		_started += seconds(mktime(localtime(&t0)) - mktime(gmtime(&t0)));
 	}
 
+	// Scope size and range arenot configurable yet
+	_scopeSize = 100;
+	_scopeRange = 100;
+	_dBK = (float)_scopeSize / _scopeRange;
+
+	// Configure title zone
+	_title = "QrssPiG grab on " + std::to_string(_baseFreq) + "Hz";
+	if (config["title"]) _title = config["title"].as<std::string>();
+	_qth = "";
+	if (config["qth"]) _qth = config["qth"].as<std::string>();
+
 	// Not yet configurable values
 	_markerSize = ceil(1.2 * _fontSize);
 	_borderSize = _markerSize / 2;
 
 	_init();
-
-	_computeFreqScale();
-	_computeDbScale();
-	_computeTimeScale();
 
 	_drawDbScale(); // draw first as still overlaps with freq scales
 	_drawFreqScale();
@@ -193,6 +200,7 @@ void QGImage::startNewFrame(bool incrementTime) {
 		_currentLine = 0;
 	}
 
+	_renderTitle();
 	_drawTimeScale();
 }
 
@@ -275,13 +283,6 @@ void QGImage::_init() {
 	int white = gdTrueColor(255, 255, 255);
 	int black = gdTrueColor(0, 0, 0); // Not that useful, but once we want to set another background color the code is already here
 
-	// Scope size and range arenot configurable yet
-	_scopeSize = 100;
-	_scopeRange = 100;
-	_dBK = (float)_scopeSize / _scopeRange;
-
-	_titleHeight = 10;
-
 	// Calculate max bounding boxes for labels, check font existence on first call
 	int brect[8];
 
@@ -305,6 +306,11 @@ void QGImage::_init() {
 	gdImageStringFT(nullptr, brect, 0, const_cast<char *>(_font.c_str()), _fontSize, 0, 0, 0, const_cast<char *>("00:00:00"));
 	_timeLabelWidth = brect[2] - brect[0];
 	_timeLabelHeight = brect[1] - brect[7];
+
+	_computeTitleHeight();
+	_computeFreqScale();
+	_computeDbScale();
+	_computeTimeScale();
 
 	// Allocate canvas
 	switch (_orientation) {
@@ -361,6 +367,60 @@ void QGImage::_free() {
 	_im = nullptr;
 }
 
+void QGImage::_computeTitleHeight() {
+	_titleHeight = (6 * _fontSize * 10) / 7; // 10/7 is interline. 6 is 1 double size line, 2 single size lines and a half line above and below. After the double line there is also a double interline
+}
+
+void QGImage::_renderTitle() {
+	int black = gdTrueColor(0, 0, 0);
+	int white = gdTrueColor(255, 255, 255);
+
+	// Clear zone
+	if (_orientation == Orientation::Horizontal) {
+		gdImageFilledRectangle(_im,
+			_borderSize,
+			_borderSize,
+			_borderSize + _freqLabelWidth + _markerSize + _size + _markerSize + _freqLabelWidth + _scopeSize - 1,
+			_borderSize + _titleHeight - 1,
+			black);
+	} else {
+		gdImageFilledRectangle(_im,
+			_borderSize,
+			_borderSize,
+			_borderSize + _freqLabelWidth + _markerSize + _size + _markerSize + _freqLabelWidth - 1,
+			_borderSize + _titleHeight - 1,
+			black);
+	}
+
+	int brect[8];
+	int margin = (_fontSize * 5) / 7; // half interline
+	int lineCursor = (_fontSize * 50) / 14; // 2.5 lines * 10/7 interline, half line margin and first line is double height
+
+	gdImageStringFT(_im, brect, white, const_cast<char *>(_font.c_str()), 2*_fontSize, 0,
+		_borderSize + margin, _borderSize + lineCursor,
+		const_cast<char *>(_title.c_str()));
+
+	lineCursor += (2*_fontSize * 10) / 7;
+
+	if (_qth.length()) {
+		gdImageStringFT(_im, brect, white, const_cast<char *>(_font.c_str()), _fontSize, 0,
+			_borderSize + margin, _borderSize + lineCursor,
+			const_cast<char *>((std::string("QTH: ") + _qth).c_str()));
+	}
+
+	lineCursor += (_fontSize * 10) / 7;
+
+	gdImageStringFT(_im, brect, white, const_cast<char *>(_font.c_str()), _fontSize, 0,
+		_borderSize + margin, _borderSize + lineCursor,
+		const_cast<char *>((
+			std::string("Sample rate: ") + std::to_string(_sampleRate) + std::string(" S/s") +
+			std::string(" FFT size: ") + std::to_string(N) +
+			std::string(" FFT overlap: ") + std::to_string(_overlap) +
+			std::string(" Time res: ") + std::to_string(1./_timeK) + std::string(" s/px") +
+			std::string(" Freq res: ") + std::to_string(1./_freqK) + std::string(" Hz/px")
+			).c_str()));
+}
+
 void QGImage::_computeFreqScale() {
 	// Calculate label spacing
 	int maxLabelSize;
@@ -390,7 +450,7 @@ void QGImage::_drawFreqScale() {
 	int black = gdTrueColor(0, 0, 0);
 	int white = gdTrueColor(255, 255, 255);
 
-	// Clear zones and set topLeft corners
+	// Clear zones
 	if (_orientation == Orientation::Horizontal) {
 		gdImageFilledRectangle(_im,
 			_borderSize,
@@ -456,7 +516,7 @@ void QGImage::_drawFreqScale() {
 
 		// Calculate text's bounding box
 		int brect[8];
-		gdImageStringFT(nullptr, brect, 0, (char *)_font.c_str(), _fontSize, 0, 0, 0, (char *)s.str().c_str());
+		gdImageStringFT(nullptr, brect, 0, const_cast<char *>(_font.c_str()), _fontSize, 0, 0, 0, const_cast<char *>(s.str().c_str()));
 
 		// Cache key data as they will be overriden when rendering first string
 		int x = brect[0], y = brect[1], w = brect[2] - brect[0], h = brect[1] - brect[7];
@@ -571,7 +631,7 @@ void QGImage::_drawDbScale() {
 	int black = gdTrueColor(0, 0, 0);
 	int white = gdTrueColor(255, 255, 255);
 
-	// Clear zone and set topLeft corner
+	// Clear zones
 	if (_orientation == Orientation::Horizontal) {
 		gdImageFilledRectangle(_im,
 			_borderSize + _freqLabelWidth + _markerSize + _size + _markerSize + _freqLabelWidth,
@@ -722,7 +782,7 @@ void QGImage::_drawTimeScale() {
 	int black = gdTrueColor(0, 0, 0);
 	int white = gdTrueColor(255, 255, 255);
 
-	// Clear zone and set topLeft corner
+	// Clear zones
 	if (_orientation == Orientation::Horizontal) {
 		gdImageFilledRectangle(_im,
 			_borderSize + _freqLabelWidth + _markerSize,
