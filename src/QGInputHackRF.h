@@ -12,5 +12,5 @@ public:
 	void open();
 
 private:
-	hackrf_device *_hackrf;
+	hackrf_device *_device;
 };

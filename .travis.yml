@@ -19,6 +19,7 @@ addons:
       - librtfilter-dev
       - libusb-1.0-0-dev
       - libhackrf-dev
+      - librtlsdr-dev
 
 before_install:
   - ./install-libhackrf.sh

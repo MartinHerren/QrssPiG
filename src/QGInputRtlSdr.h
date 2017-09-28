@@ -12,4 +12,5 @@ public:
 	void open();
 
 private:
+	rtlsdr_dev_t *_device;
 };

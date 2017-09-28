@@ -70,6 +70,7 @@ QrssPiG::QrssPiG(const std::string &configFile) : QrssPiG() {
 
 		if ((input["device"]) && (input["device"].as<std::string>().compare("stdin"))) {
 			_inputDevice = QGInputDevice::CreateInputDevice(input);
+			_inputDevice->open();
 
 			_sampleRate = _inputDevice->sampleRate();
 			_baseFreq = _inputDevice->baseFreq();
