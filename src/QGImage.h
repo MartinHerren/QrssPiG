@@ -28,6 +28,7 @@ private:
 
 	void _computeFreqScale();
 	void _drawFreqScale();
+	void _computeDbScale();
 	void _drawDbScale();
 	void _computeTimeScale();
 	void _drawTimeScale();
@@ -74,11 +75,14 @@ private:
 
 	// Constants to go from hertz/seconds to pixel
 	float _freqK;
+	float _dBK;
 	float _timeK;
 
 	// Marker and label division
 	int _hertzPerFreqLabel;
 	int _freqLabelDivs;
+	int _dBPerDbLabel;
+	int _dBLabelDivs;
 	int _secondsPerTimeLabel;
 	int _timeLabelDivs;
 
@@ -90,6 +94,7 @@ private:
 	int _borderSize;
 	int _titleHeight;
 	int _scopeSize;
+	int _scopeRange;
 	int _markerSize;
 	int _freqLabelWidth;
 	int _freqLabelHeight;

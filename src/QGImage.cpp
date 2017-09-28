@@ -127,6 +127,7 @@ void QGImage::configure(const YAML::Node &config) {
 	_init();
 
 	_computeFreqScale();
+	_computeDbScale();
 	_computeTimeScale();
 
 	_drawDbScale(); // draw first as still overlaps with freq scales
@@ -220,9 +221,9 @@ QGImage::Status QGImage::addLine(const std::complex<float> *fft) {
 				_db2Color(v));
 			if (i != _fMin)
 				gdImageLine(_im,
-					_borderSize + _freqLabelWidth + _markerSize + _size + _markerSize + _freqLabelWidth - last,
+					_borderSize + _freqLabelWidth + _markerSize + _size + _markerSize + _freqLabelWidth - last * _dBK,
 					_borderSize + _titleHeight + _markerSize + _fDelta - 1 + _fMin - i + 1, // -1 as before, + 1 to have last position
-					_borderSize + _freqLabelWidth + _markerSize + _size + _markerSize + _freqLabelWidth - v,
+					_borderSize + _freqLabelWidth + _markerSize + _size + _markerSize + _freqLabelWidth - v * _dBK,
 					_borderSize + _titleHeight + _markerSize + _fDelta - 1 + _fMin - i,
 					whiteA);
 			break;
@@ -235,9 +236,9 @@ QGImage::Status QGImage::addLine(const std::complex<float> *fft) {
 			if (i != _fMin)
 				gdImageLine(_im,
 					_borderSize + _timeLabelWidth + _markerSize - _fMin + i - 1, // -1 to have last position
-					_borderSize + _titleHeight + _freqLabelHeight + _markerSize + _size + _markerSize + _freqLabelHeight - last,
+					_borderSize + _titleHeight + _freqLabelHeight + _markerSize + _size + _markerSize + _freqLabelHeight - last * _dBK,
 					_borderSize + _timeLabelWidth + _markerSize - _fMin + i,
-					_borderSize + _titleHeight + _freqLabelHeight + _markerSize + _size + _markerSize + _freqLabelHeight - v,
+					_borderSize + _titleHeight + _freqLabelHeight + _markerSize + _size + _markerSize + _freqLabelHeight - v * _dBK,
 					whiteA);
 			break;
 		}
@@ -274,7 +275,11 @@ void QGImage::_init() {
 	int white = gdTrueColor(255, 255, 255);
 	int black = gdTrueColor(0, 0, 0); // Not that useful, but once we want to set another background color the code is already here
 
+	// Scope size and range arenot configurable yet
 	_scopeSize = 100;
+	_scopeRange = 100;
+	_dBK = (float)_scopeSize / _scopeRange;
+
 	_titleHeight = 10;
 
 	// Calculate max bounding boxes for labels, check font existence on first call
@@ -537,15 +542,37 @@ void QGImage::_drawFreqScale() {
 	}
 }
 
+void QGImage::_computeDbScale() {
+	// Calculate lagel spacing
+	int maxLabelSize;
+	if (_orientation == Orientation::Horizontal) {
+		maxLabelSize = (6 * _dBLabelWidth) / 5;
+	} else {
+		maxLabelSize = 3 * _dBLabelHeight;
+	}
+
+	// Search finest label interval without overlap
+	if (1 * _dBK > maxLabelSize) { _dBPerDbLabel = 1; _dBLabelDivs = 10; }
+	else if (2 * _dBK > maxLabelSize) { _dBPerDbLabel = 2; _dBLabelDivs = 2; }
+	else if (5 * _dBK > maxLabelSize) { _dBPerDbLabel = 5; _dBLabelDivs = 5; }
+	else if (10 * _dBK > maxLabelSize) { _dBPerDbLabel = 10; _dBLabelDivs = 10; }
+	else if (20 * _dBK > maxLabelSize) { _dBPerDbLabel = 20; _dBLabelDivs = 2; }
+	else if (30 * _dBK > maxLabelSize) { _dBPerDbLabel = 30; _dBLabelDivs = 3; }
+	else if (40 * _dBK > maxLabelSize) { _dBPerDbLabel = 40; _dBLabelDivs = 4; }
+	else if (50 * _dBK > maxLabelSize) { _dBPerDbLabel = 50; _dBLabelDivs = 5; }
+	else if (60 * _dBK > maxLabelSize) { _dBPerDbLabel = 60; _dBLabelDivs = 6; }
+	else if (70 * _dBK > maxLabelSize) { _dBPerDbLabel = 70; _dBLabelDivs = 7; }
+	else if (80 * _dBK > maxLabelSize) { _dBPerDbLabel = 80; _dBLabelDivs = 80; }
+	else if (90 * _dBK > maxLabelSize) { _dBPerDbLabel = 90; _dBLabelDivs = 90; }
+	else { _dBPerDbLabel = 100; _dBLabelDivs = 10; }
+}
+
 void QGImage::_drawDbScale() {
-	int tickStep, labelStep;
 	int black = gdTrueColor(0, 0, 0);
 	int white = gdTrueColor(255, 255, 255);
 
 	// Clear zone and set topLeft corner
 	if (_orientation == Orientation::Horizontal) {
-		tickStep = 10;
-		labelStep = tickStep * 3;
 		gdImageFilledRectangle(_im,
 			_borderSize + _freqLabelWidth + _markerSize + _size + _markerSize + _freqLabelWidth,
 			_borderSize + _titleHeight + _markerSize + _fDelta,
@@ -559,8 +586,6 @@ void QGImage::_drawDbScale() {
 			_borderSize + _titleHeight + _markerSize + _fDelta + _markerSize + _dBLabelHeight - 1,
 			black);
 	} else {
-		tickStep = 10;
-		labelStep = tickStep;
 		gdImageFilledRectangle(_im,
 			_borderSize,
 			_borderSize + _titleHeight + _freqLabelHeight + _markerSize + _size + _markerSize + _freqLabelHeight - _dBLabelHeight/2,
@@ -575,93 +600,95 @@ void QGImage::_drawDbScale() {
 			black);
 	}
 
-	// Render graph scale (hard coded to full range -100dB-0dB over 100 pixels)
-
 	// dB labels with long ticks
-	for (int i = 0; i > -100; i -= labelStep) {
+	for (int d = 0; d > -_scopeRange; d -= _dBPerDbLabel) {
+		int l = d * _dBK; // Line number of label
+
 		std::stringstream text;
-		text << i << "dB";
+		text << d << "dB";
 
 		// Calculate text's bounding box
 		int brect[8];
-		gdImageStringFT(nullptr, brect, white, (char *)_font.c_str(), _fontSize, 0, 0, 0, (char *)text.str().c_str());
+		gdImageStringFT(nullptr, brect, white, const_cast<char *>(_font.c_str()), _fontSize, 0, 0, 0, const_cast<char *>(text.str().c_str()));
 
 		if (_orientation == Orientation::Horizontal) {
 			gdImageLine(_im,
-				_borderSize + _freqLabelWidth + _markerSize + _size + _markerSize + _freqLabelWidth - i,
+				_borderSize + _freqLabelWidth + _markerSize + _size + _markerSize + _freqLabelWidth - l,
 				_borderSize + _titleHeight + _markerSize + _fDelta,
-				_borderSize + _freqLabelWidth + _markerSize + _size + _markerSize + _freqLabelWidth - i,
+				_borderSize + _freqLabelWidth + _markerSize + _size + _markerSize + _freqLabelWidth - l,
 				_borderSize + _titleHeight + _markerSize + _fDelta + _markerSize - 1,
 				white);
 			gdImageStringFT(_im, brect, white, const_cast<char *>(_font.c_str()), _fontSize, 0,
-				_borderSize + _freqLabelWidth + _markerSize + _size + _markerSize + _freqLabelWidth - i - .5 * (brect[2] - brect[0]),
+				_borderSize + _freqLabelWidth + _markerSize + _size + _markerSize + _freqLabelWidth - l - .5 * (brect[2] - brect[0]),
 				_borderSize + _titleHeight + _markerSize + _fDelta + _markerSize - brect[7],
 				const_cast<char *>(text.str().c_str()));
 		} else {
 			gdImageStringFT(_im, brect, white, const_cast<char *>(_font.c_str()), _fontSize, 0,
 				_borderSize + _timeLabelWidth - (brect[2] - brect[0]),
-				_borderSize + _titleHeight + _freqLabelHeight + _markerSize + _size + _markerSize + _freqLabelHeight - i + (brect[1] - brect[7])/2 - brect[1],
+				_borderSize + _titleHeight + _freqLabelHeight + _markerSize + _size + _markerSize + _freqLabelHeight - l + (brect[1] - brect[7])/2 - brect[1],
 				const_cast<char *>(text.str().c_str()));
 			gdImageLine(_im,
 				_borderSize + _timeLabelWidth, // timeLabel is usually wider than dBLabel.. should take larger of them
-				_borderSize + _titleHeight + _freqLabelHeight + _markerSize + _size + _markerSize + _freqLabelHeight - i,
+				_borderSize + _titleHeight + _freqLabelHeight + _markerSize + _size + _markerSize + _freqLabelHeight - l,
 				_borderSize + _timeLabelWidth + _markerSize,
-				_borderSize + _titleHeight + _freqLabelHeight + _markerSize + _size + _markerSize + _freqLabelHeight - i,
+				_borderSize + _titleHeight + _freqLabelHeight + _markerSize + _size + _markerSize + _freqLabelHeight - l,
 				white);
 		}
 	}
 
 	// Small tick markers
-	for (int i = 0; i > -100; i -= tickStep) {
+	for (float d = 0; d > -_scopeRange; d -= (float)_dBPerDbLabel / _dBLabelDivs) {
+		int l = d * _dBK; // Line number of label
+
 		if (_orientation == Orientation::Horizontal)
 			gdImageLine(_im,
-				_borderSize + _freqLabelWidth + _markerSize + _size + _markerSize + _freqLabelWidth - i,
+				_borderSize + _freqLabelWidth + _markerSize + _size + _markerSize + _freqLabelWidth - l,
 				_borderSize + _titleHeight + _markerSize + _fDelta,
-				_borderSize + _freqLabelWidth + _markerSize + _size + _markerSize + _freqLabelWidth - i,
+				_borderSize + _freqLabelWidth + _markerSize + _size + _markerSize + _freqLabelWidth - l,
 				_borderSize + _titleHeight + _markerSize + _fDelta + _markerSize/2 - 1,
 				white);
 		else
 			gdImageLine(_im,
 				_borderSize + _timeLabelWidth + _markerSize/2, // timeLabel is usually wider than dBLabel.. should take larger of them
-				_borderSize + _titleHeight + _freqLabelHeight + _markerSize + _size + _markerSize + _freqLabelHeight - i,
+				_borderSize + _titleHeight + _freqLabelHeight + _markerSize + _size + _markerSize + _freqLabelHeight - l,
 				_borderSize + _timeLabelWidth + _markerSize,
-				_borderSize + _titleHeight + _freqLabelHeight + _markerSize + _size + _markerSize + _freqLabelHeight - i,
+				_borderSize + _titleHeight + _freqLabelHeight + _markerSize + _size + _markerSize + _freqLabelHeight - l,
 				white);
 	}
 
 	// Indicator bar for dBmin-max range
 	if (_orientation == Orientation::Horizontal)
 		gdImageLine(_im,
-			_borderSize + _freqLabelWidth + _markerSize + _size + _markerSize + _freqLabelWidth - _dBmin,
+			_borderSize + _freqLabelWidth + _markerSize + _size + _markerSize + _freqLabelWidth - _dBmin * _dBK,
 			_borderSize + _titleHeight + _markerSize + _fDelta + _markerSize/4,
-			_borderSize + _freqLabelWidth + _markerSize + _size + _markerSize + _freqLabelWidth - _dBmax,
+			_borderSize + _freqLabelWidth + _markerSize + _size + _markerSize + _freqLabelWidth - _dBmax * _dBK,
 			_borderSize + _titleHeight + _markerSize + _fDelta + _markerSize/4,
 			white);
 	else
 		gdImageLine(_im,
 			_borderSize + _timeLabelWidth + _markerSize - _markerSize/4 - 1,
-			_borderSize + _titleHeight + _freqLabelHeight + _markerSize + _size + _markerSize + _freqLabelHeight - _dBmin,
+			_borderSize + _titleHeight + _freqLabelHeight + _markerSize + _size + _markerSize + _freqLabelHeight - _dBmin * _dBK,
 			_borderSize + _timeLabelWidth + _markerSize - _markerSize/4 - 1,
-			_borderSize + _titleHeight + _freqLabelHeight + _markerSize + _size + _markerSize + _freqLabelHeight - _dBmax,
+			_borderSize + _titleHeight + _freqLabelHeight + _markerSize + _size + _markerSize + _freqLabelHeight - _dBmax * _dBK,
 			white);
 
 	// Color bar
-	for (float i = -100.; i <= 0.; i++) {
-		int c = _db2Color(i);
+	for (int l = 0; l < _scopeSize; l++) {
+		int c = _db2Color(-(float)l/_dBK);
 
 		if (_orientation == Orientation::Horizontal)
 			gdImageLine(_im,
-				_borderSize + _freqLabelWidth + _markerSize + _size + _markerSize + _freqLabelWidth - i,
+				_borderSize + _freqLabelWidth + _markerSize + _size + _markerSize + _freqLabelWidth + l,
 				_borderSize + _titleHeight + _markerSize + _fDelta,
-				_borderSize + _freqLabelWidth + _markerSize + _size + _markerSize + _freqLabelWidth - i,
+				_borderSize + _freqLabelWidth + _markerSize + _size + _markerSize + _freqLabelWidth + l,
 				_borderSize + _titleHeight + _markerSize + _fDelta + _markerSize/4 - 1,
 				c);
 		else
 			gdImageLine(_im,
 				_borderSize + _timeLabelWidth + _markerSize - _markerSize/4,
-				_borderSize + _titleHeight + _freqLabelHeight + _markerSize + _size + _markerSize + _freqLabelHeight - i,
+				_borderSize + _titleHeight + _freqLabelHeight + _markerSize + _size + _markerSize + _freqLabelHeight + l,
 				_borderSize + _timeLabelWidth + _markerSize - 1,
-				_borderSize + _titleHeight + _freqLabelHeight + _markerSize + _size + _markerSize + _freqLabelHeight - i,
+				_borderSize + _titleHeight + _freqLabelHeight + _markerSize + _size + _markerSize + _freqLabelHeight + l,
 				c);
 	}
 }
