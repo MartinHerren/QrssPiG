@@ -16,7 +16,7 @@ public:
 	QGImage(long int sampleRate, long int baseFreq, int fftSize, int fftOverlap);
 	~QGImage();
 
-	void configure(const YAML::Node &config);
+	void configure(const YAML::Node &config, const YAML::Node &inputConfig);
 
 	void startNewFrame(bool incrementTime = true);
 	Status addLine(const std::complex<float> *fft);
@@ -27,6 +27,7 @@ private:
 	void _free();
 
 	void _computeTitleHeight();
+	void _addSubTitleField(std::string field, bool newline = false);
 	void _renderTitle();
 	void _computeFreqScale();
 	void _drawFreqScale();
@@ -45,8 +46,14 @@ private:
 
 	// Configuration
 	std::string _title;
+	std::vector<std::string> _subtitles;
+	std::string _inputDevice;
+	long int _inputSampleRate;
+	std::string _callsign;
 	std::string _qth;
-	
+	std::string _receiver;
+	std::string _antenna;
+
 	Orientation _orientation;
 	int _secondsPerFrame;
 	int _size;

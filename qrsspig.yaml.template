@@ -9,6 +9,12 @@ processing:
   fftoverlap: 7
 output:
   orientation: horizontal
+  header:
+    title: My QrssPiG Grabber
+    callsign: HFQRSS
+    qth: South of Nowhere
+    receiver: Marconi MkII
+    antenna: ShortWire
   minutesperframe: 10
   font: "ttf-dejavu/DejaVuSans.ttf"
   fontsize: 8

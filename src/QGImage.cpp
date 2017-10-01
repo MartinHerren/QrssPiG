@@ -23,7 +23,7 @@ QGImage::~QGImage() {
 	_free();
 }
 
-void QGImage::configure(const YAML::Node &config) {
+void QGImage::configure(const YAML::Node &config, const YAML::Node &inputConfig) {
 	_free();
 
 	// Configure orientation
@@ -125,11 +125,20 @@ void QGImage::configure(const YAML::Node &config) {
 	_scopeRange = 100;
 	_dBK = (float)_scopeSize / _scopeRange;
 
-	// Configure title zone
+	// Configure header zone
 	_title = "QrssPiG grab on " + std::to_string(_baseFreq) + "Hz";
-	if (config["title"]) _title = config["title"].as<std::string>();
-	_qth = "";
-	if (config["qth"]) _qth = config["qth"].as<std::string>();
+	if (config["header"]) {
+		YAML::Node header = config["header"];
+		if (header["title"]) _title = header["title"].as<std::string>();
+		if (header["callsign"]) _callsign = header["callsign"].as<std::string>();
+		if (header["qth"]) _qth = header["qth"].as<std::string>();
+		if (header["receiver"]) _receiver = header["receiver"].as<std::string>();
+		if (header["antenna"]) _antenna = header["antenna"].as<std::string>();
+	}
+	// Additional infos taken from other sections
+	if (inputConfig && inputConfig["device"]) _inputDevice = inputConfig["device"].as<std::string>();
+	_inputSampleRate = 0;
+	if (inputConfig && inputConfig["samplerate"]) _inputSampleRate = inputConfig["samplerate"].as<long int>();
 
 	// Not yet configurable values
 	_markerSize = ceil(1.2 * _fontSize);
@@ -368,7 +377,50 @@ void QGImage::_free() {
 }
 
 void QGImage::_computeTitleHeight() {
-	_titleHeight = (6 * _fontSize * 10) / 7; // 10/7 is interline. 6 is 1 double size line, 2 single size lines and a half line above and below. After the double line there is also a double interline
+	// TODO: need a way to override current date once it is in the subtitle
+
+	if (_qth.length()) _addSubTitleField(std::string("Callsign: ") + _callsign);
+	if (_qth.length()) _addSubTitleField(std::string("QTH: ") + _qth);
+	if (_qth.length()) _addSubTitleField(std::string("Receiver: ") + _receiver);
+	if (_qth.length()) _addSubTitleField(std::string("Antenna: ") + _antenna);
+
+	if (_inputSampleRate) _addSubTitleField(std::string("Input sample rate: ") + std::to_string(_inputSampleRate) + std::string(" S/s"), true);
+	_addSubTitleField(std::string("Processing sample rate: ") + std::to_string(_sampleRate) + std::string(" S/s"), true);
+	_addSubTitleField(std::string("FFT size: ") + std::to_string(N));
+	_addSubTitleField(std::string("FFT overlap: ") + std::to_string(_overlap));
+	_addSubTitleField(std::string("Time res: ") + std::to_string(1./_timeK) + std::string(" s/px"));
+	_addSubTitleField(std::string("Freq res: ") + std::to_string(1./_freqK) + std::string(" Hz/px"));
+
+	_titleHeight = ((4 + _subtitles.size()) * _fontSize * 10) / 7; // 10/7 is interline. 4 interline for double size title
+}
+
+void QGImage::_addSubTitleField(std::string field, bool newline) {
+	if (_subtitles.size() == 0) {
+		_subtitles.push_back(field);
+		return;
+	}
+
+	// Force new line only if last line not empty, not to make multiple empty newlines
+	if (newline && _subtitles.at(_subtitles.size() - 1).length()) {
+		_subtitles.push_back(field);
+		return;
+	}
+
+	std::string line = _subtitles.at(_subtitles.size() - 1) + " " + field;
+
+	int brect[8];
+	gdImageStringFT(nullptr, brect, 0, const_cast<char *>(_font.c_str()), _fontSize, 0, 0, 0, const_cast<char *>(line.c_str()));
+
+	int w;
+	if (_orientation == Orientation::Horizontal) {
+		w = _freqLabelWidth + _markerSize + _size + _markerSize + _freqLabelWidth + _scopeSize;
+	} else {
+		w = _freqLabelWidth + _markerSize + _size + _markerSize + _freqLabelWidth;
+	}
+
+std::cout << "try[" << _subtitles.size() << "]: " << line << std::endl;
+	if ((brect[2] - brect[0]) <= w) _subtitles.at(_subtitles.size() - 1) = line;
+	else _subtitles.push_back(field);
 }
 
 void QGImage::_renderTitle() {
@@ -402,23 +454,12 @@ void QGImage::_renderTitle() {
 
 	lineCursor += (2*_fontSize * 10) / 7;
 
-	if (_qth.length()) {
+	for (auto s: _subtitles) {
 		gdImageStringFT(_im, brect, white, const_cast<char *>(_font.c_str()), _fontSize, 0,
 			_borderSize + margin, _borderSize + lineCursor,
-			const_cast<char *>((std::string("QTH: ") + _qth).c_str()));
+			const_cast<char *>(s.c_str()));
+		lineCursor += (_fontSize * 10) / 7;
 	}
-
-	lineCursor += (_fontSize * 10) / 7;
-
-	gdImageStringFT(_im, brect, white, const_cast<char *>(_font.c_str()), _fontSize, 0,
-		_borderSize + margin, _borderSize + lineCursor,
-		const_cast<char *>((
-			std::string("Sample rate: ") + std::to_string(_sampleRate) + std::string(" S/s") +
-			std::string(" FFT size: ") + std::to_string(N) +
-			std::string(" FFT overlap: ") + std::to_string(_overlap) +
-			std::string(" Time res: ") + std::to_string(1./_timeK) + std::string(" s/px") +
-			std::string(" Freq res: ") + std::to_string(1./_freqK) + std::string(" Hz/px")
-			).c_str()));
 }
 
 void QGImage::_computeFreqScale() {
