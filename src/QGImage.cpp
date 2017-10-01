@@ -379,10 +379,11 @@ void QGImage::_free() {
 void QGImage::_computeTitleHeight() {
 	// TODO: need a way to override current date once it is in the subtitle
 
-	if (_qth.length()) _addSubTitleField(std::string("Callsign: ") + _callsign);
+	_subtitles.push_back(""); // Force new line
+	if (_callsign.length()) _addSubTitleField(std::string("Callsign: ") + _callsign);
 	if (_qth.length()) _addSubTitleField(std::string("QTH: ") + _qth);
-	if (_qth.length()) _addSubTitleField(std::string("Receiver: ") + _receiver);
-	if (_qth.length()) _addSubTitleField(std::string("Antenna: ") + _antenna);
+	if (_receiver.length()) _addSubTitleField(std::string("Receiver: ") + _receiver);
+	if (_antenna.length()) _addSubTitleField(std::string("Antenna: ") + _antenna);
 
 	if (_inputSampleRate) _addSubTitleField(std::string("Input sample rate: ") + std::to_string(_inputSampleRate) + std::string(" S/s"), true);
 	_addSubTitleField(std::string("Processing sample rate: ") + std::to_string(_sampleRate) + std::string(" S/s"), true);
@@ -406,7 +407,7 @@ void QGImage::_addSubTitleField(std::string field, bool newline) {
 		return;
 	}
 
-	std::string line = _subtitles.at(_subtitles.size() - 1) + " " + field;
+	std::string line = _subtitles.at(_subtitles.size() - 1) + (_subtitles.at(_subtitles.size() - 1).length() ? " " : "") + field;
 
 	int brect[8];
 	gdImageStringFT(nullptr, brect, 0, const_cast<char *>(_font.c_str()), _fontSize, 0, 0, 0, const_cast<char *>(line.c_str()));
@@ -418,7 +419,6 @@ void QGImage::_addSubTitleField(std::string field, bool newline) {
 		w = _freqLabelWidth + _markerSize + _size + _markerSize + _freqLabelWidth;
 	}
 
-std::cout << "try[" << _subtitles.size() << "]: " << line << std::endl;
 	if ((brect[2] - brect[0]) <= w) _subtitles.at(_subtitles.size() - 1) = line;
 	else _subtitles.push_back(field);
 }
