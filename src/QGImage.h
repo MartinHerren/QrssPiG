@@ -76,6 +76,7 @@ private:
 	bool _alignFrame;
 	bool _syncFrames;
 	std::chrono::milliseconds _started;
+	std::chrono::milliseconds _runningSince;
 	std::chrono::milliseconds _startedIntoFrame;
 
 	// Internal data

@@ -12,6 +12,7 @@ QGImage::QGImage(long int sampleRate, long int baseFreq, int fftSize, int fftOve
 	_c = nullptr;
 	_cd = 0;
 	_started = std::chrono::milliseconds(0);
+	_runningSince = std::chrono::milliseconds(0);
 	_currentLine = 0;
 
 	// Freq/time constants used for mapping freq/time to pixel
@@ -190,7 +191,7 @@ void QGImage::startNewFrame(bool incrementTime) {
 	using namespace std::chrono;
 
 	bool backSync = false; // Syncing can bring the current line into the past regarding new current frame, better said the new frame was created to early
-	_started += seconds(_secondsPerFrame);
+	if (incrementTime) _started += seconds(_secondsPerFrame);
 
 	if (_syncFrames) {
 		milliseconds s = _started;
@@ -198,6 +199,8 @@ void QGImage::startNewFrame(bool incrementTime) {
 		backSync = (_started < s) ? true : false;
 		if (incrementTime) std::cout << (_started - s).count() << "ms adjustement on new frame" << std::endl; // TODO: incrementTime is missused as 'not first frame'. Should be renamed as initial use not needed anymore
 	}
+
+	if (_runningSince == milliseconds(0)) _runningSince = _started;
 
 	if (_alignFrame) {
 		_startedIntoFrame = _started % seconds(_secondsPerFrame); // Time into frame to align frames on correct boundary
@@ -377,7 +380,7 @@ void QGImage::_free() {
 }
 
 void QGImage::_computeTitleHeight() {
-	// TODO: need a way to override current date once it is in the subtitle
+	_addSubTitleField("Frame start YYYY-MM-DDT00:00:00Z Running since: YYYY-MM-DDT00:00:00Z");
 
 	_subtitles.push_back(""); // Force new line
 	if (_callsign.length()) _addSubTitleField(std::string("Callsign: ") + _callsign);
@@ -443,6 +446,16 @@ void QGImage::_renderTitle() {
 			_borderSize + _titleHeight - 1,
 			black);
 	}
+
+	// Update date in header
+	char s1[128], s2[128];
+	time_t t = std::chrono::duration_cast<std::chrono::seconds>(_started).count();
+	std::tm *tm = std::gmtime(&t);
+	strftime(s1, 128, "%FT%TZ", tm);
+	t = std::chrono::duration_cast<std::chrono::seconds>(_runningSince).count();
+	tm = std::gmtime(&t);
+	strftime(s2, 128, "%FT%TZ", tm);
+	_subtitles.at(0) = std::string("Frame start ") + s1 + " Running since: " + s2;
 
 	int brect[8];
 	int margin = (_fontSize * 5) / 7; // half interline
