@@ -45,3 +45,5 @@ endif (LIBLIQUIDSDR_FOUND)
 # Generate and include Config.h
 configure_file ("Config.h.in" "${PROJECT_BINARY_DIR}/Config.h")
 include_directories("${PROJECT_BINARY_DIR}")
+
+install(TARGETS QrssPiG RUNTIME DESTINATION bin)
