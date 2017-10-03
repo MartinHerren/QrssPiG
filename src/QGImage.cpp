@@ -197,7 +197,6 @@ void QGImage::startNewFrame(bool incrementTime) {
 		milliseconds s = _started;
 		_started = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
 		backSync = (_started < s) ? true : false;
-		if (incrementTime) std::cout << (_started - s).count() << "ms adjustement on new frame" << std::endl; // TODO: incrementTime is missused as 'not first frame'. Should be renamed as initial use not needed anymore
 	}
 
 	if (_runningSince == milliseconds(0)) _runningSince = _started;
