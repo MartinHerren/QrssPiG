@@ -388,12 +388,14 @@ void QGImage::_computeTitleHeight() {
 	if (_receiver.length()) _addSubTitleField(std::string("Receiver: ") + _receiver);
 	if (_antenna.length()) _addSubTitleField(std::string("Antenna: ") + _antenna);
 
-	if (_inputSampleRate) _addSubTitleField(std::string("Input sample rate: ") + std::to_string(_inputSampleRate) + std::string(" S/s"), true);
-	_addSubTitleField(std::string("Processing sample rate: ") + std::to_string(_sampleRate) + std::string(" S/s"), true);
+	_addSubTitleField(std::string("Base frequency: ") + std::to_string(_baseFreq) + std::string("\u202fHz"), true);
+	_addSubTitleField(std::string("Input sample rate: ") + std::to_string(_inputSampleRate) + std::string("\u202fS/s"));
+
+	_addSubTitleField(std::string("Processing sample rate: ") + std::to_string(_sampleRate) + std::string("\u202fS/s"), true);
 	_addSubTitleField(std::string("FFT size: ") + std::to_string(N));
 	_addSubTitleField(std::string("FFT overlap: ") + std::to_string(_overlap));
-	_addSubTitleField(std::string("Time res: ") + std::to_string(1./_timeK) + std::string(" s/px"));
-	_addSubTitleField(std::string("Freq res: ") + std::to_string(1./_freqK) + std::string(" Hz/px"));
+	_addSubTitleField(std::string("Time res: ") + std::to_string(1./_timeK) + std::string("\u202fs/px"));
+	_addSubTitleField(std::string("Freq res: ") + std::to_string(1./_freqK) + std::string("\u202fHz/px"));
 
 	_titleHeight = ((4 + _subtitles.size()) * _fontSize * 10) / 7; // 10/7 is interline. 4 interline for double size title
 }
