@@ -304,13 +304,12 @@ void QGImage::_init() {
 	if (err) throw std::runtime_error(err);
 	_qrsspigLabelWidth = brect[2] - brect[0];
 	_qrsspigLabelHeight = brect[1] - brect[7];
-	int qrsspigLabelBase = brect[1];
 
-	gdImageStringFT(nullptr, brect, 0, const_cast<char *>(_font.c_str()), _fontSize, 0, 0, 0, const_cast<char *>("000000000Hz"));
+	gdImageStringFT(nullptr, brect, 0, const_cast<char *>(_font.c_str()), _fontSize, 0, 0, 0, const_cast<char *>("000000000\u202fHz"));
 	_freqLabelWidth = brect[2] - brect[0];
 	_freqLabelHeight = brect[1] - brect[7];
 
-	gdImageStringFT(nullptr, brect, 0, const_cast<char *>(_font.c_str()), _fontSize, 0, 0, 0, const_cast<char *>("-100dB"));
+	gdImageStringFT(nullptr, brect, 0, const_cast<char *>(_font.c_str()), _fontSize, 0, 0, 0, const_cast<char *>("-100\u202fdB"));
 	_dBLabelWidth = brect[2] - brect[0];
 	_dBLabelHeight = brect[1] - brect[7];
 
@@ -333,10 +332,6 @@ void QGImage::_init() {
 			_borderSize + _freqLabelWidth + _markerSize + _size + _markerSize + _freqLabelWidth + _scopeSize + _borderSize,
 			_borderSize + _titleHeight + _markerSize + _fDelta + _markerSize + _timeLabelHeight + _borderSize - 1,
 			black);
-		gdImageStringFT(_im, brect, white, const_cast<char *>(_font.c_str()), _fontSize, 0,
-			_borderSize + _freqLabelWidth + _markerSize + _size + _markerSize + _freqLabelWidth + _scopeSize - _qrsspigLabelWidth,
-			_borderSize + _titleHeight + _markerSize + _fDelta + _markerSize + _timeLabelHeight - qrsspigLabelBase,
-			const_cast<char *>(_qrsspigString.c_str()));
 		break;
 
 	case Orientation::Vertical:
@@ -347,10 +342,6 @@ void QGImage::_init() {
 			_borderSize + _timeLabelWidth + _markerSize + _fDelta + _borderSize,
 			_borderSize + _titleHeight + _freqLabelHeight + _markerSize + _size + _markerSize + _freqLabelHeight + _scopeSize + _borderSize - 1,
 			black);
-		gdImageStringFT(_im, brect, white, const_cast<char *>(_font.c_str()), _fontSize, 0,
-			_borderSize + _timeLabelWidth + _markerSize + _fDelta - _qrsspigLabelWidth,
-			_borderSize + _titleHeight + _freqLabelHeight + _markerSize + _size + _markerSize + _freqLabelHeight + _scopeSize - qrsspigLabelBase,
-			const_cast<char *>(_qrsspigString.c_str()));
 		break;
 	}
 
@@ -420,7 +411,7 @@ void QGImage::_addSubTitleField(std::string field, bool newline) {
 	if (_orientation == Orientation::Horizontal) {
 		w = _freqLabelWidth + _markerSize + _size + _markerSize + _freqLabelWidth + _scopeSize;
 	} else {
-		w = _freqLabelWidth + _markerSize + _size + _markerSize + _freqLabelWidth;
+		w = _timeLabelWidth + _markerSize + _fDelta;
 	}
 
 	if ((brect[2] - brect[0]) <= w) _subtitles.at(_subtitles.size() - 1) = line;
@@ -443,7 +434,7 @@ void QGImage::_renderTitle() {
 		gdImageFilledRectangle(_im,
 			_borderSize,
 			_borderSize,
-			_borderSize + _freqLabelWidth + _markerSize + _size + _markerSize + _freqLabelWidth - 1,
+			_borderSize + _timeLabelWidth + _markerSize + _fDelta - 1,
 			_borderSize + _titleHeight - 1,
 			black);
 	}
@@ -465,6 +456,18 @@ void QGImage::_renderTitle() {
 	gdImageStringFT(_im, brect, white, const_cast<char *>(_font.c_str()), 2*_fontSize, 0,
 		_borderSize + margin, _borderSize + lineCursor,
 		const_cast<char *>(_title.c_str()));
+
+	if (_orientation == Orientation::Horizontal) {
+		gdImageStringFT(_im, brect, white, const_cast<char *>(_font.c_str()), _fontSize, 0,
+			_borderSize + _freqLabelWidth + _markerSize + _size + _markerSize + _freqLabelWidth + _scopeSize - _qrsspigLabelWidth,
+			_borderSize + lineCursor,
+			const_cast<char *>(_qrsspigString.c_str()));
+	} else {
+		gdImageStringFT(_im, brect, white, const_cast<char *>(_font.c_str()), _fontSize, 0,
+			_borderSize + _timeLabelWidth + _markerSize + _fDelta - _qrsspigLabelWidth,
+			_borderSize + lineCursor,
+			const_cast<char *>(_qrsspigString.c_str()));
+	}
 
 	lineCursor += (2*_fontSize * 10) / 7;
 
@@ -567,7 +570,7 @@ void QGImage::_drawFreqScale() {
 		int p = f * _freqK; // Position of label
 
 		std::stringstream s;
-		s << (_baseFreq + f) << "Hz";
+		s << (_baseFreq + f) << "\u202fHz";
 
 		// Calculate text's bounding box
 		int brect[8];
@@ -720,7 +723,7 @@ void QGImage::_drawDbScale() {
 		int l = d * _dBK; // Line number of label
 
 		std::stringstream text;
-		text << d << "dB";
+		text << d << "\u202fdB";
 
 		// Calculate text's bounding box
 		int brect[8];
