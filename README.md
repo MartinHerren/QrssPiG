@@ -27,7 +27,7 @@ It depends on following dev libs:
  - libfftw3-dev
  - libyaml-cpp-dev
  - libfreetype6-dev
- - librtfilter-dev
+ - (librtfilter-dev)
  - libliquid-dev
 
 To build:
@@ -66,24 +66,25 @@ upload:
   type: local
 ```
 
-### Piping from rtl_sdr through sox for resampling
-You need rtl_sdr and sox installed. From your build directory
+### Piping from rtl_sdr using internal resampling
+You need rtl_sdr installed. From your build directory
 ```
-rtl_sdr -f 27999300 -s 1000000 - | sox -t u8 -c 2 -r 1000000 - -t u8 -c 2 -r 6000 - | ./src/QrssPiG -c qrss.yaml
+rtl_sdr -f 27999300 -s 240000 -g 60 - | ./src/QrssPiG -c qrss.yaml
 ```
-rtl_sdr is used as receiver and produces unsigned 8 bit I/Q data at a samplerate of 1MSample/s from 27999300Hz and send them to stdout.
+rtl_sdr is used as receiver and produces unsigned 8 bit I/Q data at a samplerate of 240kSample/s from 27999300Hz and send them to stdout.
 The frequency is choosen so that with a frequency accurate receiver qrss data should appear around 1.5kHz which will be in the middle of the plot.
-sox is used to resample the data from 1MSample/s to 6kSample/s.
-In the qrss.yaml config file you must set the sample rate to 6000 and the format to rtlsdr (or u8iq) like in the following example:
+In the qrss.yaml config file you must set the sample rate to the input samplerate of 240000 and a processing samplerate of 6000 and the format to rtlsdr (or u8iq) like in the following example:
 ```
 input:
   format: rtlsdr
-  samplerate: 6000
+  samplerate: 240000
   basefreq: 27999300
 processing:
+  resamplerate: 6000
   fft: 16384
   fftoverlap: 3
 output:
+  title: QrssPiG 10m QRSS Grabber
   orientation: horizontal
   minutesperframe: 10
   freqmin: 300
