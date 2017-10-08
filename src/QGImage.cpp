@@ -127,7 +127,7 @@ void QGImage::configure(const YAML::Node &config, const YAML::Node &inputConfig)
 	_dBK = (float)_scopeSize / _scopeRange;
 
 	// Configure header zone
-	_title = "QrssPiG grab on " + std::to_string(_baseFreq) + "Hz";
+	_title = "QrssPiG grab on " + std::to_string(_baseFreq) + "\u202fHz";
 	if (config["header"]) {
 		YAML::Node header = config["header"];
 		if (header["title"]) _title = header["title"].as<std::string>();
