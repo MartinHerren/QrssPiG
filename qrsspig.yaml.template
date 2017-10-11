@@ -2,9 +2,10 @@ input:
   format: hackrf
   samplerate: 48000
   basefreq: 10000000
+  ppm: 0
 processing:
   chunksize: 32
-  resamplerate: 6000
+  samplerate: 6000
   fft: 4096
   fftoverlap: 7
 output:

@@ -11,7 +11,6 @@ QrssPiG::QrssPiG() :
 	_sampleRate(48000),
 	_baseFreq(0),
 	_chunkSize(32),
-	_resampleRate(6000),
 	_input(nullptr),
 	_resampled(nullptr),
 	_hannW(nullptr),
@@ -33,7 +32,6 @@ QrssPiG::QrssPiG(const std::string &format, int sampleRate, int N, const std::st
 
 	_N = N;
 	_sampleRate = sampleRate;
-	_resampleRate = 0;
 
 	if (sshHost.length()) {
 		_uploaders.push_back(new QGSCPUploader(sshHost, sshUser, dir, sshPort));
@@ -43,7 +41,7 @@ QrssPiG::QrssPiG(const std::string &format, int sampleRate, int N, const std::st
 
 	_init();
 
-	_im->configure(YAML::Load(""), YAML::Load("")); // Start with default config
+	_im->configure(YAML::Load("")); // Start with default config
 }
 
 QrssPiG::QrssPiG(const std::string &configFile) : QrssPiG() {
@@ -68,13 +66,14 @@ QrssPiG::QrssPiG(const std::string &configFile) : QrssPiG() {
 		if (input["basefreq"]) _baseFreq = input["basefreq"].as<int>();
 	}
 
+	int pSampleRate = 6000;
 	if (config["processing"]) {
 		if (config["processing"].Type() != YAML::NodeType::Map) throw std::runtime_error("YAML: processing must be a map");
 
 		YAML::Node processing = config["processing"];
 
 		if (processing["chunksize"]) _chunkSize = processing["chunksize"].as<int>();
-		if (processing["resamplerate"]) _resampleRate = processing["resamplerate"].as<int>();
+		if (processing["samplerate"]) pSampleRate = processing["samplerate"].as<int>();
 		if (processing["fft"]) _N = processing["fft"].as<int>();
 		if (processing["fftoverlap"]) {
 			int o = processing["fftoverlap"].as<int>();
@@ -83,32 +82,41 @@ QrssPiG::QrssPiG(const std::string &configFile) : QrssPiG() {
 		}
 	}
 
-	// Must be done here, so that _im exists when configuring it
+	if (pSampleRate && (_sampleRate != pSampleRate)) {
+		_resampler = new QGDownSampler((float)_sampleRate/(float)pSampleRate, _chunkSize);
+
+		// Patch config with real samplerate from resampler
+		pSampleRate = _sampleRate / _resampler->getRealRate();
+		if (config["processing"]) config["processing"]["samplerate"] = pSampleRate;
+
+		_input = (std::complex<float>*)fftwf_malloc(sizeof(std::complex<float>) * _chunkSize);
+		// Add provision to add a full resampled chunksize (+10% + 4 due to variable resampler output) when only one sample left before reaching N
+		_resampled = (std::complex<float>*)fftwf_malloc(sizeof(std::complex<float>) * (_N + (1.1 * _chunkSize / pSampleRate + 4) - 1));
+		_inputIndexThreshold = _chunkSize; // Trig when input size reaches chunksize to start resampling
+
+	} else {
+		// Add provision to add a full chunksize when only one sample left before reaching N
+		_input = (std::complex<float>*)fftwf_malloc(sizeof(std::complex<float>) * (_N + _chunkSize - 1));
+		_resampled = _input;
+		_inputIndexThreshold = _N; // Trig when input size reaches N to start fft
+	}
+	_inputIndex = 0;
+	_resampledIndex = 0;
+
+	// Could be inlined.
 	_init();
 
+	_im = new QGImage(_N, _overlap);
 	if (config["output"]) {
-		if (config["output"].Type() != YAML::NodeType::Map) throw std::runtime_error("YAML: output must be a map");
-
-		YAML::Node output = config["output"];
-
-		_im->configure(output, config["input"]);
-	} else {
-		_im->configure(YAML::Load(""), config["input"]); // Start with default config
+		if (config["output"].Type() == YAML::NodeType::Map) _im->configure(config, 0);
+		// else if (config["output"].Type() == YAML::NodeType::Sequence) for (unsigned int i = 0; i < config["output"].size(); i++) _im->configure(config, i);
+		else throw std::runtime_error("YAML: output must be a map or a sequence");
 	}
 
 	if (config["upload"]) {
-		if ((config["upload"].Type() != YAML::NodeType::Map) &&
-			(config["upload"].Type() != YAML::NodeType::Sequence)) {
-			throw std::runtime_error("YAML: upload must be a map or a list");
-		}
-
-		if (config["upload"].Type() == YAML::NodeType::Map) {
-			_addUploader(config["upload"]);
-		} else if (config["upload"].Type() == YAML::NodeType::Sequence) {
-			for (YAML::const_iterator it = config["upload"].begin(); it != config["upload"].end(); it++) {
-				_addUploader(*it);
-			}
-		}
+		if (config["upload"].IsMap()) _addUploader(config["upload"]);
+		else if (config["upload"].IsSequence()) for (YAML::const_iterator it = config["upload"].begin(); it != config["upload"].end(); it++) _addUploader(*it);
+		else throw std::runtime_error("YAML: upload must be a map or a sequence");
 	}
 }
 
@@ -224,21 +232,6 @@ void QrssPiG::_addUploader(const YAML::Node &uploader) {
 }
 
 void QrssPiG::_init() {
-	if (_resampleRate && (_sampleRate != _resampleRate)) {
-		_resampler = new QGDownSampler((float)_sampleRate/(float)_resampleRate, _chunkSize);
-		_input = (std::complex<float>*)fftwf_malloc(sizeof(std::complex<float>) * _chunkSize);
-		// Add provision to add a full resampled chunksize (+10% + 4 due to variable resampler output) when only one sample left before reaching N
-		_resampled = (std::complex<float>*)fftwf_malloc(sizeof(std::complex<float>) * (_N + (1.1 * _chunkSize / _resampler->getRealRate() + 4) - 1));
-		_inputIndexThreshold = _chunkSize; // Trig when input size reaches chunksize to start resampling
-	} else {
-		// Add provision to add a full chunksize when only one sample left before reaching N
-		_input = (std::complex<float>*)fftwf_malloc(sizeof(std::complex<float>) * (_N + _chunkSize - 1));
-		_resampled = _input;
-		_inputIndexThreshold = _N; // Trig when input size reaches N to start fft
-	}
-	_inputIndex = 0;
-	_resampledIndex = 0;
-
 	_hannW = new float[_N];
 	for (int i = 0; i < _N/2; i++) {
 		_hannW[i] = .5 * (1 - cos((2 * M_PI * i) / (_N / 2 - 1)));
@@ -247,8 +240,6 @@ void QrssPiG::_init() {
 	_fft = new QGFft(_N);
 	_fftIn = _fft->getInputBuffer();
 	_fftOut = _fft->getFftBuffer();
-
-	_im = new QGImage(_sampleRate / (_resampler ? _resampler->getRealRate() : 1), _baseFreq, _N, _overlap);
 
 	_frameIndex = 0;
 }

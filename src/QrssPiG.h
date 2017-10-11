@@ -43,7 +43,6 @@ private:
 
 	// Processing
 	int _chunkSize;
-	int _resampleRate;
 	int _N;
 	int _overlap; // 0: no overlap, 1: 1/2, 2: 2/3...
 

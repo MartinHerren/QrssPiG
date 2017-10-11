@@ -13,10 +13,10 @@ public:
 	enum class Orientation { Horizontal, Vertical };
 	enum class Status { Ok, FrameReady };
 
-	QGImage(long int sampleRate, long int baseFreq, int fftSize, int fftOverlap);
+	QGImage(int fftSize, int fftOverlap);
 	~QGImage();
 
-	void configure(const YAML::Node &config, const YAML::Node &inputConfig);
+	void configure(const YAML::Node &config, unsigned int index = 0);
 
 	void startNewFrame(bool incrementTime = true);
 	Status addLine(const std::complex<float> *fft);
@@ -39,12 +39,14 @@ private:
 	int _db2Color(float v);
 
 	// Params given at constructor time, cannot be changed
-	long int _sampleRate;
-	long int _baseFreq;
 	int N;
 	int _overlap;
 
 	// Configuration
+	long int _sampleRate;
+	long int _baseFreq;
+	long int _baseFreqCorrected;
+
 	std::string _title;
 	std::vector<std::string> _subtitles;
 	std::string _inputDevice;

@@ -6,7 +6,7 @@
 #include <string>
 #include <math.h>
 
-QGImage::QGImage(long int sampleRate, long int baseFreq, int fftSize, int fftOverlap): _sampleRate(sampleRate), _baseFreq(baseFreq), N(fftSize), _overlap(fftOverlap) {
+QGImage::QGImage(int fftSize, int fftOverlap): N(fftSize), _overlap(fftOverlap) {
 	_im = nullptr;
 	_imBuffer = nullptr;
 	_c = nullptr;
@@ -14,132 +14,156 @@ QGImage::QGImage(long int sampleRate, long int baseFreq, int fftSize, int fftOve
 	_started = std::chrono::milliseconds(0);
 	_runningSince = std::chrono::milliseconds(0);
 	_currentLine = 0;
-
-	// Freq/time constants used for mapping freq/time to pixel
-	_freqK = (float)(N) / (_sampleRate); // pixels = freq * _freqK
-	_timeK = (float)(_sampleRate) / (N - _overlap); // pixels = seconds * _timeK
 }
 
 QGImage::~QGImage() {
 	_free();
 }
 
-void QGImage::configure(const YAML::Node &config, const YAML::Node &inputConfig) {
+void QGImage::configure(const YAML::Node &config, unsigned int index) {
 	_free();
 
-	// Configure orientation
-	_orientation = Orientation::Horizontal;
-	if (config["orientation"]) {
-		std::string o = config["orientation"].as<std::string>();
-
-		if (o.compare("horizontal") == 0) _orientation = Orientation::Horizontal;
-		else if (o.compare("vertical") == 0) _orientation = Orientation::Vertical;
-		else throw std::runtime_error("QGImage::configure: output orientation unrecognized");
-	}
-
-	// Configure and calculate size
-	_secondsPerFrame = 10 * 60;
-	if (config["minutesperframe"]) _secondsPerFrame = config["minutesperframe"].as<int>() *  60;
-	if (config["secondsperframe"]) _secondsPerFrame = config["secondsperframe"].as<int>();
-	_size = _secondsPerFrame * _timeK;
-
-	// Configure font
-	_font = "ttf-dejavu/DejaVuSans.ttf";
-	if (config["font"]) _font = config["font"].as<std::string>();
-	_fontSize = 8;
-	if (config["fontsize"]) _fontSize = config["fontsize"].as<int>();
-
-	// Configure freq range, default value to full range of positive and negative
-	_fMin = -N / 2;
-	_fMax = N / 2;
-	if (config["freqmin"]) {
-		long int f = config["freqmin"].as<long int>();
-
-		if ((f >= -_sampleRate / 2) && (f <= _sampleRate / 2)) {
-			_fMin = (int)((f * N) / _sampleRate);
-		} else if ((f - _baseFreq >= -_sampleRate / 2) && (f - _baseFreq <= _sampleRate / 2)) {
-			_fMin = (int)(((f - _baseFreq) * N) / _sampleRate);
-		} else {
-			throw std::runtime_error("QGImage::configure: freqmin out of range");
-		}
-	}
-	if (config["freqmax"]) {
-		long int f = config["freqmax"].as<long int>();
-
-		if ((f >= -_sampleRate / 2) && (f <= _sampleRate / 2)) {
-			_fMax = (int)((f * N) / _sampleRate);
-		} else if ((f - _baseFreq >= -_sampleRate / 2) && (f - _baseFreq <= _sampleRate / 2)) {
-			_fMax = (int)(((f - _baseFreq) * N) / _sampleRate);
-		} else {
-			throw std::runtime_error("QGImage::configure: freqmax out of range");
-		}
-	}
-	if (_fMin >= _fMax) std::runtime_error("QGImage::configure: freqmin must be lower than freqmax");
-	_fDelta = _fMax - _fMin;
-
-	// Configure db range
-	_dBmin = -30;
-	_dBmax = 0;
-	if (config["dBmin"]) _dBmin = config["dBmin"].as<int>();
-	if (config["dBmax"]) _dBmax = config["dBmax"].as<int>();
-	_dBdelta = _dBmax - _dBmin;
-
-	// Optionally don't align frames
-	_alignFrame = true;
-	if (config["noalign"]) {
-		std::string s = config["noalign"].as<std::string>();
-		if ((s.compare("true") == 0) || (s.compare("yes") == 0)) _alignFrame = false;
-		else if ((s.compare("false") == 0) || (s.compare("no") == 0)) _alignFrame = true;
-		else throw std::runtime_error("QGImage::configure: illegal value for noalign");
-	}
-
-	// Configure start time
-	_syncFrames = true;
-	if (config["started"]) {
-		using namespace std::chrono;
-
-		std::tm tm = {};
-		std::stringstream ss(config["started"].as<std::string>());
-
-		// Don't attempt to resync on frame start if start time given. Usually start time is only used when processing offline data.
-		_syncFrames = false;
-
-		//ss >> std::get_time(&tm, "%Y-%m-%dT%H:%M:%SZ"); // std::get_time() not supported on Travis' Ubuntu 14.04 build system
-		std::string c; // to hold separators
-		ss >> std::setw(4) >> tm.tm_year >> std::setw(1) >> c >> std::setw(2) >> tm.tm_mon >> std::setw(1) >> c >> std::setw(2) >> tm.tm_mday >> std::setw(1) >> c
-			>> std::setw(2) >> tm.tm_hour >> std::setw(1) >> c >> std::setw(2) >> tm.tm_min >> std::setw(1) >> c >> std::setw(2) >> tm.tm_sec >> std::setw(1) >> c;
-		tm.tm_year -= 1900; // Fix to years since 1900s
-		tm.tm_mon -= 1; // Fix to 0-11 range
-
-		// mktime takes time in local time. Should be taken in UTC, patched below
-		_started = duration_cast<milliseconds>(system_clock::from_time_t(std::mktime(&tm)).time_since_epoch());
-
-		// Calculate difference from UTC and local winter time to fix _started
-		time_t t0 = time(nullptr);
-
-		// Fix started time to be in UTC
-		_started += seconds(mktime(localtime(&t0)) - mktime(gmtime(&t0)));
-	}
-
-	// Scope size and range arenot configurable yet
-	_scopeSize = 100;
-	_scopeRange = 100;
-	_dBK = (float)_scopeSize / _scopeRange;
-
-	// Configure header zone
-	_title = "QrssPiG grab on " + std::to_string(_baseFreq) + "\u202fHz";
-	if (config["header"]) {
-		YAML::Node header = config["header"];
-		if (header["title"]) _title = header["title"].as<std::string>();
-		if (header["callsign"]) _callsign = header["callsign"].as<std::string>();
-		if (header["qth"]) _qth = header["qth"].as<std::string>();
-		if (header["receiver"]) _receiver = header["receiver"].as<std::string>();
-		if (header["antenna"]) _antenna = header["antenna"].as<std::string>();
-	}
-	// Additional infos taken from other sections
-	if (inputConfig && inputConfig["device"]) _inputDevice = inputConfig["device"].as<std::string>();
+	_inputDevice = "";
 	_inputSampleRate = 0;
-	if (inputConfig && inputConfig["samplerate"]) _inputSampleRate = inputConfig["samplerate"].as<long int>();
+	_baseFreq = 7038300;
+	_baseFreqCorrected = 7038300;
+
+	if (config["input"]) {
+		YAML::Node input = config["input"];
+		if (input["device"]) _inputDevice = input["device"].as<std::string>();
+		if (input["samplerate"]) _inputSampleRate = input["samplerate"].as<long int>();
+		if (input["basefreq"]) _baseFreqCorrected =_baseFreq = input["basefreq"].as<int>();
+		if (input["ppm"]) _baseFreqCorrected = _baseFreq + (_baseFreq * input["ppm"].as<int>()) / 1000000;
+	}
+
+	_sampleRate = 6000;
+
+	if (config["processing"]) {
+		YAML::Node processing = config["processing"];
+		if (processing["samplerate"]) _sampleRate = processing["samplerate"].as<int>();
+	}
+
+	// Freq/time constants used for mapping freq/time to pixel
+	_freqK = (float)(N) / (_sampleRate); // pixels = freq * _freqK
+	_timeK = (float)(_sampleRate) / (N - _overlap); // pixels = seconds * _timeK
+
+	if (config["output"]) {
+		YAML::Node output;
+
+		// Get the correct output when having multiple outputs
+		if (config["output"].IsMap()) output = config["output"];
+		else if (config["output"].IsSequence()) output = config["output"][index];
+
+		// Configure orientation
+		_orientation = Orientation::Horizontal;
+		if (output["orientation"]) {
+			std::string o = output["orientation"].as<std::string>();
+
+			if (o.compare("horizontal") == 0) _orientation = Orientation::Horizontal;
+			else if (o.compare("vertical") == 0) _orientation = Orientation::Vertical;
+			else throw std::runtime_error("QGImage::configure: output orientation unrecognized");
+		}
+
+		// Configure and calculate size
+		_secondsPerFrame = 10 * 60;
+		if (output["minutesperframe"]) _secondsPerFrame = output["minutesperframe"].as<int>() *  60;
+		if (output["secondsperframe"]) _secondsPerFrame = output["secondsperframe"].as<int>();
+		_size = _secondsPerFrame * _timeK;
+
+		// Configure font
+		_font = "ttf-dejavu/DejaVuSans.ttf";
+		if (output["font"]) _font = output["font"].as<std::string>();
+		_fontSize = 8;
+		if (output["fontsize"]) _fontSize = output["fontsize"].as<int>();
+
+		// Configure freq range, default value to full range of positive and negative
+		_fMin = -N / 2;
+		_fMax = N / 2;
+		if (output["freqmin"]) {
+			long int f = output["freqmin"].as<long int>();
+
+			if ((f >= -_sampleRate / 2) && (f <= _sampleRate / 2)) {
+				_fMin = (int)((f * N) / _sampleRate);
+			} else if ((f - _baseFreqCorrected >= -_sampleRate / 2) && (f - _baseFreqCorrected <= _sampleRate / 2)) {
+				_fMin = (int)(((f - _baseFreqCorrected) * N) / _sampleRate);
+			} else {
+				throw std::runtime_error("QGImage::configure: freqmin out of range");
+			}
+		}
+		if (output["freqmax"]) {
+			long int f = output["freqmax"].as<long int>();
+
+			if ((f >= -_sampleRate / 2) && (f <= _sampleRate / 2)) {
+				_fMax = (int)((f * N) / _sampleRate);
+			} else if ((f - _baseFreqCorrected >= -_sampleRate / 2) && (f - _baseFreqCorrected <= _sampleRate / 2)) {
+				_fMax = (int)(((f - _baseFreqCorrected) * N) / _sampleRate);
+			} else {
+				throw std::runtime_error("QGImage::configure: freqmax out of range");
+			}
+		}
+		if (_fMin >= _fMax) std::runtime_error("QGImage::configure: freqmin must be lower than freqmax");
+		_fDelta = _fMax - _fMin;
+
+		// Configure db range
+		_dBmin = -30;
+		_dBmax = 0;
+		if (output["dBmin"]) _dBmin = output["dBmin"].as<int>();
+		if (output["dBmax"]) _dBmax = output["dBmax"].as<int>();
+		_dBdelta = _dBmax - _dBmin;
+
+		// Optionally don't align frames
+		_alignFrame = true;
+		if (output["noalign"]) {
+			std::string s = output["noalign"].as<std::string>();
+			if ((s.compare("true") == 0) || (s.compare("yes") == 0)) _alignFrame = false;
+			else if ((s.compare("false") == 0) || (s.compare("no") == 0)) _alignFrame = true;
+			else throw std::runtime_error("QGImage::configure: illegal value for noalign");
+		}
+
+		// Configure start time
+		_syncFrames = true;
+		if (output["started"]) {
+			using namespace std::chrono;
+
+			std::tm tm = {};
+			std::stringstream ss(output["started"].as<std::string>());
+
+			// Don't attempt to resync on frame start if start time given. Usually start time is only used when processing offline data.
+			_syncFrames = false;
+
+			//ss >> std::get_time(&tm, "%Y-%m-%dT%H:%M:%SZ"); // std::get_time() not supported on Travis' Ubuntu 14.04 build system
+			std::string c; // to hold separators
+			ss >> std::setw(4) >> tm.tm_year >> std::setw(1) >> c >> std::setw(2) >> tm.tm_mon >> std::setw(1) >> c >> std::setw(2) >> tm.tm_mday >> std::setw(1) >> c
+				>> std::setw(2) >> tm.tm_hour >> std::setw(1) >> c >> std::setw(2) >> tm.tm_min >> std::setw(1) >> c >> std::setw(2) >> tm.tm_sec >> std::setw(1) >> c;
+			tm.tm_year -= 1900; // Fix to years since 1900s
+			tm.tm_mon -= 1; // Fix to 0-11 range
+
+			// mktime takes time in local time. Should be taken in UTC, patched below
+			_started = duration_cast<milliseconds>(system_clock::from_time_t(std::mktime(&tm)).time_since_epoch());
+
+			// Calculate difference from UTC and local winter time to fix _started
+			time_t t0 = time(nullptr);
+
+			// Fix started time to be in UTC
+			_started += seconds(mktime(localtime(&t0)) - mktime(gmtime(&t0)));
+		}
+
+		// Scope size and range arenot configurable yet
+		_scopeSize = 100;
+		_scopeRange = 100;
+		_dBK = (float)_scopeSize / _scopeRange;
+
+		// Configure header zone
+		_title = "QrssPiG grab on " + std::to_string(_baseFreq) + "\u202fHz";
+		if (output["header"]) {
+			YAML::Node header = output["header"];
+			if (header["title"]) _title = header["title"].as<std::string>();
+			if (header["callsign"]) _callsign = header["callsign"].as<std::string>();
+			if (header["qth"]) _qth = header["qth"].as<std::string>();
+			if (header["receiver"]) _receiver = header["receiver"].as<std::string>();
+			if (header["antenna"]) _antenna = header["antenna"].as<std::string>();
+		}
+	}
 
 	// Not yet configurable values
 	_markerSize = ceil(1.2 * _fontSize);
@@ -379,7 +403,9 @@ void QGImage::_computeTitleHeight() {
 	if (_receiver.length()) _addSubTitleField(std::string("Receiver: ") + _receiver);
 	if (_antenna.length()) _addSubTitleField(std::string("Antenna: ") + _antenna);
 
-	_addSubTitleField(std::string("Base frequency: ") + std::to_string(_baseFreq) + std::string("\u202fHz"), true);
+	_subtitles.push_back(""); // Force new line TODO: check if last line not empty
+	if (_inputDevice.length()) _addSubTitleField(std::string("Input device: ") + _inputDevice);
+	_addSubTitleField(std::string("Base frequency: ") + std::to_string(_baseFreq) + std::string("\u202fHz"));
 	_addSubTitleField(std::string("Input sample rate: ") + std::to_string(_inputSampleRate) + std::string("\u202fS/s"));
 
 	_addSubTitleField(std::string("Processing sample rate: ") + std::to_string(_sampleRate) + std::string("\u202fS/s"), true);
@@ -571,7 +597,7 @@ void QGImage::_drawFreqScale() {
 		int p = f * _freqK; // Position of label
 
 		std::stringstream s;
-		s << (_baseFreq + f) << "\u202fHz";
+		s << (_baseFreqCorrected + f) << "\u202fHz";
 
 		// Calculate text's bounding box
 		int brect[8];
