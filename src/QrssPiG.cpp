@@ -28,6 +28,7 @@ QrssPiG::QrssPiG(const std::string &format, int sampleRate, int N, const std::st
 	else if ((format.compare("s8iq") == 0) || (format.compare("hackrf") == 0)) _format = Format::S8IQ;
 	else if (format.compare("u16iq") == 0) _format = Format::U16IQ;
 	else if (format.compare("s16iq") == 0) _format = Format::S16IQ;
+	else if (format.compare("s16real") == 0) _format = Format::S16REAL;
 	else throw std::runtime_error("Unsupported format");
 
 	_N = N;
@@ -59,6 +60,7 @@ QrssPiG::QrssPiG(const std::string &configFile) : QrssPiG() {
 			else if ((f.compare("s8iq") == 0) || (f.compare("hackrf") == 0)) _format = Format::S8IQ;
 			else if (f.compare("u16iq") == 0) _format = Format::U16IQ;
 			else if (f.compare("s16iq") == 0) _format = Format::S16IQ;
+			else if (f.compare("s16real") == 0) _format = Format::S16REAL;
 			else throw std::runtime_error("YAML: input format unrecognized");
 		}
 
@@ -198,6 +200,18 @@ void QrssPiG::run() {
 				}
 			}
 			break;
+		}
+
+		case Format::S16REAL: {
+			signed short int r;
+			while (std::cin && _running) {
+				std::cin.read(b, 8192);
+				for (int j = 0; j < 8192;) {
+					r = b[j++];
+					r += b[j++] << 8;
+					_addIQ(std::complex<float>(r / 32768., 0.));
+				}
+			}
 		}
 	}
 }
