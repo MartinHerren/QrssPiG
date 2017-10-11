@@ -14,7 +14,7 @@
 
 class QrssPiG {
 public:
-	enum class Format { U8IQ, S8IQ, U16IQ, S16IQ };
+	enum class Format { U8IQ, S8IQ, U16IQ, S16IQ, S16REAL };
 
 private:
 	QrssPiG();
