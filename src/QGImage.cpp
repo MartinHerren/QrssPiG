@@ -71,7 +71,7 @@ void QGImage::configure(const YAML::Node &config, unsigned int index) {
 		_size = _secondsPerFrame * _timeK;
 
 		// Configure font
-		_font = "ttf-dejavu/DejaVuSans.ttf";
+		_font = "dejavu/DejaVuSans.ttf";
 		if (output["font"]) _font = output["font"].as<std::string>();
 		_fontSize = 8;
 		if (output["fontsize"]) _fontSize = output["fontsize"].as<int>();
