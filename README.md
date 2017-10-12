@@ -42,14 +42,14 @@ $ make
 ### Piping from audio device
 You need arecord to be installed. From your build directory
 ```
-arecord -q -t raw -f S16_LE -r 48000 -D hw:1 --buffer-size=48000 | ./src/qrsspig -c qrss.yaml
+arecord -q -D hw:1 -t raw -f S16_LE -r 48000 -c 1 --buffer-size=48000 | ./src/qrsspig -c qrss.yaml
 ```
-arecord is used to record from the second audio input (audio usb dongle) as raw audio data without header in signed 16 bit little-endian format with 48kHz samplerate. Output is sent to standard out. 1 second buffer to prevent overflow.
+arecord is used to record from the second audio input (audio usb dongle with mono input) as raw audio data without header in signed 16 bit little-endian format with 48kHz samplerate. Output is sent to standard out. 1 second buffer to prevent overflow.
 A receiver tuned to 10138500Hz must be recorded to the audio input. The frequency is choosen so that with a frequency accurate receiver qrss data should appear around 1.5kHz which will be in the middle of the plot.
 In the qrss.yaml config file you must set the sample rate to 6000 and the format to s16iq like in the following example:
 ```
 input:
-  format: s16real
+  format: s16mono
   samplerate: 48000
   basefreq: 10138500
 processing:
@@ -66,6 +66,7 @@ output:
 upload:
   type: local
 ```
+If your soundcard supports stereo input you must specify -c 2 instead of -c 1 for arecord and use s16left or s16right for format in the config file, depending on which channel of the stereo input your radio is connected.
 
 ### Piping from rtl_sdr
 You need rtl_sdr installed. From your build directory
@@ -81,7 +82,7 @@ input:
   samplerate: 240000
   basefreq: 27999300
 processing:
-  resamplerate: 6000
+  samplerate: 6000
   fft: 16384
   fftoverlap: 3
 output:

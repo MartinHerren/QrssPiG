@@ -17,6 +17,6 @@ Vcs-Git: https://github.com/MartinHerren/QrssPiG
 
 Package: qrsspig
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}
+Depends: ${shlibs:Depends}, ${misc:Depends}, fonts-dejavu-core
 Description: QRSS grabber
   QRSS grabber software

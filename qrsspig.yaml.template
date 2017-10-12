@@ -17,7 +17,7 @@ output:
     receiver: Marconi MkII
     antenna: ShortWire
   minutesperframe: 10
-  font: "ttf-dejavu/DejaVuSans.ttf"
+  font: "dejavu/DejaVuSans.ttf"
   fontsize: 8
   freqmin: 300
   freqmax: 2700
