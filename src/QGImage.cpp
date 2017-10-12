@@ -323,7 +323,7 @@ void QGImage::_init() {
 	int brect[8];
 
 	std::stringstream ss;
-	ss << QrssPiG_NAME << " v" << QrssPiG_VERSION_MAJOR << "." << QrssPiG_VERSION_MINOR << "." << QrssPiG_VERSION_PATCH;
+	ss << QRSSPIG_NAME << " v" << QRSSPIG_VERSION_MAJOR << "." << QRSSPIG_VERSION_MINOR << "." << QRSSPIG_VERSION_PATCH;
 	_qrsspigString = ss.str();
 	char * err = gdImageStringFT(nullptr, brect, 0, const_cast<char *>(_font.c_str()), _fontSize, 0, 0, 0, const_cast<char *>(_qrsspigString.c_str()));
 	if (err) throw std::runtime_error(err);
