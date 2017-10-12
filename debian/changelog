@@ -9,4 +9,4 @@ qrsspig (0.2.0-1) dev; urgency=medium
   * Resync timing on each frame
   * Support for receiver frequency error correction
 
- -- Martin Herren <sputnik@on-the-web.ch>  Thu, 12 Oct 2017 10:00:00 + 0200
+ --  Martin Herren <sputnik@on-the-web.ch>  Thu, 12 Oct 2017 10:00:00 +0200
