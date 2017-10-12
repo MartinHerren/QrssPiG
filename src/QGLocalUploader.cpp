@@ -12,10 +12,12 @@ QGLocalUploader::QGLocalUploader(const std::string &dir) :
 QGLocalUploader::~QGLocalUploader() {
 }
 
-void QGLocalUploader::_pushThreadImpl(const std::string &fileName, const char *data, int dataSize) {
+void QGLocalUploader::_pushThreadImpl(const std::string &fileName, const char *data, int dataSize, std::string &uri) {
 	std::ofstream o;
 
-	o.open(_dir + "/" + fileName, std::ios::binary);
+	uri = _dir + "/" + fileName;
+
+	o.open(uri, std::ios::binary);
 	o.write(data, dataSize);
 	o.close();
 }

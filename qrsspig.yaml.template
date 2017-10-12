@@ -1,12 +1,21 @@
 input:
   format: hackrf
-  samplerate: 8000
+  samplerate: 48000
   basefreq: 10000000
+  ppm: 0
 processing:
+  chunksize: 32
+  samplerate: 6000
   fft: 4096
   fftoverlap: 7
 output:
   orientation: horizontal
+  header:
+    title: My QrssPiG Grabber
+    callsign: HFQRSS
+    qth: South of Nowhere
+    receiver: Marconi MkII
+    antenna: ShortWire
   minutesperframe: 10
   font: "ttf-dejavu/DejaVuSans.ttf"
   fontsize: 8

@@ -1,0 +1,12 @@
+qrsspig (0.2.0-1) dev; urgency=medium
+
+  * Integrated downsampling using libliquid, optionally librtfilter can also
+    be used
+  * Layout improvements with header and smarter frequency and time label
+    spacing
+  * Multiple uploader supported in parallel
+  * Support for mono 16 bit audio input
+  * Resync timing on each frame
+  * Support for receiver frequency error correction
+
+ -- Martin Herren <sputnik@on-the-web.ch>  Thu, 12 Oct 2017 10:00:00 + 0200

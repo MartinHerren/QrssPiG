@@ -18,11 +18,13 @@ QGSCPUploader::QGSCPUploader(const std::string &host, const std::string &user, c
 QGSCPUploader::~QGSCPUploader() {
 }
 
-void QGSCPUploader::_pushThreadImpl(const std::string &fileName, const char *data, int dataSize) {
+void QGSCPUploader::_pushThreadImpl(const std::string &fileName, const char *data, int dataSize, std::string &uri) {
 	ssh_session ssh;
 
 	int verbosity = SSH_LOG_PROTOCOL;
 	int rc;
+
+	uri = (_user.length() ? _user + "@" : "") + _host + ":" + _dir + "/" + fileName;
 
 	ssh = ssh_new();
 

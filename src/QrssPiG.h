@@ -3,16 +3,18 @@
 #include <complex>
 #include <iostream>
 #include <string>
+#include <vector>
 
 #include <yaml-cpp/yaml.h>
 
+#include "QGDownSampler.h"
 #include "QGFft.h"
 #include "QGImage.h"
 #include "QGUploader.h"
 
 class QrssPiG {
 public:
-	enum class Format { U8IQ, S8IQ, U16IQ, S16IQ };
+	enum class Format { U8IQ, S8IQ, U16IQ, S16IQ, S16REAL };
 
 private:
 	QrssPiG();
@@ -30,30 +32,34 @@ private:
 	void _addUploader(const YAML::Node &uploader);
 	void _init();
 
-	void _addIQ(std::complex<double> iq);
+	void _addIQ(std::complex<float> iq);
 	void _computeFft();
 	void _pushImage(bool wait = false);
 
-	// FFT size
-	int _N;
-	int _overlap; // 0: no overlap, 1: 1/2, 2: 2/3...
-
-	// Data format
+	// Input data format
 	Format _format;
 	int _sampleRate;
 	int _baseFreq;
 
-	double *_hannW;
+	// Processing
+	int _chunkSize;
+	int _N;
+	int _overlap; // 0: no overlap, 1: 1/2, 2: 2/3...
+
+	// Processing buffer
+	int _inputIndex;
+	int _inputIndexThreshold;
+	int _resampledIndex;
+	std::complex<float> *_input;
+	std::complex<float> *_resampled;
+	float *_hannW;
+	std::complex<float> *_fftIn;
+	std::complex<float> *_fftOut;
+
+	QGDownSampler *_resampler;
 	QGFft *_fft;
-
-	int _idx; // Current sample index in fft input
-
-	std::complex<double> *_in;
-	std::complex<double> *_fftIn;
-	std::complex<double> *_fftOut;
-
 	QGImage *_im;
-	QGUploader *_up;
+	std::vector<QGUploader*> _uploaders;
 
 	int _frameIndex;
 

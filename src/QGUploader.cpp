@@ -22,9 +22,14 @@ void QGUploader::push(const std::string &fileName, const char *data, int dataSiz
 }
 
 void QGUploader::_pushThread(std::string fileName, const char *data, int dataSize) {
-    _pushThreadImpl(fileName, data, dataSize);
+    std::string uri;
 
+    try {
+        _pushThreadImpl(fileName, data, dataSize, uri);
+        std::cout << "pushed " << uri << std::endl;
+    } catch (const std::exception &e) {
+        std::cout << "pushing " << uri << " failed: " << e.what() << std::endl;
+    }
     // Delete data allocated above so specific implementations don't have to worry
     delete [] data;
-std::cout << "pushed " << fileName << std::endl;
 }

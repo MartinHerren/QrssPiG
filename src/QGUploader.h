@@ -14,5 +14,5 @@ public:
 private:
 	void _pushThread(std::string fileName, const char *data, int dataSize);
 
-	virtual void _pushThreadImpl(const std::string &fileName, const char *data, int dataSize) = 0;
+	virtual void _pushThreadImpl(const std::string &fileName, const char *data, int dataSize, std::string &uri) = 0;
 };

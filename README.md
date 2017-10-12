@@ -27,7 +27,8 @@ It depends on following dev libs:
  - libfftw3-dev
  - libyaml-cpp-dev
  - libfreetype6-dev
- - (librtlsdr-dev)
+ - (librtfilter-dev)
+ - libliquid-dev
 
 To build:
 ```
@@ -38,20 +39,21 @@ $ make
 ```
 
 ## Run
-### Piping from audio device using alsa including resampling and remixing using sox
-You need arecord and sox to be installed
+### Piping from audio device
+You need arecord to be installed. From your build directory
 ```
-arecord -q -t raw -f S16_LE -r 48000 | sox -t s16 -c 1 -r 48000 - -t s16 -c 2 -r 6000 - remix 1 0 | ./src/QrssPiG -c qrss.yaml
+arecord -q -t raw -f S16_LE -r 48000 -D hw:1 --buffer-size=48000 | ./src/QrssPiG -c qrss.yaml
 ```
-arecord is used to record from the standard audio input as raw audio data without header in signed 16 bit little-endian format with 48kHz samplerate. Output is sent to standard out.
-sox is used to resample audio from 48kHz to 6kHz to lower processing and create a stereo signal with the audio data on the left channel and the right one silent.
+arecord is used to record from the second audio input (audio usb dongle) as raw audio data without header in signed 16 bit little-endian format with 48kHz samplerate. Output is sent to standard out. 1 second buffer to prevent overflow.
+A receiver tuned to 10138500Hz must be recorded to the audio input. The frequency is choosen so taht with a frequency accurate receiver qrss data should appear around 1.5kHz which will be in the middle of the plot.
 In the qrss.yaml config file you must set the sample rate to 6000 and the format to s16iq like in the following example:
 ```
 input:
-  format: s16iq
-  samplerate: 6000
+  format: s16real
+  samplerate: 48000
   basefreq: 10138500
 processing:
+  samplerate: 6000
   fft: 16384
   fftoverlap: 3
 output:
@@ -65,24 +67,25 @@ upload:
   type: local
 ```
 
-### Piping from rtl_sdr through sox for resampling
-You need rtl_sdr and sox installed. From your build directory
+### Piping from rtl_sdr
+You need rtl_sdr installed. From your build directory
 ```
-rtl_sdr -f 27999300 -s 1000000 - | sox -t u8 -c 2 -r 1000000 - -t u8 -c 2 -r 6000 - | ./src/QrssPiG -c qrss.yaml
+rtl_sdr -f 27999300 -s 240000 -g 60 - | ./src/QrssPiG -c qrss.yaml
 ```
-rtl_sdr is used as receiver and produces unsigned 8 bit I/Q data at a samplerate of 1MSample/s from 27999300Hz and send them to stdout.
+rtl_sdr is used as receiver and produces unsigned 8 bit I/Q data at a samplerate of 240kSample/s from 27999300Hz and send them to stdout.
 The frequency is choosen so that with a frequency accurate receiver qrss data should appear around 1.5kHz which will be in the middle of the plot.
-sox is used to resample the data from 1MSample/s to 6kSample/s.
-In the qrss.yaml config file you must set the sample rate to 6000 and the format to rtlsdr (or u8iq) like in the following example:
+In the qrss.yaml config file you must set the sample rate to the input samplerate of 240000 and a processing samplerate of 6000 and the format to rtlsdr (or u8iq) like in the following example:
 ```
 input:
   format: rtlsdr
-  samplerate: 6000
+  samplerate: 240000
   basefreq: 27999300
 processing:
+  resamplerate: 6000
   fft: 16384
   fftoverlap: 3
 output:
+  title: QrssPiG 10m QRSS Grabber
   orientation: horizontal
   minutesperframe: 10
   freqmin: 300
@@ -96,11 +99,11 @@ upload:
 ### Piping from hackrf through sox for resampling
 You need a recent version of hackrf_transfer (first version couldn't stream to stdout) and sox installed. From your build directory
 ```
-hackrf_transfer -f 10138500 -s 4000000 -b 1.75 -a 1 -g 60 -l 24 -r - | sox -t s8 -c 2 -r 4000000 - -t s8 -c 2 -r 6000 - | ./src/QrssPiG -c qrss.yaml
+hackrf_transfer -f 10138500 -s 8000000 -b 1.75 -a 1 -g 60 -l 24 -r - | sox -t s8 -c 2 -r 8000000 - -t s8 -c 2 -r 6000 - | ./src/QrssPiG -c qrss.yaml
 ```
-hackrf_transfer is used as receiver and produces signed 8 bit I/Q data at a samplerate of 4MSample/s from 10138500Hz and send them to stdout.
+hackrf_transfer is used as receiver and produces signed 8 bit I/Q data at a samplerate of 8MSample/s from 10138500Hz and send them to stdout.
 The frequency is choosen so that with a frequency accurate receiver qrss data should appear around 1.5kHz which will be in the middle of the plot.
-sox is used to resample the data from 4MSample/s to 6kSample/s.
+sox is used to resample the data from 8MSample/s to 6kSample/s. Internal downsampler doesn't work yet for hackrf_transfer.
 In the qrss.yaml config file you must set the sample rate to 6000 and the format to hackrf (or s8iq) like in the following example:
 ```
 input:
