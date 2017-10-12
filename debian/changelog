@@ -1,3 +1,9 @@
+qrsspig (0.2.0-1.2) dev; urgency=medium
+
+  * Merge latest updates before 0.2.0, audio input variants
+
+ -- Martin Herren <sputnik@on-the-web.ch>  Thu, 12 Oct 2017 22:28:30 +0200
+
 qrsspig (0.2.0-1.1) dev; urgency=medium
 
   * Target bin now qrsspig instead of QrssPiG
