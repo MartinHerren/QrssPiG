@@ -3,6 +3,7 @@ v0.2.0:
  - Layout improvements with header and smarter frequency and time label spacing
  - Multiple uploader supported in parallel
  - Support for mono 16 bit audio input
+ - Resync timing on each frame
  - Support for receiver frequency error correction
 
 v0.1.0:
