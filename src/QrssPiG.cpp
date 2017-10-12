@@ -28,7 +28,9 @@ QrssPiG::QrssPiG(const std::string &format, int sampleRate, int N, const std::st
 	else if ((format.compare("s8iq") == 0) || (format.compare("hackrf") == 0)) _format = Format::S8IQ;
 	else if (format.compare("u16iq") == 0) _format = Format::U16IQ;
 	else if (format.compare("s16iq") == 0) _format = Format::S16IQ;
-	else if (format.compare("s16real") == 0) _format = Format::S16REAL;
+	else if (format.compare("s16mono") == 0) _format = Format::S16MONO;
+	else if (format.compare("s16left") == 0) _format = Format::S16LEFT;
+	else if (format.compare("s16right") == 0) _format = Format::S16RIGHT;
 	else throw std::runtime_error("Unsupported format");
 
 	_N = N;
@@ -60,7 +62,9 @@ QrssPiG::QrssPiG(const std::string &configFile) : QrssPiG() {
 			else if ((f.compare("s8iq") == 0) || (f.compare("hackrf") == 0)) _format = Format::S8IQ;
 			else if (f.compare("u16iq") == 0) _format = Format::U16IQ;
 			else if (f.compare("s16iq") == 0) _format = Format::S16IQ;
-			else if (f.compare("s16real") == 0) _format = Format::S16REAL;
+			else if (f.compare("s16mono") == 0) _format = Format::S16MONO;
+			else if (f.compare("s16left") == 0) _format = Format::S16LEFT;
+			else if (f.compare("s16right") == 0) _format = Format::S16RIGHT;
 			else throw std::runtime_error("YAML: input format unrecognized");
 		}
 
@@ -202,11 +206,37 @@ void QrssPiG::run() {
 			break;
 		}
 
-		case Format::S16REAL: {
+		case Format::S16MONO: {
 			signed short int r;
 			while (std::cin && _running) {
 				std::cin.read(b, 8192);
 				for (int j = 0; j < 8192;) {
+					r = b[j++];
+					r += b[j++] << 8;
+					_addIQ(std::complex<float>(r / 32768., 0.));
+				}
+			}
+		}
+
+		case Format::S16LEFT: {
+			signed short int r;
+			while (std::cin && _running) {
+				std::cin.read(b, 8192);
+				for (int j = 0; j < 8192;) {
+					r = b[j++];
+					r += b[j++] << 8;
+					j += 2;
+					_addIQ(std::complex<float>(r / 32768., 0.));
+				}
+			}
+		}
+
+		case Format::S16RIGHT: {
+			signed short int r;
+			while (std::cin && _running) {
+				std::cin.read(b, 8192);
+				for (int j = 0; j < 8192;) {
+					j += 2;
 					r = b[j++];
 					r += b[j++] << 8;
 					_addIQ(std::complex<float>(r / 32768., 0.));
