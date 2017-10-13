@@ -11,13 +11,16 @@
 #endif // HAVE_LIBRTFILTER
 #endif // HAVE_LIBLIQUIDSDR
 
-QGDownSampler::QGDownSampler(float rate, unsigned int cs): _rate(rate), _cs(cs) {
+QGDownSampler::QGDownSampler(float rate, unsigned int cs): _cs(cs) {
 #ifdef HAVE_LIBLIQUIDSDR
+	_rate = rate;
 	_liquidSdrResampler = resamp_crcf_create(1./_rate, 6000, .49/_rate, 60., 32);
 #else
 #ifdef HAVE_LIBRTFILTER
-	_rtFilterResampler = rtf_create_downsampler(1, RTF_CFLOAT, _rate);
+	_rate = floor(rate); // Only integer rates supported. Taking floor to get the next higher end samplerate
+	_rtFilterResampler = rtf_create_downsampler(1, RTF_CFLOAT, (unsigned int)_rate);
 #else
+	_rate = floor(rate);
 	_counter = 0;
 	_counterLimit = (unsigned int)floor(_rate);
 #endif // HAVE_LIBRTFILTER
@@ -35,15 +38,7 @@ QGDownSampler::~QGDownSampler() {
 }
 
 float QGDownSampler::getRealRate() {
-#ifdef HAVE_LIBLIQUIDSDR
 	return _rate;
-#else
-#ifdef HAVE_LIBRTFILTER
-	return floor(_rate);
-#else
-	return floor(_rate);
-#endif // HAVE_LIBRTFILTER
-#endif // HAVE_LIBLIQUIDSDR
 }
 
 unsigned int QGDownSampler::processChunk(std::complex<float> *in, std::complex<float> *out) {

@@ -13,10 +13,10 @@ public:
 	enum class Orientation { Horizontal, Vertical };
 	enum class Status { Ok, FrameReady };
 
-	QGImage(long int sampleRate, long int baseFreq, int fftSize, int fftOverlap);
+	QGImage(int fftSize, int fftOverlap);
 	~QGImage();
 
-	void configure(const YAML::Node &config);
+	void configure(const YAML::Node &config, unsigned int index = 0);
 
 	void startNewFrame(bool incrementTime = true);
 	Status addLine(const std::complex<float> *fft);
@@ -26,8 +26,12 @@ private:
 	void _init();
 	void _free();
 
+	void _computeTitleHeight();
+	void _addSubTitleField(std::string field, bool newline = false);
+	void _renderTitle();
 	void _computeFreqScale();
 	void _drawFreqScale();
+	void _computeDbScale();
 	void _drawDbScale();
 	void _computeTimeScale();
 	void _drawTimeScale();
@@ -35,12 +39,23 @@ private:
 	int _db2Color(float v);
 
 	// Params given at constructor time, cannot be changed
-	long int _sampleRate;
-	long int _baseFreq;
 	int N;
 	int _overlap;
 
 	// Configuration
+	long int _sampleRate;
+	long int _baseFreq;
+	long int _baseFreqCorrected;
+
+	std::string _title;
+	std::vector<std::string> _subtitles;
+	std::string _inputDevice;
+	long int _inputSampleRate;
+	std::string _callsign;
+	std::string _qth;
+	std::string _receiver;
+	std::string _antenna;
+
 	Orientation _orientation;
 	int _secondsPerFrame;
 	int _size;
@@ -63,6 +78,7 @@ private:
 	bool _alignFrame;
 	bool _syncFrames;
 	std::chrono::milliseconds _started;
+	std::chrono::milliseconds _runningSince;
 	std::chrono::milliseconds _startedIntoFrame;
 
 	// Internal data
@@ -74,11 +90,14 @@ private:
 
 	// Constants to go from hertz/seconds to pixel
 	float _freqK;
+	float _dBK;
 	float _timeK;
 
 	// Marker and label division
 	int _hertzPerFreqLabel;
 	int _freqLabelDivs;
+	int _dBPerDbLabel;
+	int _dBLabelDivs;
 	int _secondsPerTimeLabel;
 	int _timeLabelDivs;
 
@@ -90,6 +109,7 @@ private:
 	int _borderSize;
 	int _titleHeight;
 	int _scopeSize;
+	int _scopeRange;
 	int _markerSize;
 	int _freqLabelWidth;
 	int _freqLabelHeight;

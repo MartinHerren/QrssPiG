@@ -15,7 +15,7 @@
 
 class QrssPiG {
 public:
-	enum class Format { U8IQ, S8IQ, U16IQ, S16IQ };
+	enum class Format { U8IQ, S8IQ, U16IQ, S16IQ, S16MONO, S16LEFT, S16RIGHT };
 
 private:
 	QrssPiG();
@@ -47,7 +47,6 @@ private:
 
 	// Processing
 	int _chunkSize;
-	int _resampleRate;
 	int _N;
 	int _overlap; // 0: no overlap, 1: 1/2, 2: 2/3...
 

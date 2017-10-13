@@ -1,0 +1,24 @@
+qrsspig (0.2.0-1.2) dev; urgency=medium
+
+  * Merge latest updates before 0.2.0, audio input variants
+
+ -- Martin Herren <sputnik@on-the-web.ch>  Thu, 12 Oct 2017 22:28:30 +0200
+
+qrsspig (0.2.0-1.1) dev; urgency=medium
+
+  * Target bin now qrsspig instead of QrssPiG
+
+ -- Martin Herren <sputnik@on-the-web.ch>  Thu, 12 Oct 2017 15:25:48 +0200
+
+qrsspig (0.2.0-1) dev; urgency=medium
+
+  * Integrated downsampling using libliquid, optionally librtfilter can also
+    be used
+  * Layout improvements with header and smarter frequency and time label
+    spacing
+  * Multiple uploader supported in parallel
+  * Support for mono 16 bit audio input
+  * Resync timing on each frame
+  * Support for receiver frequency error correction
+
+ --  Martin Herren <sputnik@on-the-web.ch>  Thu, 12 Oct 2017 10:00:00 +0200

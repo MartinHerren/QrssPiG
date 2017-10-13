@@ -1,0 +1,22 @@
+Source: qrsspig
+Section: comm
+Priority: optional
+Maintainer: Martin Herren <sputnik@on-the-web.ch>
+Build-Depends: cmake,
+               debhelper (>= 9),
+               libboost-program-options-dev,
+               libgd-dev,
+               libssh-dev,
+               libfftw3-dev,
+               libyaml-cpp-dev,
+               libfreetype6-dev,
+               libliquid-dev
+Standards-Version: 3.9.8
+Homepage: https://martinherren.github.io/QrssPiG
+Vcs-Git: https://github.com/MartinHerren/QrssPiG
+
+Package: qrsspig
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, fonts-dejavu-core
+Description: QRSS grabber
+  QRSS grabber software
