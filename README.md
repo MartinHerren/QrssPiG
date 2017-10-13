@@ -17,6 +17,23 @@ If i find one working for my needs I might well using the existing one and stop 
  - Upload them via scp
  - Ftp upload is not planned, maybe ftps
 
+## Install from Debian repository
+There is a Debian Strech (Debian 9) repository with binaries for amd64 and armhf (Raspberry). To add the repository:
+Create a file /etc/apt/sources.list.d/hb9fxx.list containing
+```
+deb https://debian.hb9fxx.ch/debian/ dev/
+deb-src https://debian.hb9fxx.ch/debian/ dev/
+```
+and run
+```
+sudo aptitude install apt-transport-https
+wget https://debian.hb9fxx.ch/debian/key.asc -O - | sudo apt-key add
+sudo aptitude update
+sudo aptitude install qrsspig
+```
+
+You now can run qrsspig giving it a config file as shown below in the run section.
+
 ## Build
 To build QrssPiG you need cmake
 
