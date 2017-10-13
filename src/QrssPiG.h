@@ -10,6 +10,7 @@
 #include "QGDownSampler.h"
 #include "QGFft.h"
 #include "QGImage.h"
+#include "QGInputDevice.h"
 #include "QGUploader.h"
 
 class QrssPiG {
@@ -35,6 +36,9 @@ private:
 	void _addIQ(std::complex<float> iq);
 	void _computeFft();
 	void _pushImage(bool wait = false);
+
+	// Input device
+	QGInputDevice *_inputDevice;
 
 	// Input data format
 	Format _format;

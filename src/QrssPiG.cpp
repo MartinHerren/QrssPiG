@@ -7,6 +7,7 @@
 #include "QGSCPUploader.h"
 
 QrssPiG::QrssPiG() :
+	_inputDevice(nullptr),
 	_format(Format::U8IQ),
 	_sampleRate(48000),
 	_baseFreq(0),
@@ -70,6 +71,14 @@ QrssPiG::QrssPiG(const std::string &configFile) : QrssPiG() {
 
 		if (input["samplerate"]) _sampleRate = input["samplerate"].as<int>();
 		if (input["basefreq"]) _baseFreq = input["basefreq"].as<int>();
+
+		if ((input["device"]) && (input["device"].as<std::string>().compare("stdin"))) {
+			_inputDevice = QGInputDevice::CreateInputDevice(input);
+			_inputDevice->open();
+
+			_sampleRate = _inputDevice->sampleRate();
+			_baseFreq = _inputDevice->baseFreq();
+		}
 	}
 
 	int pSampleRate = 6000;
@@ -142,6 +151,7 @@ QrssPiG::~QrssPiG() {
 	if (_im) delete _im;
 	for (auto up: _uploaders) delete up;
 	if (_resampler) delete _resampler;
+	if (_inputDevice) delete _inputDevice;
 }
 
 void QrssPiG::run() {
@@ -249,6 +259,7 @@ void QrssPiG::run() {
 //
 // Private members
 //
+
 void QrssPiG::_addUploader(const YAML::Node &uploader) {
 	if (!uploader["type"]) throw std::runtime_error("YAML: uploader must have a type");
 
