@@ -261,28 +261,32 @@ void QrssPiG::run() {
 //
 
 void QrssPiG::_addUploader(const YAML::Node &uploader) {
-	if (!uploader["type"]) throw std::runtime_error("YAML: uploader must have a type");
+	try {
+		_uploaders.push_back(QGUploader::CreateUploader(uploader));
+	} catch (const std::exception &e) {
+		if (!uploader["type"]) throw std::runtime_error("YAML: uploader must have a type");
 
-	std::string type = uploader["type"].as<std::string>();
+		std::string type = uploader["type"].as<std::string>();
 
-	if (type.compare("scp") == 0) {
-		std::string host = "localhost";
-		int port = 22; // TODO: use 0 to force uploader to take default port ?
-		std::string user = "";
-		std::string dir = "./";
+		if (type.compare("scp") == 0) {
+			std::string host = "localhost";
+			int port = 22; // TODO: use 0 to force uploader to take default port ?
+			std::string user = "";
+			std::string dir = "./";
 
-		if (uploader["host"]) host = uploader["host"].as<std::string>();
-		if (uploader["port"]) port = uploader["port"].as<int>();
-		if (uploader["user"]) user = uploader["user"].as<std::string>();
-		if (uploader["dir"]) dir = uploader["dir"].as<std::string>();
+			if (uploader["host"]) host = uploader["host"].as<std::string>();
+			if (uploader["port"]) port = uploader["port"].as<int>();
+			if (uploader["user"]) user = uploader["user"].as<std::string>();
+			if (uploader["dir"]) dir = uploader["dir"].as<std::string>();
 
-		_uploaders.push_back(new QGSCPUploader(host, user, dir, port));
-	} else if (type.compare("local") == 0) {
-		std::string dir = "./";
+			_uploaders.push_back(new QGSCPUploader(host, user, dir, port));
+		} else if (type.compare("local") == 0) {
+			std::string dir = "./";
 
-		if (uploader["dir"]) dir = uploader["dir"].as<std::string>();
+			if (uploader["dir"]) dir = uploader["dir"].as<std::string>();
 
-		_uploaders.push_back(new QGLocalUploader(dir));
+			_uploaders.push_back(new QGLocalUploader(dir));
+		}
 	}
 }
 

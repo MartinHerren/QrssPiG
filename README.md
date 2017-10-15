@@ -14,8 +14,7 @@ If i find one working for my needs I might well using the existing one and stop 
  - Optionally control the sdr device
  - Optionally process audio from stream or audio input
  - Generate pretty horizontal or vertical waterfall graphs
- - Upload them via scp
- - Ftp upload is not planned, maybe ftps
+ - Upload them via scp or ftp, or just save locally. Or any combination of uploads and local saves
 
 ## Install from Debian repository
 There is a Debian Strech (Debian 9) repository with binaries for amd64 and armhf (Raspberry). To add the repository:
@@ -39,11 +38,12 @@ To build QrssPiG you need cmake
 
 It depends on following dev libs:
  - libboost-program-options-dev
- - libgd-dev
- - libssh-dev
- - libfftw3-dev
  - libyaml-cpp-dev
+ - libfftw3-dev
+ - libgd-dev
  - libfreetype6-dev
+ - libssh-dev
+ - libcurl4-openssl-dev
  - (librtfilter-dev)
  - libliquid-dev
 
