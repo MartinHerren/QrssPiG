@@ -4,7 +4,11 @@
 #include <iostream>
 #include <thread>
 
+#include "Config.h"
+
+#ifdef HAVE_LIBCURL
 #include "QGUploaderFTP.h"
+#endif // HAVE_LIBCURL
 
 QGUploader::QGUploader(const YAML::Node &config) {
     _verbose = false;

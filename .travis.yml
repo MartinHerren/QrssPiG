@@ -11,11 +11,12 @@ addons:
   apt:
     packages:
       - libboost-program-options-dev
-      - libgd2-noxpm-dev
-      - libssh-dev
-      - libfftw3-dev
       - libyaml-cpp-dev
+      - libfftw3-dev
+      - libgd2-noxpm-dev
       - libfreetype6-dev
+      - libssh-dev
+      - libcurl4-openssl-dev
       - librtfilter-dev
 
 script:

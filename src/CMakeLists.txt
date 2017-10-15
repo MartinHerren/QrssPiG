@@ -35,7 +35,7 @@ if (LIBLIQUIDSDR_FOUND)
 endif (LIBLIQUIDSDR_FOUND)
 if (LIBCURL_FOUND)
 	target_link_libraries(qrsspig ${LIBCURL_LIBRARY})
-	set(HAVE_LIBLIQUIDSDR 1)
+	set(HAVE_LIBCURL 1)
 endif (LIBCURL_FOUND)
 
 add_executable (IQGen IQGen.cpp)
