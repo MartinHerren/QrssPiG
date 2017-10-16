@@ -7,12 +7,34 @@
 #include <curl/curl.h>
 
 QGUploaderFTP::QGUploaderFTP(const YAML::Node &config) : QGUploader(config) {
+	_ssl = SSL::None;
 	_host = "localhost";
 	_port = 21;
 	_user = "";
 	_password = "";
 	_dir = "";
 	_fileMode = 0644;
+
+	if (config["type"].as<std::string>().compare("ftps") == 0) {
+		// Shortcut for implicit ftp on port 990, later can still be overriden with port option
+		_ssl = SSL::Implicit;
+		_port = 990;
+	}
+
+	if (config["ssl"]) {
+		std::string ssl = config["ssl"].as<std::string>();
+
+		if (ssl.compare("none") == 0) {
+			_ssl = SSL::None;
+		} else if (ssl.compare("implicit") == 0) {
+			_ssl = SSL::Implicit;
+			_port = 990;
+		} else if (ssl.compare("explicit") == 0) {
+			_ssl = SSL::Explicit;
+		} else {
+			throw std::runtime_error("invalid ftp ssl option value");
+		}
+	}
 
 	if (config["host"]) _host = config["host"].as<std::string>();
 	if (config["port"]) _port = config["port"].as<int>();
@@ -47,10 +69,11 @@ void QGUploaderFTP::_pushThreadImpl(const std::string &fileName, const char *dat
 		throw std::runtime_error("curl_easy_init() failed");
 	}
 
-	uri = std::string("ftp://") + _host + ":" + std::to_string(_port) + "/" + _dir + (_dir.length() ? "/" : "") + fileName;
+	uri = (_ssl == SSL::Implicit ? std::string("ftps://") : std::string("ftp://")) + _host + ":" + std::to_string(_port) + "/" + _dir + (_dir.length() ? "/" : "") + fileName;
 
 	curl_easy_setopt(curl, CURLOPT_URL, uri.c_str());
 	curl_easy_setopt(curl, CURLOPT_USERPWD, (_user + ":" + _password).c_str());
+	if (_ssl == SSL::Explicit) curl_easy_setopt(curl, CURLOPT_USE_SSL, CURLUSESSL_ALL);
 
 	curl_easy_setopt(curl, CURLOPT_UPLOAD, 1L);
 	// we want to use our own read function

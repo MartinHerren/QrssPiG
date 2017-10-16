@@ -43,7 +43,7 @@ QGUploader *QGUploader::CreateUploader(const YAML::Node &config) {
         return new QGUploaderLocal(config);
     } else if (config["type"].as<std::string>().compare("scp") == 0) {
         return new QGUploaderSCP(config);
-    } else if (config["type"].as<std::string>().compare("ftp") == 0) {
+    } else if ((config["type"].as<std::string>().compare("ftp") == 0) || (config["type"].as<std::string>().compare("ftps") == 0)) {
 #ifdef HAVE_LIBCURL
         return new QGUploaderFTP(config);
 #endif //  HAVE_LIBCURL
