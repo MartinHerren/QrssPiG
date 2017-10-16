@@ -3,9 +3,6 @@
 #include <stdexcept>
 #include <string>
 
-#include "QGUploaderLocal.h"
-#include "QGUploaderSCP.h"
-
 QrssPiG::QrssPiG() :
 	_inputDevice(nullptr),
 	_format(Format::U8IQ),
