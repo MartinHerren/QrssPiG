@@ -25,7 +25,6 @@ QGUploaderSCP::~QGUploaderSCP() {
 void QGUploaderSCP::_pushThreadImpl(const std::string &fileName, const char *data, int dataSize, std::string &uri) {
 	ssh_session ssh;
 
-	int verbosity = SSH_LOG_PROTOCOL;
 	int rc;
 
 	uri = std::string("ssh://") + (_user.length() ? _user + "@" : "") + _host + ":" + _dir + (_dir.length() ? "/" : "") + fileName;
@@ -37,7 +36,9 @@ void QGUploaderSCP::_pushThreadImpl(const std::string &fileName, const char *dat
 	ssh_options_set(ssh, SSH_OPTIONS_HOST, _host.c_str());
 	if (_user.length() > 0) ssh_options_set(ssh, SSH_OPTIONS_USER, _user.c_str());
 	if (_port > 0) ssh_options_set(ssh, SSH_OPTIONS_PORT, &_port);
-	//ssh_options_set(ssh, SSH_OPTIONS_LOG_VERBOSITY, &verbosity);
+
+	int verbosity = SSH_LOG_PROTOCOL;
+	if (_verbose) ssh_options_set(ssh, SSH_OPTIONS_LOG_VERBOSITY, &verbosity);
 
 	rc = ssh_connect(ssh);
 
