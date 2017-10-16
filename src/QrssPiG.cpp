@@ -38,9 +38,9 @@ QrssPiG::QrssPiG(const std::string &format, int sampleRate, int N, const std::st
 	_sampleRate = sampleRate;
 
 	if (sshHost.length()) {
-		_uploaders.push_back(QGUploader::CreateUploader(YAML::Load("{host: " + sshHost + ", port: " + std::to_string(sshPort) + ", user: " + sshUser + ", dir: " + dir + "}")));
+		_uploaders.push_back(QGUploader::CreateUploader(YAML::Load("{type: scp, host: " + sshHost + ", port: " + std::to_string(sshPort) + ", user: " + sshUser + ", dir: " + dir + "}")));
 	} else {
-		_uploaders.push_back(QGUploader::CreateUploader(YAML::Load("{dir: " + dir + "}")));
+		_uploaders.push_back(QGUploader::CreateUploader(YAML::Load("{type: local, dir: " + dir + "}")));
 	}
 
 	_init();
