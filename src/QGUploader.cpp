@@ -15,8 +15,10 @@
 
 QGUploader::QGUploader(const YAML::Node &config) {
     _verbose = false;
+    _pushIntermediate = false;
 
     if (config["verbose"]) _verbose = config["verbose"].as<bool>();
+    if (config["intermediate"]) _pushIntermediate = config["intermediate"].as<bool>();
 }
 
 // Push is done in a thread on a copy of the data.

@@ -298,7 +298,33 @@ void QrssPiG::_addIQ(std::complex<float> iq) {
 void QrssPiG::_computeFft() {
 	for (int i = 0; i < _N; i++) _fftIn[i] = _resampled[i] * _hannW[i / 2];
 	_fft->process();
-	if (_im->addLine(_fftOut) == QGImage::Status::FrameReady) _pushImage();
+
+	switch(_im->addLine(_fftOut)) {
+	case QGImage::Status::IntermediateReady:
+		_pushIntermediateImage();
+		break;
+
+	case QGImage::Status::FrameReady:
+		_pushImage();
+		break;
+
+	default:
+		break;
+	}
+}
+
+void QrssPiG::_pushIntermediateImage() {
+	try {
+		int frameSize;
+		std::string frameName;
+		char * frame;
+
+		frame = _im->getFrame(&frameSize, frameName);
+
+std::cout << "pushing intermediate" << frameName << std::endl;
+		for (auto up: _uploaders) up->pushIntermediate(frameName, frame, frameSize);
+	} catch (const std::exception &e) {
+	}
 }
 
 void QrssPiG::_pushImage(bool wait) {
