@@ -1,4 +1,4 @@
-#include "QGSCPUploader.h"
+#include "QGUploaderSCP.h"
 
 #include <iostream>
 #include <stdexcept>
@@ -6,7 +6,7 @@
 #include <libssh/libssh.h>
 //#include <libssh/libsshpp.hpp> // Not available in debian jessie, available in stretch
 
-QGSCPUploader::QGSCPUploader(const std::string &host, const std::string &user, const std::string &dir, int port) :
+QGUploaderSCP::QGUploaderSCP(const std::string &host, const std::string &user, const std::string &dir, int port) :
 	QGUploader(),
 	_host(host),
 	_user(user),
@@ -15,10 +15,10 @@ QGSCPUploader::QGSCPUploader(const std::string &host, const std::string &user, c
 	_fileMode(0644) {
 }
 
-QGSCPUploader::~QGSCPUploader() {
+QGUploaderSCP::~QGUploaderSCP() {
 }
 
-void QGSCPUploader::_pushThreadImpl(const std::string &fileName, const char *data, int dataSize, std::string &uri) {
+void QGUploaderSCP::_pushThreadImpl(const std::string &fileName, const char *data, int dataSize, std::string &uri) {
 	ssh_session ssh;
 
 	int verbosity = SSH_LOG_PROTOCOL;

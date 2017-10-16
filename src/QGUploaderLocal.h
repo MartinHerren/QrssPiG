@@ -4,10 +4,10 @@
 
 #include "QGUploader.h"
 
-class QGLocalUploader: public QGUploader {
+class QGUploaderLocal: public QGUploader {
 public:
-	QGLocalUploader(const std::string &dir = "./");
-	~QGLocalUploader();
+	QGUploaderLocal(const std::string &dir = "./");
+	~QGUploaderLocal();
 
 private:
 	void _pushThreadImpl(const std::string &fileName, const char *data, int dataSize, std::string &uri);

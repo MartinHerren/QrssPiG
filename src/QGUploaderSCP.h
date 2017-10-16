@@ -4,10 +4,10 @@
 
 #include "QGUploader.h"
 
-class QGSCPUploader: public QGUploader {
+class QGUploaderSCP: public QGUploader {
 public:
-	QGSCPUploader(const std::string &host = "localhost", const std::string &user = "", const std::string &dir = "./", int port = 0);
-	~QGSCPUploader();
+	QGUploaderSCP(const std::string &host = "localhost", const std::string &user = "", const std::string &dir = "./", int port = 0);
+	~QGUploaderSCP();
 
 private:
 	void _pushThreadImpl(const std::string &fileName, const char *data, int dataSize, std::string &uri);

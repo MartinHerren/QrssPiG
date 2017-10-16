@@ -3,8 +3,8 @@
 #include <stdexcept>
 #include <string>
 
-#include "QGLocalUploader.h"
-#include "QGSCPUploader.h"
+#include "QGUploaderLocal.h"
+#include "QGUploaderSCP.h"
 
 QrssPiG::QrssPiG() :
 	_inputDevice(nullptr),
@@ -38,9 +38,9 @@ QrssPiG::QrssPiG(const std::string &format, int sampleRate, int N, const std::st
 	_sampleRate = sampleRate;
 
 	if (sshHost.length()) {
-		_uploaders.push_back(new QGSCPUploader(sshHost, sshUser, dir, sshPort));
+		_uploaders.push_back(new QGUploaderSCP(sshHost, sshUser, dir, sshPort));
 	} else {
-		_uploaders.push_back(new QGLocalUploader(dir));
+		_uploaders.push_back(new QGUploaderLocal(dir));
 	}
 
 	_init();
@@ -279,13 +279,13 @@ void QrssPiG::_addUploader(const YAML::Node &uploader) {
 			if (uploader["user"]) user = uploader["user"].as<std::string>();
 			if (uploader["dir"]) dir = uploader["dir"].as<std::string>();
 
-			_uploaders.push_back(new QGSCPUploader(host, user, dir, port));
+			_uploaders.push_back(new QGUploaderSCP(host, user, dir, port));
 		} else if (type.compare("local") == 0) {
 			std::string dir = "./";
 
 			if (uploader["dir"]) dir = uploader["dir"].as<std::string>();
 
-			_uploaders.push_back(new QGLocalUploader(dir));
+			_uploaders.push_back(new QGUploaderLocal(dir));
 		}
 	}
 }
