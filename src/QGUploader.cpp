@@ -21,6 +21,10 @@ QGUploader::QGUploader(const YAML::Node &config) {
     if (config["intermediate"]) _pushIntermediate = config["intermediate"].as<bool>();
 }
 
+void QGUploader::pushIntermediate(const std::string &fileName, const char *data, int dataSize) {
+    if (_pushIntermediate) push(fileName, data, dataSize);
+}
+
 // Push is done in a thread on a copy of the data.
 // Parent class handles copying of the data, creation of the thread and finally free the data
 // wait param can be set to true to block until pushed. Used on program exit
