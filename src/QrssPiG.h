@@ -10,6 +10,7 @@
 #include "QGDownSampler.h"
 #include "QGFft.h"
 #include "QGImage.h"
+#include "QGInputDevice.h"
 #include "QGUploader.h"
 
 class QrssPiG {
@@ -29,13 +30,15 @@ public:
 	void stop() { _running = false; };
 
 private:
-	void _addUploader(const YAML::Node &uploader);
 	void _init();
 
 	void _addIQ(std::complex<float> iq);
 	void _computeFft();
 	void _pushIntermediateImage();
 	void _pushImage(bool wait = false);
+
+	// Input device
+	QGInputDevice *_inputDevice;
 
 	// Input data format
 	Format _format;

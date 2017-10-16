@@ -1,7 +1,7 @@
 # QrssPiG
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](http://www.gnu.org/licenses/gpl-3.0)
-[![Build Status](https://travis-ci.org/MartinHerren/QrssPiG.svg?branch=master)](https://travis-ci.org/MartinHerren/QrssPiG)
+[![Build Status](https://travis-ci.org/MartinHerren/QrssPiG.svg?branch=dev)](https://travis-ci.org/MartinHerren/QrssPiG)
 
 QrssPiG is short for QRSS (Raspberry)Pi Grabber.
 
@@ -14,19 +14,36 @@ If i find one working for my needs I might well using the existing one and stop 
  - Optionally control the sdr device
  - Optionally process audio from stream or audio input
  - Generate pretty horizontal or vertical waterfall graphs
- - Upload them via scp
- - Ftp upload is not planned, maybe ftps
+ - Upload them via scp or ftp, or just save locally. Or any combination of uploads and local saves
+
+## Install from Debian repository
+There is a Debian Strech (Debian 9) repository with binaries for amd64 and armhf (Raspberry). To add the repository:
+Create a file /etc/apt/sources.list.d/hb9fxx.list containing
+```
+deb https://debian.hb9fxx.ch/debian/ dev/
+deb-src https://debian.hb9fxx.ch/debian/ dev/
+```
+and run
+```
+sudo aptitude install apt-transport-https
+wget https://debian.hb9fxx.ch/debian/key.asc -O - | sudo apt-key add
+sudo aptitude update
+sudo aptitude install qrsspig
+```
+
+You now can run qrsspig giving it a config file as shown below in the run section.
 
 ## Build
 To build QrssPiG you need cmake
 
 It depends on following dev libs:
  - libboost-program-options-dev
- - libgd-dev
- - libssh-dev
- - libfftw3-dev
  - libyaml-cpp-dev
+ - libfftw3-dev
+ - libgd-dev
  - libfreetype6-dev
+ - libssh-dev
+ - libcurl4-openssl-dev
  - (librtfilter-dev)
  - libliquid-dev
 

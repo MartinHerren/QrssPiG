@@ -3,10 +3,11 @@
 #include <stdexcept>
 #include <string>
 
-#include "QGLocalUploader.h"
-#include "QGSCPUploader.h"
+#include "QGUploaderLocal.h"
+#include "QGUploaderSCP.h"
 
 QrssPiG::QrssPiG() :
+	_inputDevice(nullptr),
 	_format(Format::U8IQ),
 	_sampleRate(48000),
 	_baseFreq(0),
@@ -37,9 +38,9 @@ QrssPiG::QrssPiG(const std::string &format, int sampleRate, int N, const std::st
 	_sampleRate = sampleRate;
 
 	if (sshHost.length()) {
-		_uploaders.push_back(new QGSCPUploader(false, sshHost, sshUser, dir, sshPort));
+		_uploaders.push_back(QGUploader::CreateUploader(YAML::Load("{type: scp, host: " + sshHost + ", port: " + std::to_string(sshPort) + ", user: " + sshUser + ", dir: " + dir + "}")));
 	} else {
-		_uploaders.push_back(new QGLocalUploader(false, dir));
+		_uploaders.push_back(QGUploader::CreateUploader(YAML::Load("{type: local, dir: " + dir + "}")));
 	}
 
 	_init();
@@ -70,6 +71,14 @@ QrssPiG::QrssPiG(const std::string &configFile) : QrssPiG() {
 
 		if (input["samplerate"]) _sampleRate = input["samplerate"].as<int>();
 		if (input["basefreq"]) _baseFreq = input["basefreq"].as<int>();
+
+		if ((input["device"]) && (input["device"].as<std::string>().compare("stdin"))) {
+			_inputDevice = QGInputDevice::CreateInputDevice(input);
+			_inputDevice->open();
+
+			_sampleRate = _inputDevice->sampleRate();
+			_baseFreq = _inputDevice->baseFreq();
+		}
 	}
 
 	int pSampleRate = 6000;
@@ -120,8 +129,8 @@ QrssPiG::QrssPiG(const std::string &configFile) : QrssPiG() {
 	}
 
 	if (config["upload"]) {
-		if (config["upload"].IsMap()) _addUploader(config["upload"]);
-		else if (config["upload"].IsSequence()) for (YAML::const_iterator it = config["upload"].begin(); it != config["upload"].end(); it++) _addUploader(*it);
+		if (config["upload"].IsMap()) _uploaders.push_back(QGUploader::CreateUploader(config["upload"]));
+		else if (config["upload"].IsSequence()) for (YAML::const_iterator it = config["upload"].begin(); it != config["upload"].end(); it++) _uploaders.push_back(QGUploader::CreateUploader(*it));
 		else throw std::runtime_error("YAML: upload must be a map or a sequence");
 	}
 }
@@ -142,6 +151,7 @@ QrssPiG::~QrssPiG() {
 	if (_im) delete _im;
 	for (auto up: _uploaders) delete up;
 	if (_resampler) delete _resampler;
+	if (_inputDevice) delete _inputDevice;
 }
 
 void QrssPiG::run() {
@@ -249,40 +259,6 @@ void QrssPiG::run() {
 //
 // Private members
 //
-void QrssPiG::_addUploader(const YAML::Node &uploader) {
-	if (!uploader["type"]) throw std::runtime_error("YAML: uploader must have a type");
-
-	bool pushIntermediate = false;
-	if (uploader["intermediate"]) {
-		std::string s = uploader["intermediate"].as<std::string>();
-		if ((s.compare("true") == 0) || (s.compare("yes") == 0)) pushIntermediate = true;
-		else if ((s.compare("false") == 0) || (s.compare("no") == 0)) pushIntermediate = false;
-		else throw std::runtime_error("YAML: uploader, intermediate value unknown");
-	}
-
-	std::string type = uploader["type"].as<std::string>();
-
-	if (type.compare("scp") == 0) {
-		std::string host = "localhost";
-		int port = 22; // TODO: use 0 to force uploader to take default port ?
-		std::string user = "";
-		std::string dir = "./";
-
-		if (uploader["host"]) host = uploader["host"].as<std::string>();
-		if (uploader["port"]) port = uploader["port"].as<int>();
-		if (uploader["user"]) user = uploader["user"].as<std::string>();
-		if (uploader["dir"]) dir = uploader["dir"].as<std::string>();
-
-		_uploaders.push_back(new QGSCPUploader(pushIntermediate, host, user, dir, port));
-	} else if (type.compare("local") == 0) {
-		std::string dir = "./";
-
-		if (uploader["dir"]) dir = uploader["dir"].as<std::string>();
-
-		_uploaders.push_back(new QGLocalUploader(pushIntermediate, dir));
-	}
-}
-
 void QrssPiG::_init() {
 	_hannW = new float[_N];
 	for (int i = 0; i < _N/2; i++) {
