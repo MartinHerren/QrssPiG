@@ -6,13 +6,17 @@
 #include <libssh/libssh.h>
 //#include <libssh/libsshpp.hpp> // Not available in debian jessie, available in stretch
 
-QGUploaderSCP::QGUploaderSCP(const std::string &host, const std::string &user, const std::string &dir, int port) :
-	QGUploader(),
-	_host(host),
-	_user(user),
-	_dir(dir),
-	_port(port),
-	_fileMode(0644) {
+QGUploaderSCP::QGUploaderSCP(const YAML::Node &config) : QGUploader(config) {
+	_host = "localhost";
+	_port = 22;
+	_user = "";
+	_dir = "";
+	_fileMode = 0644;
+
+	if (config["host"]) _host = config["host"].as<std::string>();
+	if (config["port"]) _port = config["port"].as<int>();
+	if (config["user"]) _user = config["user"].as<std::string>();
+	if (config["dir"]) _dir = config["dir"].as<std::string>();
 }
 
 QGUploaderSCP::~QGUploaderSCP() {
@@ -24,7 +28,7 @@ void QGUploaderSCP::_pushThreadImpl(const std::string &fileName, const char *dat
 	int verbosity = SSH_LOG_PROTOCOL;
 	int rc;
 
-	uri = (_user.length() ? _user + "@" : "") + _host + ":" + _dir + "/" + fileName;
+	uri = std::string("ssh://") + (_user.length() ? _user + "@" : "") + _host + ":" + _dir + (_dir.length() ? "/" : "") + fileName;
 
 	ssh = ssh_new();
 

@@ -30,7 +30,6 @@ public:
 	void stop() { _running = false; };
 
 private:
-	void _addUploader(const YAML::Node &uploader);
 	void _init();
 
 	void _addIQ(std::complex<float> iq);

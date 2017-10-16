@@ -6,7 +6,7 @@
 
 class QGUploaderSCP: public QGUploader {
 public:
-	QGUploaderSCP(const std::string &host = "localhost", const std::string &user = "", const std::string &dir = "./", int port = 0);
+	QGUploaderSCP(const YAML::Node &config);
 	~QGUploaderSCP();
 
 private:

@@ -6,7 +6,7 @@
 
 class QGUploaderLocal: public QGUploader {
 public:
-	QGUploaderLocal(const std::string &dir = "./");
+	QGUploaderLocal(const YAML::Node &config);
 	~QGUploaderLocal();
 
 private:

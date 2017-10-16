@@ -5,7 +5,6 @@
 
 class QGUploader {
 protected:
-	QGUploader() {}; // TODO Keep until SCP/UploaderLocal migrated
 	QGUploader(const YAML::Node &config);
 
 public:

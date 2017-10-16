@@ -4,9 +4,10 @@
 #include <iostream>
 #include <stdexcept>
 
-QGUploaderLocal::QGUploaderLocal(const std::string &dir) :
-	QGUploader(),
-	_dir(dir) {
+QGUploaderLocal::QGUploaderLocal(const YAML::Node &config) : QGUploader(config) {
+	_dir = "";
+
+	if (config["dir"]) _dir = config["dir"].as<std::string>();
 }
 
 QGUploaderLocal::~QGUploaderLocal() {
@@ -15,7 +16,7 @@ QGUploaderLocal::~QGUploaderLocal() {
 void QGUploaderLocal::_pushThreadImpl(const std::string &fileName, const char *data, int dataSize, std::string &uri) {
 	std::ofstream o;
 
-	uri = _dir + "/" + fileName;
+	uri = std::string("file://") + _dir + (_dir.length() ? "/" : "") + fileName;
 
 	o.open(uri, std::ios::binary);
 	o.write(data, dataSize);

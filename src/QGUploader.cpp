@@ -6,6 +6,9 @@
 
 #include "Config.h"
 
+#include "QGUploaderLocal.h"
+#include "QGUploaderSCP.h"
+
 #ifdef HAVE_LIBCURL
 #include "QGUploaderFTP.h"
 #endif // HAVE_LIBCURL
@@ -36,10 +39,17 @@ void QGUploader::push(const std::string &fileName, const char *data, int dataSiz
 QGUploader *QGUploader::CreateUploader(const YAML::Node &config) {
     if (!config["type"]) throw std::runtime_error("YAML: uploader must have a type");
 
-    if (config["type"].as<std::string>().compare("ftp") == 0) {
+    if (config["type"].as<std::string>().compare("local") == 0) {
+        return new QGUploaderLocal(config);
+    } else if (config["type"].as<std::string>().compare("scp") == 0) {
+        return new QGUploaderSCP(config);
+    } else if (config["type"].as<std::string>().compare("ftp") == 0) {
+#ifdef HAVE_LIBCURL
         return new QGUploaderFTP(config);
+#endif //  HAVE_LIBCURL
+	throw std::runtime_error("QGUploader: ftp uploader support not builtin into this build");
     } else {
-        throw std::runtime_error(std::string("QGInputDevice: unknown device ") + config["device"].as<std::string>());
+        throw std::runtime_error(std::string("QGUploader: unknown type ") + config["type"].as<std::string>());
     }
 }
 

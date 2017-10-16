@@ -38,9 +38,9 @@ QrssPiG::QrssPiG(const std::string &format, int sampleRate, int N, const std::st
 	_sampleRate = sampleRate;
 
 	if (sshHost.length()) {
-		_uploaders.push_back(new QGUploaderSCP(sshHost, sshUser, dir, sshPort));
+		_uploaders.push_back(QGUploader::CreateUploader(YAML::Load("{host: " + sshHost + ", port: " + std::to_string(sshPort) + ", user: " + sshUser + ", dir: " + dir + "}")));
 	} else {
-		_uploaders.push_back(new QGUploaderLocal(dir));
+		_uploaders.push_back(QGUploader::CreateUploader(YAML::Load("{dir: " + dir + "}")));
 	}
 
 	_init();
@@ -129,8 +129,8 @@ QrssPiG::QrssPiG(const std::string &configFile) : QrssPiG() {
 	}
 
 	if (config["upload"]) {
-		if (config["upload"].IsMap()) _addUploader(config["upload"]);
-		else if (config["upload"].IsSequence()) for (YAML::const_iterator it = config["upload"].begin(); it != config["upload"].end(); it++) _addUploader(*it);
+		if (config["upload"].IsMap()) _uploaders.push_back(QGUploader::CreateUploader(config["upload"]));
+		else if (config["upload"].IsSequence()) for (YAML::const_iterator it = config["upload"].begin(); it != config["upload"].end(); it++) _uploaders.push_back(QGUploader::CreateUploader(*it));
 		else throw std::runtime_error("YAML: upload must be a map or a sequence");
 	}
 }
@@ -259,37 +259,6 @@ void QrssPiG::run() {
 //
 // Private members
 //
-
-void QrssPiG::_addUploader(const YAML::Node &uploader) {
-	try {
-		_uploaders.push_back(QGUploader::CreateUploader(uploader));
-	} catch (const std::exception &e) {
-		if (!uploader["type"]) throw std::runtime_error("YAML: uploader must have a type");
-
-		std::string type = uploader["type"].as<std::string>();
-
-		if (type.compare("scp") == 0) {
-			std::string host = "localhost";
-			int port = 22; // TODO: use 0 to force uploader to take default port ?
-			std::string user = "";
-			std::string dir = "./";
-
-			if (uploader["host"]) host = uploader["host"].as<std::string>();
-			if (uploader["port"]) port = uploader["port"].as<int>();
-			if (uploader["user"]) user = uploader["user"].as<std::string>();
-			if (uploader["dir"]) dir = uploader["dir"].as<std::string>();
-
-			_uploaders.push_back(new QGUploaderSCP(host, user, dir, port));
-		} else if (type.compare("local") == 0) {
-			std::string dir = "./";
-
-			if (uploader["dir"]) dir = uploader["dir"].as<std::string>();
-
-			_uploaders.push_back(new QGUploaderLocal(dir));
-		}
-	}
-}
-
 void QrssPiG::_init() {
 	_hannW = new float[_N];
 	for (int i = 0; i < _N/2; i++) {

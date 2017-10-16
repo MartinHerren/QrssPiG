@@ -12,13 +12,13 @@ QGUploaderFTP::QGUploaderFTP(const YAML::Node &config) : QGUploader(config) {
 	_user = "";
 	_password = "";
 	_dir = "";
+	_fileMode = 0644;
 
 	if (config["host"]) _host = config["host"].as<std::string>();
 	if (config["port"]) _port = config["port"].as<int>();
 	if (config["user"]) _user = config["user"].as<std::string>();
 	if (config["password"]) _password = config["password"].as<std::string>();
 	if (config["dir"]) _dir = config["dir"].as<std::string>();
-	_fileMode = 0644;
 
 	CURLcode res;
 	res = curl_global_init(CURL_GLOBAL_DEFAULT);
