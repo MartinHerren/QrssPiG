@@ -1,4 +1,4 @@
-#include "QGSCPUploader.h"
+#include "QGUploaderSCP.h"
 
 #include <iostream>
 #include <stdexcept>
@@ -6,25 +6,28 @@
 #include <libssh/libssh.h>
 //#include <libssh/libsshpp.hpp> // Not available in debian jessie, available in stretch
 
-QGSCPUploader::QGSCPUploader(const std::string &host, const std::string &user, const std::string &dir, int port) :
-	QGUploader(),
-	_host(host),
-	_user(user),
-	_dir(dir),
-	_port(port),
-	_fileMode(0644) {
+QGUploaderSCP::QGUploaderSCP(const YAML::Node &config) : QGUploader(config) {
+	_host = "localhost";
+	_port = 22;
+	_user = "";
+	_dir = "";
+	_fileMode = 0644;
+
+	if (config["host"]) _host = config["host"].as<std::string>();
+	if (config["port"]) _port = config["port"].as<int>();
+	if (config["user"]) _user = config["user"].as<std::string>();
+	if (config["dir"]) _dir = config["dir"].as<std::string>();
 }
 
-QGSCPUploader::~QGSCPUploader() {
+QGUploaderSCP::~QGUploaderSCP() {
 }
 
-void QGSCPUploader::_pushThreadImpl(const std::string &fileName, const char *data, int dataSize, std::string &uri) {
+void QGUploaderSCP::_pushThreadImpl(const std::string &fileName, const char *data, int dataSize, std::string &uri) {
 	ssh_session ssh;
 
-	int verbosity = SSH_LOG_PROTOCOL;
 	int rc;
 
-	uri = (_user.length() ? _user + "@" : "") + _host + ":" + _dir + "/" + fileName;
+	uri = std::string("ssh://") + (_user.length() ? _user + "@" : "") + _host + ":" + _dir + (_dir.length() ? "/" : "") + fileName;
 
 	ssh = ssh_new();
 
@@ -33,7 +36,9 @@ void QGSCPUploader::_pushThreadImpl(const std::string &fileName, const char *dat
 	ssh_options_set(ssh, SSH_OPTIONS_HOST, _host.c_str());
 	if (_user.length() > 0) ssh_options_set(ssh, SSH_OPTIONS_USER, _user.c_str());
 	if (_port > 0) ssh_options_set(ssh, SSH_OPTIONS_PORT, &_port);
-	//ssh_options_set(ssh, SSH_OPTIONS_LOG_VERBOSITY, &verbosity);
+
+	int verbosity = SSH_LOG_PROTOCOL;
+	if (_verbose) ssh_options_set(ssh, SSH_OPTIONS_LOG_VERBOSITY, &verbosity);
 
 	rc = ssh_connect(ssh);
 

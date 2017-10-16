@@ -31,3 +31,10 @@ upload:
     port: 22
     user: qrsspig
     dir: /tmp
+  - type: ftp
+    host: localhost
+    port: 21
+    ssl: explicit
+    user: ftpuser
+    password: secret
+    dir: /path
