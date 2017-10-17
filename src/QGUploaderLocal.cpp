@@ -14,11 +14,14 @@ QGUploaderLocal::~QGUploaderLocal() {
 }
 
 void QGUploaderLocal::_pushThreadImpl(const std::string &fileName, const char *data, int dataSize, std::string &uri) {
-	std::ofstream o;
-
 	uri = std::string("file://") + _dir + (_dir.length() ? "/" : "") + fileName;
 
-	o.open(uri, std::ios::binary);
+	std::ofstream o;
+	o.open(_dir + (_dir.length() ? "/" : "") + fileName, std::ios::binary);
+
+	if (!o.is_open()) throw std::runtime_error(std::string("Unable to write file ") + uri);
+
 	o.write(data, dataSize);
+
 	o.close();
 }
