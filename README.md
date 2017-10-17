@@ -36,16 +36,18 @@ You now can run qrsspig giving it a config file as shown below in the run sectio
 ## Build
 To build QrssPiG you need cmake
 
-It depends on following dev libs:
+The build depends on following mandatory dev libs:
  - libboost-program-options-dev
  - libyaml-cpp-dev
  - libfftw3-dev
  - libgd-dev
  - libfreetype6-dev
- - libssh-dev
- - libcurl4-openssl-dev
- - (librtfilter-dev)
- - libliquid-dev
+
+Additional functionalities are available through following libs:
+ - libssh-dev: SCP upload of grabs to a server
+ - libcurl4-openssl-dev: FTP upload of grabs to a server
+ - libliquid-dev: Downsampling of input signal samplerate before processing
+ - librtfilter-dev: Alternative for libliquid-dev
 
 To build:
 ```
