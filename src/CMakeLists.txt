@@ -3,15 +3,18 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -pedantic -Wextra")
 add_definitions(-std=c++11)
 
 # Look for optional packages
-find_package(LibRTFilter)
-if (LIBRTFILTER_FOUND)
-	include_directories(${LIBRTFILTER_INCLUDE_DIR})
-endif (LIBRTFILTER_FOUND)
-
 find_package(LibLiquidSDR)
 if (LIBLIQUIDSDR_FOUND)
 	include_directories(${LIBLIQUIDSDR_INCLUDE_DIR})
 endif (LIBLIQUIDSDR_FOUND)
+
+# Don't look for librtfilter if libliquid available
+if (NOT LIBLIQUIDSDR_FOUND)
+	find_package(LibRTFilter)
+	if (LIBRTFILTER_FOUND)
+		include_directories(${LIBRTFILTER_INCLUDE_DIR})
+	endif (LIBRTFILTER_FOUND)
+endif (NOT LIBLIQUIDSDR_FOUND)
 
 find_package(LibHackRF)
 if (LIBHACKRF_FOUND)
