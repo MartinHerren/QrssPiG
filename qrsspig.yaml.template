@@ -35,6 +35,7 @@ upload:
     host: localhost
     port: 21
     ssl: explicit
+    insecure: false
     user: ftpuser
     password: secret
     dir: /path
