@@ -8,6 +8,7 @@
 
 QGUploaderFTP::QGUploaderFTP(const YAML::Node &config) : QGUploader(config) {
 	_ssl = SSL::None;
+	_insecure = false;
 	_host = "localhost";
 	_port = 21;
 	_user = "";
@@ -35,6 +36,8 @@ QGUploaderFTP::QGUploaderFTP(const YAML::Node &config) : QGUploader(config) {
 			throw std::runtime_error("invalid ftp ssl option value");
 		}
 	}
+
+	if (config["insecure"]) _insecure = config["insecure"].as<bool>();
 
 	if (config["host"]) _host = config["host"].as<std::string>();
 	if (config["port"]) _port = config["port"].as<int>();
@@ -74,6 +77,8 @@ void QGUploaderFTP::_pushThreadImpl(const std::string &fileName, const char *dat
 	curl_easy_setopt(curl, CURLOPT_URL, uri.c_str());
 	curl_easy_setopt(curl, CURLOPT_USERPWD, (_user + ":" + _password).c_str());
 	if (_ssl == SSL::Explicit) curl_easy_setopt(curl, CURLOPT_USE_SSL, CURLUSESSL_ALL);
+	if (_insecure) curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L); // Needed to accept self-signed certs
+	// if () curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L); // TODO: Would be needed to accept certs with missmatching host name
 
 	curl_easy_setopt(curl, CURLOPT_UPLOAD, 1L);
 	// we want to use our own read function

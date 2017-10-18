@@ -18,6 +18,7 @@ private:
 	static size_t cb(void *ptr, size_t size, size_t nmemb, void *userp);
 
 	SSL _ssl;
+	bool _insecure;
 	std::string _host;
 	int _port;
 	std::string _user;
