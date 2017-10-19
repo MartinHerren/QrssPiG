@@ -6,7 +6,7 @@
 
 QrssPiG *gPig = nullptr;
 
-void signalHandler(int signal) { if (gPig) gPig->stop(); }
+void signalHandler(int signal) { (void)signal; if (gPig) gPig->stop(); }
 
 int main(int argc, char *argv[]) {
 	std::cout << QRSSPIG_NAME << " v" << QRSSPIG_VERSION_MAJOR << "." << QRSSPIG_VERSION_MINOR << "." << QRSSPIG_VERSION_PATCH << std::endl;

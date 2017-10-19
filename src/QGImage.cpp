@@ -316,7 +316,6 @@ char *QGImage::getFrame(int *frameSize, std::string &frameName) {
 
 // Private members
 void QGImage::_init() {
-	int white = gdTrueColor(255, 255, 255);
 	int black = gdTrueColor(0, 0, 0); // Not that useful, but once we want to set another background color the code is already here
 
 	// Calculate max bounding boxes for labels, check font existence on first call
@@ -604,7 +603,7 @@ void QGImage::_drawFreqScale() {
 		gdImageStringFT(nullptr, brect, 0, const_cast<char *>(_font.c_str()), _fontSize, 0, 0, 0, const_cast<char *>(s.str().c_str()));
 
 		// Cache key data as they will be overriden when rendering first string
-		int x = brect[0], y = brect[1], w = brect[2] - brect[0], h = brect[1] - brect[7];
+		int y = brect[1], w = brect[2] - brect[0], h = brect[1] - brect[7];
 
 		if (_orientation == Orientation::Horizontal) {
 			gdImageStringFT(_im, brect, white, const_cast<char *>(_font.c_str()), _fontSize, 0,

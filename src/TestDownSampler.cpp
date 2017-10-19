@@ -8,6 +8,7 @@
 using namespace std::chrono;
 
 int main(int argc, char *argv[]) {
+	(void)argc;(void)argv;
 	float rate = 8000./6;
 
 	unsigned int inSize = 1*2666000;
