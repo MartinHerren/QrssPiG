@@ -66,15 +66,15 @@ QrssPiG::QrssPiG(const std::string &configFile) : QrssPiG() {
 			else throw std::runtime_error("YAML: input format unrecognized");
 		}
 
-		if (input["samplerate"]) _sampleRate = input["samplerate"].as<int>();
-		if (input["basefreq"]) _baseFreq = input["basefreq"].as<int>();
-
-		if ((input["device"]) && (input["device"].as<std::string>().compare("stdin"))) {
+		try {
 			_inputDevice = QGInputDevice::CreateInputDevice(input);
 			_inputDevice->open();
 
 			_sampleRate = _inputDevice->sampleRate();
 			_baseFreq = _inputDevice->baseFreq();
+		} catch (const std::exception &e) {
+			//TODO: If nothing done here, remove trycatch block
+			throw std::runtime_error(e.what());
 		}
 	}
 

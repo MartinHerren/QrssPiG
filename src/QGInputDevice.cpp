@@ -6,6 +6,8 @@
 
 #include "Config.h"
 
+#include "QGInputStdIn.h"
+
 #ifdef HAVE_LIBHACKRF
 #include "QGInputHackRF.h"
 #endif // HAVE_LIBHACKRF
@@ -20,7 +22,10 @@ QGInputDevice::QGInputDevice(const YAML::Node &config) {
 }
 
 QGInputDevice *QGInputDevice::CreateInputDevice(const YAML::Node &config) {
-    if (config["device"].as<std::string>().compare("hackrf") == 0) {
+    if (!config["device"] || (config["device"].as<std::string>().compare("stdin") == 0)) {
+        std::cout << "Input device stdin" << std::endl;
+        return new QGInputStdIn(config);
+    } else if (config["device"].as<std::string>().compare("hackrf") == 0) {
         #ifdef HAVE_LIBHACKRF
         std::cout << "Input device hackrf" << std::endl;
         return new QGInputHackRF(config);

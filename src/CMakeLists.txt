@@ -36,7 +36,7 @@ if (LIBCURL_FOUND)
 	include_directories(${LIBCURL_INCLUDE_DIR})
 endif (LIBCURL_FOUND)
 
-list(APPEND QRSSPIG_SOURCES main.cpp QrssPiG.cpp QGInputDevice.cpp QGDownSampler.cpp QGFft.cpp QGImage.cpp QGUploader.cpp QGUploaderLocal.cpp)
+list(APPEND QRSSPIG_SOURCES main.cpp QrssPiG.cpp QGInputDevice.cpp QGInputStdIn.cpp QGDownSampler.cpp QGFft.cpp QGImage.cpp QGUploader.cpp QGUploaderLocal.cpp)
 
 if (LIBHACKRF_FOUND)
 	list(APPEND QRSSPIG_SOURCES QGInputHackRF.cpp)
