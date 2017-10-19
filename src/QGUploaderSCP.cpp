@@ -3,14 +3,11 @@
 #include <iostream>
 #include <stdexcept>
 
-#include <libssh/libssh.h>
-//#include <libssh/libsshpp.hpp> // Not available in debian jessie, available in stretch
-
 QGUploaderSCP::QGUploaderSCP(const YAML::Node &config) : QGUploader(config) {
 	_host = "localhost";
 	_port = 22;
 	_user = "";
-	_dir = "";
+	_dir = ".";
 	_fileMode = 0644;
 
 	if (config["host"]) _host = config["host"].as<std::string>();
@@ -25,8 +22,6 @@ QGUploaderSCP::~QGUploaderSCP() {
 void QGUploaderSCP::_pushThreadImpl(const std::string &fileName, const char *data, int dataSize, std::string &uri) {
 	ssh_session ssh;
 
-	int rc;
-
 	uri = std::string("ssh://") + (_user.length() ? _user + "@" : "") + _host + ":" + _dir + (_dir.length() ? "/" : "") + fileName;
 
 	ssh = ssh_new();
@@ -40,22 +35,30 @@ void QGUploaderSCP::_pushThreadImpl(const std::string &fileName, const char *dat
 	int verbosity = SSH_LOG_PROTOCOL;
 	if (_verbose) ssh_options_set(ssh, SSH_OPTIONS_LOG_VERBOSITY, &verbosity);
 
-	rc = ssh_connect(ssh);
-
-	if (rc != SSH_OK) {
+	if (ssh_connect(ssh) != SSH_OK) {
 		ssh_free(ssh);
 		throw std::runtime_error("Error connecting to server");
 	}
 
 	// Todo: improve auth host
-	ssh_is_server_known(ssh);
+	switch (ssh_is_server_known(ssh)) {
+	case SSH_SERVER_KNOWN_OK:
+		break;
 
-	// Todo: improve...
-	unsigned char *hash = NULL;
-	ssh_get_pubkey_hash(ssh, &hash); // TODO: deprecated, use ssh_get_publickey_hash()
-	ssh_clean_pubkey_hash(&hash);
+	case SSH_SERVER_KNOWN_CHANGED:
+	case SSH_SERVER_FOUND_OTHER:
+		std::cout << "Server key or key type changed" << std::endl << std::endl;
+		break;
 
-	ssh_write_knownhost(ssh);
+	case SSH_SERVER_NOT_KNOWN:
+	case SSH_SERVER_FILE_NOT_FOUND:
+		_getServerHash(&ssh);
+		ssh_write_knownhost(ssh);
+		break;
+
+	case SSH_SERVER_ERROR:
+		throw std::runtime_error("Error verifying server known");
+	}
 
 	// Todo: improve user auth
 	ssh_userauth_publickey_auto(ssh, NULL, NULL);
@@ -95,4 +98,23 @@ void QGUploaderSCP::_pushThreadImpl(const std::string &fileName, const char *dat
 	ssh_scp_free(scp);
 	ssh_disconnect(ssh);
 	ssh_free(ssh);
+}
+
+void QGUploaderSCP::_getServerHash(ssh_session *session) {
+	ssh_key serverPublicKey;
+
+	if (ssh_get_publickey(*session, &serverPublicKey) != SSH_OK) {
+		throw std::runtime_error("Error getting server public key");
+	}
+
+	unsigned char *hash = NULL;
+	size_t hashLen = 0;
+
+	if (ssh_get_publickey_hash(serverPublicKey, SSH_PUBLICKEY_HASH_SHA1, &hash, &hashLen) != SSH_OK) {
+		throw std::runtime_error("Error getting hash from server public key");
+	}
+
+//	ssh_print_hexa("hash", hash, hashLen);
+
+	ssh_clean_pubkey_hash(&hash);
 }
