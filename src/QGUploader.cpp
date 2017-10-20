@@ -53,13 +53,15 @@ QGUploader *QGUploader::CreateUploader(const YAML::Node &config) {
     } else if (config["type"].as<std::string>().compare("scp") == 0) {
 #ifdef HAVE_LIBSSH
         return new QGUploaderSCP(config);
-#endif //  HAVE_LIBSSH
+#else
         throw std::runtime_error("QGUploader: scp uploader support not builtin into this build");
+#endif //  HAVE_LIBSSH
     } else if ((config["type"].as<std::string>().compare("ftp") == 0) || (config["type"].as<std::string>().compare("ftps") == 0)) {
 #ifdef HAVE_LIBCURL
         return new QGUploaderFTP(config);
-#endif //  HAVE_LIBCURL
+#else
         throw std::runtime_error("QGUploader: ftp uploader support not builtin into this build");
+#endif //  HAVE_LIBCURL
     } else {
         throw std::runtime_error(std::string("QGUploader: unknown type ") + config["type"].as<std::string>());
     }

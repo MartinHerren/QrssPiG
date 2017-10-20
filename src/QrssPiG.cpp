@@ -5,9 +5,6 @@
 
 QrssPiG::QrssPiG() :
 	_inputDevice(nullptr),
-	_format(Format::U8IQ),
-	_sampleRate(48000),
-	_baseFreq(0),
 	_chunkSize(32),
 	_input(nullptr),
 	_resampled(nullptr),
@@ -22,17 +19,10 @@ QrssPiG::QrssPiG() :
 }
 
 QrssPiG::QrssPiG(const std::string &format, int sampleRate, int N, const std::string &dir, const std::string &sshHost, const std::string &sshUser, int sshPort) : QrssPiG() {
-	if ((format.compare("u8iq") == 0) || (format.compare("rtlsdr") == 0)) _format = Format::U8IQ;
-	else if ((format.compare("s8iq") == 0) || (format.compare("hackrf") == 0)) _format = Format::S8IQ;
-	else if (format.compare("u16iq") == 0) _format = Format::U16IQ;
-	else if (format.compare("s16iq") == 0) _format = Format::S16IQ;
-	else if (format.compare("s16mono") == 0) _format = Format::S16MONO;
-	else if (format.compare("s16left") == 0) _format = Format::S16LEFT;
-	else if (format.compare("s16right") == 0) _format = Format::S16RIGHT;
-	else throw std::runtime_error("Unsupported format");
-
 	_N = N;
-	_sampleRate = sampleRate;
+
+	_inputDevice = QGInputDevice::CreateInputDevice(YAML::Load("{format: " + format + ", samplerate: " + std::to_string(sampleRate) + ", basefreq: 0}"));
+	_inputDevice->open();
 
 	if (sshHost.length()) {
 		_uploaders.push_back(QGUploader::CreateUploader(YAML::Load("{type: scp, host: " + sshHost + ", port: " + std::to_string(sshPort) + ", user: " + sshUser + ", dir: " + dir + "}")));
@@ -46,39 +36,20 @@ QrssPiG::QrssPiG(const std::string &format, int sampleRate, int N, const std::st
 }
 
 QrssPiG::QrssPiG(const std::string &configFile) : QrssPiG() {
+	int iSampleRate = 48000;
+	int pSampleRate = 6000;
+
 	YAML::Node config = YAML::LoadFile(configFile);
 
 	if (config["input"]) {
 		if (config["input"].Type() != YAML::NodeType::Map) throw std::runtime_error("YAML: input must be a map");
 
-		YAML::Node input = config["input"];
+		_inputDevice = QGInputDevice::CreateInputDevice(config["input"]);
+		_inputDevice->open();
 
-		if (input["format"]) {
-			std::string f = input["format"].as<std::string>();
-
-			if ((f.compare("u8iq") == 0) || (f.compare("rtlsdr") == 0)) _format = Format::U8IQ;
-			else if ((f.compare("s8iq") == 0) || (f.compare("hackrf") == 0)) _format = Format::S8IQ;
-			else if (f.compare("u16iq") == 0) _format = Format::U16IQ;
-			else if (f.compare("s16iq") == 0) _format = Format::S16IQ;
-			else if (f.compare("s16mono") == 0) _format = Format::S16MONO;
-			else if (f.compare("s16left") == 0) _format = Format::S16LEFT;
-			else if (f.compare("s16right") == 0) _format = Format::S16RIGHT;
-			else throw std::runtime_error("YAML: input format unrecognized");
-		}
-
-		try {
-			_inputDevice = QGInputDevice::CreateInputDevice(input);
-			_inputDevice->open();
-
-			_sampleRate = _inputDevice->sampleRate();
-			_baseFreq = _inputDevice->baseFreq();
-		} catch (const std::exception &e) {
-			//TODO: If nothing done here, remove trycatch block
-			throw std::runtime_error(e.what());
-		}
+		iSampleRate = _inputDevice->sampleRate();
 	}
 
-	int pSampleRate = 6000;
 	if (config["processing"]) {
 		if (config["processing"].Type() != YAML::NodeType::Map) throw std::runtime_error("YAML: processing must be a map");
 
@@ -94,11 +65,11 @@ QrssPiG::QrssPiG(const std::string &configFile) : QrssPiG() {
 		}
 	}
 
-	if (pSampleRate && (_sampleRate != pSampleRate)) {
-		_resampler = new QGDownSampler((float)_sampleRate/(float)pSampleRate, _chunkSize);
+	if (pSampleRate && (iSampleRate != pSampleRate)) {
+		_resampler = new QGDownSampler((float)iSampleRate/(float)pSampleRate, _chunkSize);
 
 		// Patch config with real samplerate from resampler
-		pSampleRate = _sampleRate / _resampler->getRealRate();
+		pSampleRate = iSampleRate / _resampler->getRealRate();
 		if (config["processing"]) config["processing"]["samplerate"] = pSampleRate;
 
 		_input = (std::complex<float>*)fftwf_malloc(sizeof(std::complex<float>) * _chunkSize);
@@ -115,7 +86,7 @@ QrssPiG::QrssPiG(const std::string &configFile) : QrssPiG() {
 	_inputIndex = 0;
 	_resampledIndex = 0;
 
-	// Could be inlined.
+	// Could be inlined, should be part of a processing init
 	_init();
 
 	_im = new QGImage(_N, _overlap);
@@ -152,105 +123,12 @@ QrssPiG::~QrssPiG() {
 }
 
 void QrssPiG::run() {
-	char b[8192];
-	_running = true;
-	std::cin >> std::noskipws;
+	using std::placeholders::_1;
+	_inputDevice->run(std::bind(&QrssPiG::_addIQ, this, _1));
+}
 
-	switch (_format) {
-		case Format::U8IQ: {
-			unsigned char i, q;
-			while (std::cin && _running) {
-				std::cin.read(b, 8192);
-				for (int j = 0; j < 8192;) {
-					i = b[j++];
-					q = b[j++];
-					_addIQ(std::complex<float>((i - 128) / 128., (q - 128) / 128.));
-				}
-			}
-			break;
-		}
-
-		case Format::S8IQ: {
-			signed char i, q;
-			while (std::cin && _running) {
-				std::cin.read(b, 8192);
-				for (int j = 0; j < 8192;) {
-					i = b[j++];
-					q = b[j++];
-					_addIQ(std::complex<float>(i / 128., q / 128.));
-				}
-			}
-			break;
-		}
-
-		case Format::U16IQ: {
-			unsigned short int i, q;
-			while (std::cin && _running) {
-				std::cin.read(b, 8192);
-				for (int j = 0; j < 8192;) {
-					i = b[j++];
-					i += b[j++] << 8;
-					q = b[j++];
-					q += b[j++] << 8;
-					_addIQ(std::complex<float>((i - 32768) / 32768., (q - 32768) / 32768.));
-				}
-			}
-			break;
-		}
-
-		case Format::S16IQ: {
-			signed short int i, q;
-			while (std::cin && _running) {
-				std::cin.read(b, 8192);
-				for (int j = 0; j < 8192;) {
-					i = b[j++];
-					i += b[j++] << 8;
-					q = b[j++];
-					q += b[j++] << 8;
-					_addIQ(std::complex<float>(i / 32768., q / 32768.));
-				}
-			}
-			break;
-		}
-
-		case Format::S16MONO: {
-			signed short int r;
-			while (std::cin && _running) {
-				std::cin.read(b, 8192);
-				for (int j = 0; j < 8192;) {
-					r = b[j++];
-					r += b[j++] << 8;
-					_addIQ(std::complex<float>(r / 32768., 0.));
-				}
-			}
-		}
-
-		case Format::S16LEFT: {
-			signed short int r;
-			while (std::cin && _running) {
-				std::cin.read(b, 8192);
-				for (int j = 0; j < 8192;) {
-					r = b[j++];
-					r += b[j++] << 8;
-					j += 2;
-					_addIQ(std::complex<float>(r / 32768., 0.));
-				}
-			}
-		}
-
-		case Format::S16RIGHT: {
-			signed short int r;
-			while (std::cin && _running) {
-				std::cin.read(b, 8192);
-				for (int j = 0; j < 8192;) {
-					j += 2;
-					r = b[j++];
-					r += b[j++] << 8;
-					_addIQ(std::complex<float>(r / 32768., 0.));
-				}
-			}
-		}
-	}
+void QrssPiG::stop() {
+	_inputDevice->stop();
 }
 
 //

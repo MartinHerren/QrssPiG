@@ -14,9 +14,6 @@
 #include "QGUploader.h"
 
 class QrssPiG {
-public:
-	enum class Format { U8IQ, S8IQ, U16IQ, S16IQ, S16MONO, S16LEFT, S16RIGHT };
-
 private:
 	QrssPiG();
 
@@ -26,8 +23,7 @@ public:
 	~QrssPiG();
 
 	void run();
-
-	void stop() { _running = false; };
+	void stop();
 
 private:
 	void _init();
@@ -39,11 +35,6 @@ private:
 
 	// Input device
 	QGInputDevice *_inputDevice;
-
-	// Input data format
-	Format _format;
-	int _sampleRate;
-	int _baseFreq;
 
 	// Processing
 	int _chunkSize;
@@ -66,6 +57,4 @@ private:
 	std::vector<QGUploader*> _uploaders;
 
 	int _frameIndex;
-
-	volatile bool _running;
 };
