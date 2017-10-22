@@ -22,7 +22,6 @@ QrssPiG::QrssPiG(const std::string &format, int sampleRate, int N, const std::st
 	_N = N;
 
 	_inputDevice = QGInputDevice::CreateInputDevice(YAML::Load("{format: " + format + ", samplerate: " + std::to_string(sampleRate) + ", basefreq: 0}"));
-	_inputDevice->open();
 
 	if (sshHost.length()) {
 		_uploaders.push_back(QGUploader::CreateUploader(YAML::Load("{type: scp, host: " + sshHost + ", port: " + std::to_string(sshPort) + ", user: " + sshUser + ", dir: " + dir + "}")));
@@ -45,9 +44,11 @@ QrssPiG::QrssPiG(const std::string &configFile) : QrssPiG() {
 		if (config["input"].Type() != YAML::NodeType::Map) throw std::runtime_error("YAML: input must be a map");
 
 		_inputDevice = QGInputDevice::CreateInputDevice(config["input"]);
-		_inputDevice->open();
 
 		iSampleRate = _inputDevice->sampleRate();
+
+		// Patch real samplerate back to config so image class will have the correct value
+		config["input"]["samplerate"] = iSampleRate;
 	}
 
 	if (config["processing"]) {

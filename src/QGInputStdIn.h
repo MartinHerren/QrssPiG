@@ -7,8 +7,6 @@ public:
 	QGInputStdIn(const YAML::Node &config);
 	~QGInputStdIn();
 
-	void open();
-
 	void run(std::function<void(std::complex<float>)>cb);
 	void stop();
 

@@ -23,14 +23,14 @@ QGImage::~QGImage() {
 void QGImage::configure(const YAML::Node &config, unsigned int index) {
 	_free();
 
-	_inputDevice = "";
+	_inputType = "";
 	_inputSampleRate = 0;
 	_baseFreq = 7038300;
 	_baseFreqCorrected = 7038300;
 
 	if (config["input"]) {
 		YAML::Node input = config["input"];
-		if (input["device"]) _inputDevice = input["device"].as<std::string>();
+		if (input["type"]) _inputType = input["type"].as<std::string>();
 		if (input["samplerate"]) _inputSampleRate = input["samplerate"].as<long int>();
 		if (input["basefreq"]) _baseFreqCorrected =_baseFreq = input["basefreq"].as<int>();
 		if (input["ppm"]) _baseFreqCorrected = _baseFreq + (_baseFreq * input["ppm"].as<int>()) / 1000000;
@@ -403,7 +403,7 @@ void QGImage::_computeTitleHeight() {
 	if (_antenna.length()) _addSubTitleField(std::string("Antenna: ") + _antenna);
 
 	_subtitles.push_back(""); // Force new line TODO: check if last line not empty
-	if (_inputDevice.length()) _addSubTitleField(std::string("Input device: ") + _inputDevice);
+	if (_inputType.length()) _addSubTitleField(std::string("Input type: ") + _inputType);
 	_addSubTitleField(std::string("Base frequency: ") + std::to_string(_baseFreq) + std::string("\u202fHz"));
 	_addSubTitleField(std::string("Input sample rate: ") + std::to_string(_inputSampleRate) + std::string("\u202fS/s"));
 

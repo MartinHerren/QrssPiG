@@ -49,7 +49,7 @@ private:
 
 	std::string _title;
 	std::vector<std::string> _subtitles;
-	std::string _inputDevice;
+	std::string _inputType;
 	long int _inputSampleRate;
 	std::string _callsign;
 	std::string _qth;

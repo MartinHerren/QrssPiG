@@ -8,6 +8,10 @@
 
 #include "QGInputStdIn.h"
 
+#ifdef HAVE_LIBALSA
+#include "QGInputAlsa.h"
+#endif // HAVE_LIBALSA
+
 #ifdef HAVE_LIBHACKRF
 #include "QGInputHackRF.h"
 #endif // HAVE_LIBHACKRF
@@ -25,24 +29,31 @@ QGInputDevice::QGInputDevice(const YAML::Node &config) {
 }
 
 QGInputDevice *QGInputDevice::CreateInputDevice(const YAML::Node &config) {
-    if (!config["device"] || (config["device"].as<std::string>().compare("stdin") == 0)) {
-        std::cout << "Input device stdin" << std::endl;
+    if (!config["type"] || (config["type"].as<std::string>().compare("stdin") == 0)) {
+        std::cout << "Input type stdin" << std::endl;
         return new QGInputStdIn(config);
-    } else if (config["device"].as<std::string>().compare("hackrf") == 0) {
+    } else if (config["type"].as<std::string>().compare("alsa") == 0) {
+#ifdef HAVE_LIBALSA
+        std::cout << "Input type alsa" << std::endl;
+        return new QGInputAlsa(config);
+#else
+        throw std::runtime_error(std::string("QGInputDevice: alsa support not builtin into this build"));
+#endif //HAVE_LIBALSA
+    } else if (config["type"].as<std::string>().compare("hackrf") == 0) {
 #ifdef HAVE_LIBHACKRF
-        std::cout << "Input device hackrf" << std::endl;
+        std::cout << "Input type hackrf" << std::endl;
         return new QGInputHackRF(config);
 #else
-        throw std::runtime_error(std::string("QGInputDevice: hackrf device support not builtin into this build"));
+        throw std::runtime_error(std::string("QGInputDevice: hackrf support not builtin into this build"));
 #endif //HAVE_LIBHACKRF
-    } else if (config["device"].as<std::string>().compare("rtlsdr") == 0) {
+    } else if (config["type"].as<std::string>().compare("rtlsdr") == 0) {
 #ifdef HAVE_LIBRTLSDR
-        std::cout << "Input device rtlsdr" << std::endl;
+        std::cout << "Input type rtlsdr" << std::endl;
         return new QGInputRtlSdr(config);
 #else
-        throw std::runtime_error(std::string("QGInputDevice: rtlsdr device support not uiltin into this build"));
+        throw std::runtime_error(std::string("QGInputDevice: rtlsdr support not uiltin into this build"));
 #endif //HAVE_LIBRTLSDR
     } else {
-        throw std::runtime_error(std::string("QGInputDevice: unknown device ") + config["device"].as<std::string>());
+        throw std::runtime_error(std::string("QGInputDevice: unknown type ") + config["type"].as<std::string>());
     }
 }

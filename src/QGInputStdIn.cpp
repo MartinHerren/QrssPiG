@@ -23,9 +23,6 @@ QGInputStdIn::QGInputStdIn(const YAML::Node &config): QGInputDevice(config) {
 QGInputStdIn::~QGInputStdIn() {
 }
 
-void QGInputStdIn::open() {
-}
-
 void QGInputStdIn::run(std::function<void(std::complex<float>)>cb) {
 	char b[8192];
 	_running = true;
