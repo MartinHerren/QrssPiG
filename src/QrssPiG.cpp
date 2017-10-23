@@ -45,10 +45,12 @@ QrssPiG::QrssPiG(const std::string &configFile) : QrssPiG() {
 
 		_inputDevice = QGInputDevice::CreateInputDevice(config["input"]);
 
-		iSampleRate = _inputDevice->sampleRate();
-
 		// Patch real samplerate back to config so image class will have the correct value
-		config["input"]["samplerate"] = iSampleRate;
+		config["input"]["samplerate"] = _inputDevice->sampleRate();
+		config["input"]["basefreq"] = _inputDevice->baseFreq();
+		config["input"]["ppm"] = _inputDevice->ppm();
+
+		iSampleRate = config["input"]["samplerate"].as<int>();
 	}
 
 	if (config["processing"]) {

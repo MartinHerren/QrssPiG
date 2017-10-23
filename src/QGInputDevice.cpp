@@ -26,6 +26,7 @@ QGInputDevice::QGInputDevice(const YAML::Node &config) {
 
     if (config["samplerate"]) _sampleRate = config["samplerate"].as<int>();
     if (config["basefreq"]) _baseFreq = config["basefreq"].as<int>();
+    if (config["ppm"]) _ppm = config["ppm"].as<int>();
 }
 
 QGInputDevice *QGInputDevice::CreateInputDevice(const YAML::Node &config) {

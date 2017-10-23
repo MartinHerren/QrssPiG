@@ -9,6 +9,36 @@ QGInputHackRF::QGInputHackRF(const YAML::Node &config): QGInputDevice(config), _
 	if (r != HACKRF_SUCCESS) {
 		throw std::runtime_error(std::string("HackRF init returned ") + std::to_string(r));
 	}
+
+	//r = hackrf_device_list_open(l, _deviceIndex, &_device);
+	r = hackrf_open(&_device);
+
+	if (r != HACKRF_SUCCESS) {
+		_device = nullptr;
+		hackrf_exit();
+		throw std::runtime_error(std::string("HackRF opening failed: ") + std::to_string(r));
+	}
+
+	char v[255]; uint8_t vl = 255;
+	hackrf_version_string_read(_device, v, vl);
+
+	std::cout << "Version: " << v << std::endl;
+
+	r = hackrf_set_sample_rate(_device, _sampleRate);
+
+	if (r != HACKRF_SUCCESS) {
+		_device = nullptr;
+		hackrf_exit();
+		throw std::runtime_error(std::string("HackRF setting samplerate failed: ") + std::to_string(r));
+	}
+
+	r = hackrf_set_freq(_device, _baseFreq);
+
+	if (r != HACKRF_SUCCESS) {
+		_device = nullptr;
+		hackrf_exit();
+		throw std::runtime_error(std::string("HackRF setting frequency failed: ") + std::to_string(r));
+	}
 }
 
 QGInputHackRF::~QGInputHackRF() {
@@ -23,36 +53,16 @@ QGInputHackRF::~QGInputHackRF() {
 	hackrf_exit();
 }
 
-void QGInputHackRF::open() {
-	int index = 0;
-
+void QGInputHackRF::deviceList() {
 	hackrf_device_list_t *l = hackrf_device_list();
 
 	std::cout << "Devices: " << l->devicecount << std::endl;
 
-	int r = hackrf_device_list_open(l, index, &_device);
-
-	if (r != HACKRF_SUCCESS) {
-		_device = nullptr; std::cout << "HackRF opening failed: " << r << std::endl;
-		hackrf_exit();
-		return;
-	}
-
 	hackrf_device_list_free(l);
+}
 
-	char v[255]; uint8_t vl = 255; hackrf_version_string_read(_device, v, vl);
+void QGInputHackRF::run(std::function<void(std::complex<float>)>cb) {
+}
 
-	std::cout << "Version: " << v << std::endl;
-
-	r = hackrf_set_sample_rate(_device, _sampleRate);
-
-	if (r != HACKRF_SUCCESS) {
-		std::cout << "HackRF setting samplerate failed: " << r << std::endl;
-	}
-
-	r = hackrf_set_freq(_device, _baseFreq);
-
-	if (r != HACKRF_SUCCESS) {
-		std::cout << "HackRF setting frequency failed: " << r << std::endl;
-	}
+void QGInputHackRF::stop() {
 }

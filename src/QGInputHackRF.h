@@ -9,8 +9,11 @@ public:
 	QGInputHackRF(const YAML::Node &config);
 	~QGInputHackRF();
 
-	void open();
+	void deviceList();
 
-private:
+	void run(std::function<void(std::complex<float>)>cb);
+	void stop();
+
+private:	
 	hackrf_device *_device;
 };
