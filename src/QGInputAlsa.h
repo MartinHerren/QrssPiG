@@ -13,8 +13,14 @@ public:
 	void stop();
 
 private:
+	enum class Channel { MONO, LEFT, RIGHT, IQ, INVIQ };
+
 	std::string _deviceName;
+	Channel _channel;
+
 	snd_pcm_t *_device;
+	int _numChannels;
+	int _bytesPerSample;
 
 	volatile bool _running;
 };
