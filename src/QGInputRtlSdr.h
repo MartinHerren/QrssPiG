@@ -1,8 +1,8 @@
 #pragma once
 
-#include <rtl-sdr.h>
-
 #include "QGInputDevice.h"
+
+#include <rtl-sdr.h>
 
 class QGInputRtlSdr: public QGInputDevice {
 public:

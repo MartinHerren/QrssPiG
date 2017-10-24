@@ -1,11 +1,11 @@
 #pragma once
 
+#include "QGUploader.h"
+
 #include <string>
 
 #include <libssh/libssh.h>
 //#include <libssh/libsshpp.hpp> // Not available in debian jessie, available in stretch
-
-#include "QGUploader.h"
 
 class QGUploaderSCP: public QGUploader {
 public:

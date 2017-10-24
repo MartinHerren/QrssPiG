@@ -1,8 +1,8 @@
 #pragma once
 
-#include <libhackrf/hackrf.h>
-
 #include "QGInputDevice.h"
+
+#include <libhackrf/hackrf.h>
 
 class QGInputHackRF: public QGInputDevice {
 public:
@@ -14,6 +14,6 @@ public:
 	void run(std::function<void(std::complex<float>)>cb);
 	void stop();
 
-private:	
+private:
 	hackrf_device *_device;
 };
