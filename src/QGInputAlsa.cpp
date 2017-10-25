@@ -35,7 +35,7 @@ QGInputAlsa::QGInputAlsa(const YAML::Node &config): QGInputDevice(config), _buff
 
 	_samplesPerCall = 4096;
 	_bufferSize = _samplesPerCall * _bytesPerSample * _numChannels;
-	_buffer = static_cast<unsigned char*>(malloc(_bufferSize));
+	_buffer = new unsigned char[_bufferSize];
 
 	int err;
 	snd_pcm_hw_params_t *hw_params;
@@ -58,8 +58,8 @@ QGInputAlsa::QGInputAlsa(const YAML::Node &config): QGInputDevice(config), _buff
 
 QGInputAlsa::~QGInputAlsa() {
 	stop();
-	if (_device) snd_pcm_close (_device);
-	if (_buffer) free(_buffer);
+	if (_device) snd_pcm_close(_device);
+	if (_buffer) delete[] _buffer;
 }
 
 void QGInputAlsa::run(std::function<void(std::complex<float>)>cb) {
