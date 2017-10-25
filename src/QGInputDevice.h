@@ -16,7 +16,7 @@ public:
 
 	unsigned int sampleRate() { return _sampleRate; };
 	unsigned int baseFreq() { return _baseFreq; };
-	unsigned int ppm() { return _ppm; };
+	int ppm() { return _ppm; };
 
 	static QGInputDevice *CreateInputDevice(const YAML::Node &config);
 
