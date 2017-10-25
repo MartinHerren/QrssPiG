@@ -34,13 +34,15 @@ QGInputRtlSdr::QGInputRtlSdr(const YAML::Node &config): QGInputDevice(config), _
 	}
 
 	// Set ppm to 0 to mark as 'consumed', so that output image will not correct it a second time
+	// TODO substract from get_freq_correction ?
 	_ppm = 0;
+
+	if (rtlsdr_set_tuner_bandwidth(_device, 350000)) throw std::runtime_error("Failed setting bandwith");
 }
 
 QGInputRtlSdr::~QGInputRtlSdr() {
-	if (_device) {
-		rtlsdr_close(_device);
-	}
+	stop();
+	if (_device) rtlsdr_close(_device);
 }
 
 void QGInputRtlSdr::deviceList() {
@@ -48,7 +50,34 @@ void QGInputRtlSdr::deviceList() {
 }
 
 void QGInputRtlSdr::run(std::function<void(std::complex<float>)>cb) {
+	_cb = cb;
+
+	if (rtlsdr_reset_buffer(_device)) throw std::runtime_error("Error reseting device");
+	rtlsdr_read_async(_device, this->async, this, 0, 0);
+
+	return;
 }
 
 void QGInputRtlSdr::stop() {
+	// TODO: check i frunning
+	rtlsdr_cancel_async(_device);
+}
+
+void QGInputRtlSdr::process(unsigned char *buf, uint32_t len) {
+	// U8 IQ data
+	unsigned char i, q;
+
+	for (unsigned int j = 0; j < len;) {
+		i = buf[j++];
+		q = buf[j++];
+		_cb(std::complex<float>((i - 128) / 128., (q - 128) / 128.));
+	}
+}
+
+void QGInputRtlSdr::async(unsigned char *buf, uint32_t len, void *ctx) {
+	try {
+		static_cast<QGInputRtlSdr *>(ctx)->process(buf, len);
+	} catch (const std::exception &e) {
+		// TODO reset device  if error is from rtl device read and ignore if from fft ?
+	}
 }
