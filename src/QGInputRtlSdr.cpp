@@ -37,7 +37,8 @@ QGInputRtlSdr::QGInputRtlSdr(const YAML::Node &config): QGInputDevice(config), _
 	// TODO substract from get_freq_correction ?
 	_ppm = 0;
 
-	if (rtlsdr_set_tuner_bandwidth(_device, 350000)) throw std::runtime_error("Failed setting bandwith");
+	// TODO: Check in cmake if function exists in installed librtlsdr version
+	//if (rtlsdr_set_tuner_bandwidth(_device, 350000)) throw std::runtime_error("Failed setting bandwith");
 }
 
 QGInputRtlSdr::~QGInputRtlSdr() {
