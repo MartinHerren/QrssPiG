@@ -9,7 +9,6 @@
 QGImage::QGImage(int fftSize, int fftOverlap): N(fftSize), _overlap(fftOverlap) {
 	_im = nullptr;
 	_imBuffer = nullptr;
-	_c = nullptr;
 	_cd = 0;
 	_started = std::chrono::milliseconds(0);
 	_runningSince = std::chrono::milliseconds(0);
@@ -297,12 +296,12 @@ QGImage::Status QGImage::addLine(const std::complex<float> *fft) {
 	return Status::Ok;
 }
 
-char *QGImage::getFrame(int *frameSize, std::string &frameName) {
+char *QGImage::getFrame(int &frameSize, std::string &frameName) {
 	if (_imBuffer) gdFree(_imBuffer);
 
 	// _imBuffer is usually constant, but frameSize changes
 	// _imBuffer might change in case of realloc, so don't cache its value
-	_imBuffer = (char *)gdImagePngPtr(_im, frameSize);
+	_imBuffer = (char *)gdImagePngPtr(_im, &frameSize);
 
 	time_t t = std::chrono::duration_cast<std::chrono::seconds>(_started).count();
 	std::tm *tm = {};
@@ -371,7 +370,7 @@ void QGImage::_init() {
 
 	// Allocate colormap, based on modified qrx colormap reduced to 256 colors
 	_cd = 256;
-	_c = new int[_cd];
+	_c.reset(new int[_cd]);
 
 	int ii = 0;
 	for (int i = 0; i <= 255; i+= 4) _c[ii++] = gdImageColorAllocate(_im, 0, 0, i);
@@ -383,9 +382,6 @@ void QGImage::_init() {
 }
 
 void QGImage::_free() {
-	if (_c) delete [] _c;
-	_c = nullptr;
-
 	if (_imBuffer) gdFree(_imBuffer);
 	_imBuffer = nullptr;
 

@@ -20,7 +20,7 @@ public:
 
 	void startNewFrame(bool incrementTime = true);
 	Status addLine(const std::complex<float> *fft);
-	char *getFrame(int *frameSize, std::string &frameName);
+	char *getFrame(int &frameSize, std::string &frameName);
 
 private:
 	void _init();
@@ -84,7 +84,7 @@ private:
 	// Internal data
 	gdImagePtr _im;
 	char *_imBuffer;
-	int *_c;
+	std::unique_ptr<int[]> _c;
 	int _cd; // Color depth
 	int _currentLine;
 

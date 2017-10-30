@@ -34,7 +34,7 @@ private:
 	void _pushImage(bool wait = false);
 
 	// Input device
-	QGInputDevice *_inputDevice;
+	std::unique_ptr<QGInputDevice> _inputDevice;
 
 	// Processing
 	int _chunkSize;
@@ -47,14 +47,14 @@ private:
 	int _resampledIndex;
 	std::complex<float> *_input;
 	std::complex<float> *_resampled;
-	float *_hannW;
+	std::unique_ptr<float[]> _hannW;
 	std::complex<float> *_fftIn;
 	std::complex<float> *_fftOut;
 
-	QGDownSampler *_resampler;
+	std::unique_ptr<QGDownSampler> _resampler;
 	QGFft *_fft;
-	QGImage *_im;
-	std::vector<QGUploader*> _uploaders;
+	std::unique_ptr<QGImage> _im;
+	std::vector<std::unique_ptr<QGUploader>> _uploaders;
 
 	int _frameIndex;
 };

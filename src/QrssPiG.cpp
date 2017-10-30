@@ -11,9 +11,7 @@ QrssPiG::QrssPiG() :
 	_hannW(nullptr),
 	_fftIn(nullptr),
 	_fftOut(nullptr),
-	_resampler(nullptr),
-	_fft(nullptr),
-	_im(nullptr) {
+	_fft(nullptr) {
 		_N = 2048;
 		_overlap = (3 * _N) / 4;
 }
@@ -21,12 +19,12 @@ QrssPiG::QrssPiG() :
 QrssPiG::QrssPiG(const std::string &format, int sampleRate, int N, const std::string &dir, const std::string &sshHost, const std::string &sshUser, int sshPort) : QrssPiG() {
 	_N = N;
 
-	_inputDevice = QGInputDevice::CreateInputDevice(YAML::Load("{format: " + format + ", samplerate: " + std::to_string(sampleRate) + ", basefreq: 0}"));
+	_inputDevice.reset(QGInputDevice::CreateInputDevice(YAML::Load("{format: " + format + ", samplerate: " + std::to_string(sampleRate) + ", basefreq: 0}")));
 
 	if (sshHost.length()) {
-		_uploaders.push_back(QGUploader::CreateUploader(YAML::Load("{type: scp, host: " + sshHost + ", port: " + std::to_string(sshPort) + ", user: " + sshUser + ", dir: " + dir + "}")));
+		_uploaders.push_back(std::unique_ptr<QGUploader>(QGUploader::CreateUploader(YAML::Load("{type: scp, host: " + sshHost + ", port: " + std::to_string(sshPort) + ", user: " + sshUser + ", dir: " + dir + "}"))));
 	} else {
-		_uploaders.push_back(QGUploader::CreateUploader(YAML::Load("{type: local, dir: " + dir + "}")));
+		_uploaders.push_back(std::unique_ptr<QGUploader>(QGUploader::CreateUploader(YAML::Load("{type: local, dir: " + dir + "}"))));
 	}
 
 	_init();
@@ -43,7 +41,7 @@ QrssPiG::QrssPiG(const std::string &configFile) : QrssPiG() {
 	if (config["input"]) {
 		if (config["input"].Type() != YAML::NodeType::Map) throw std::runtime_error("YAML: input must be a map");
 
-		_inputDevice = QGInputDevice::CreateInputDevice(config["input"]);
+		_inputDevice.reset(QGInputDevice::CreateInputDevice(config["input"]));
 
 		// Patch real samplerate back to config so image class will have the correct value
 		config["input"]["samplerate"] = _inputDevice->sampleRate();
@@ -69,7 +67,7 @@ QrssPiG::QrssPiG(const std::string &configFile) : QrssPiG() {
 	}
 
 	if (pSampleRate && (iSampleRate != pSampleRate)) {
-		_resampler = new QGDownSampler((float)iSampleRate/(float)pSampleRate, _chunkSize);
+		_resampler.reset(new QGDownSampler((float)iSampleRate/(float)pSampleRate, _chunkSize));
 
 		// Patch config with real samplerate from resampler
 		pSampleRate = iSampleRate / _resampler->getRealRate();
@@ -92,7 +90,7 @@ QrssPiG::QrssPiG(const std::string &configFile) : QrssPiG() {
 	// Could be inlined, should be part of a processing init
 	_init();
 
-	_im = new QGImage(_N, _overlap);
+	_im.reset(new QGImage(_N, _overlap));
 	if (config["output"]) {
 		if (config["output"].Type() == YAML::NodeType::Map) _im->configure(config, 0);
 		// else if (config["output"].Type() == YAML::NodeType::Sequence) for (unsigned int i = 0; i < config["output"].size(); i++) _im->configure(config, i);
@@ -100,8 +98,8 @@ QrssPiG::QrssPiG(const std::string &configFile) : QrssPiG() {
 	}
 
 	if (config["upload"]) {
-		if (config["upload"].IsMap()) _uploaders.push_back(QGUploader::CreateUploader(config["upload"]));
-		else if (config["upload"].IsSequence()) for (YAML::const_iterator it = config["upload"].begin(); it != config["upload"].end(); it++) _uploaders.push_back(QGUploader::CreateUploader(*it));
+		if (config["upload"].IsMap()) _uploaders.push_back(std::unique_ptr<QGUploader>(QGUploader::CreateUploader(config["upload"])));
+		else if (config["upload"].IsSequence()) for (YAML::const_iterator it = config["upload"].begin(); it != config["upload"].end(); it++) _uploaders.push_back(std::unique_ptr<QGUploader>(QGUploader::CreateUploader(*it)));
 		else throw std::runtime_error("YAML: upload must be a map or a sequence");
 	}
 }
@@ -115,14 +113,9 @@ QrssPiG::~QrssPiG() {
 	// Push and wait on dtor
 	_pushImage(true);
 
-	if (_hannW) delete [] _hannW;
 	if (_fft) delete _fft;
 	if (_input) fftwf_free(_input);
 	if (_resampled && (_resampled != _input)) fftwf_free(_resampled); // When no resampling is used both pointer point to the same buffer
-	if (_im) delete _im;
-	for (auto up: _uploaders) delete up;
-	if (_resampler) delete _resampler;
-	if (_inputDevice) delete _inputDevice;
 }
 
 void QrssPiG::run() {
@@ -138,7 +131,7 @@ void QrssPiG::stop() {
 // Private members
 //
 void QrssPiG::_init() {
-	_hannW = new float[_N];
+	_hannW.reset(new float[_N]);
 	for (int i = 0; i < _N/2; i++) {
 		_hannW[i] = .5 * (1 - cos((2 * M_PI * i) / (_N / 2 - 1)));
 	}
@@ -197,10 +190,10 @@ void QrssPiG::_pushIntermediateImage() {
 		std::string frameName;
 		char * frame;
 
-		frame = _im->getFrame(&frameSize, frameName);
+		frame = _im->getFrame(frameSize, frameName);
 
 std::cout << "pushing intermediate" << frameName << std::endl;
-		for (auto up: _uploaders) up->pushIntermediate(frameName, frame, frameSize);
+		for (auto& up: _uploaders) up->pushIntermediate(frameName, frame, frameSize);
 	} catch (const std::exception &e) {
 	}
 }
@@ -211,10 +204,10 @@ void QrssPiG::_pushImage(bool wait) {
 		std::string frameName;
 		char * frame;
 
-		frame = _im->getFrame(&frameSize, frameName);
+		frame = _im->getFrame(frameSize, frameName);
 
 std::cout << "pushing " << frameName << std::endl;
-		for (auto up: _uploaders) up->push(frameName, frame, frameSize, wait);
+		for (auto& up: _uploaders) up->push(frameName, frame, frameSize, wait);
 
 		_im->startNewFrame();
 	} catch (const std::exception &e) {
