@@ -53,7 +53,11 @@ private:
 
 	std::unique_ptr<QGDownSampler> _resampler;
 	QGFft *_fft;
+
+	// Image
 	std::unique_ptr<QGImage> _im;
+
+	// Uploaders
 	std::vector<std::unique_ptr<QGUploader>> _uploaders;
 
 	int _frameIndex;

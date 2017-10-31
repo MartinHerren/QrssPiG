@@ -19,7 +19,7 @@ QrssPiG::QrssPiG() :
 QrssPiG::QrssPiG(const std::string &format, int sampleRate, int N, const std::string &dir, const std::string &sshHost, const std::string &sshUser, int sshPort) : QrssPiG() {
 	_N = N;
 
-	_inputDevice.reset(QGInputDevice::CreateInputDevice(YAML::Load("{format: " + format + ", samplerate: " + std::to_string(sampleRate) + ", basefreq: 0}")));
+	_inputDevice = QGInputDevice::CreateInputDevice(YAML::Load("{format: " + format + ", samplerate: " + std::to_string(sampleRate) + ", basefreq: 0}"));
 
 	if (sshHost.length()) {
 		_uploaders.push_back(std::unique_ptr<QGUploader>(QGUploader::CreateUploader(YAML::Load("{type: scp, host: " + sshHost + ", port: " + std::to_string(sshPort) + ", user: " + sshUser + ", dir: " + dir + "}"))));
@@ -41,7 +41,7 @@ QrssPiG::QrssPiG(const std::string &configFile) : QrssPiG() {
 	if (config["input"]) {
 		if (config["input"].Type() != YAML::NodeType::Map) throw std::runtime_error("YAML: input must be a map");
 
-		_inputDevice.reset(QGInputDevice::CreateInputDevice(config["input"]));
+		_inputDevice = QGInputDevice::CreateInputDevice(config["input"]);
 
 		// Patch real samplerate back to config so image class will have the correct value
 		config["input"]["samplerate"] = _inputDevice->sampleRate();
@@ -98,8 +98,8 @@ QrssPiG::QrssPiG(const std::string &configFile) : QrssPiG() {
 	}
 
 	if (config["upload"]) {
-		if (config["upload"].IsMap()) _uploaders.push_back(std::unique_ptr<QGUploader>(QGUploader::CreateUploader(config["upload"])));
-		else if (config["upload"].IsSequence()) for (YAML::const_iterator it = config["upload"].begin(); it != config["upload"].end(); it++) _uploaders.push_back(std::unique_ptr<QGUploader>(QGUploader::CreateUploader(*it)));
+		if (config["upload"].IsMap()) _uploaders.push_back(std::move(QGUploader::CreateUploader(config["upload"])));
+		else if (config["upload"].IsSequence()) for (YAML::const_iterator it = config["upload"].begin(); it != config["upload"].end(); it++) _uploaders.push_back(std::move(QGUploader::CreateUploader(*it)));
 		else throw std::runtime_error("YAML: upload must be a map or a sequence");
 	}
 }

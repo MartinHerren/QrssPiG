@@ -45,20 +45,20 @@ void QGUploader::push(const std::string &fileName, const char *data, int dataSiz
         std::thread(std::bind(&QGUploader::_pushThread, this, fileName, d, dataSize)).detach();
 }
 
-QGUploader *QGUploader::CreateUploader(const YAML::Node &config) {
+std::unique_ptr<QGUploader> QGUploader::CreateUploader(const YAML::Node &config) {
     if (!config["type"]) throw std::runtime_error("YAML: uploader must have a type");
 
     if (config["type"].as<std::string>().compare("local") == 0) {
-        return new QGUploaderLocal(config);
+        return std::unique_ptr<QGUploader>(new QGUploaderLocal(config));
     } else if (config["type"].as<std::string>().compare("scp") == 0) {
 #ifdef HAVE_LIBSSH
-        return new QGUploaderSCP(config);
+        return std::unique_ptr<QGUploader>(new QGUploaderSCP(config));
 #else
         throw std::runtime_error("QGUploader: scp uploader support not builtin into this build");
 #endif //  HAVE_LIBSSH
     } else if ((config["type"].as<std::string>().compare("ftp") == 0) || (config["type"].as<std::string>().compare("ftps") == 0)) {
 #ifdef HAVE_LIBCURL
-        return new QGUploaderFTP(config);
+        return std::unique_ptr<QGUploader>(new QGUploaderFTP(config));
 #else
         throw std::runtime_error("QGUploader: ftp uploader support not builtin into this build");
 #endif //  HAVE_LIBCURL

@@ -1,6 +1,8 @@
 #pragma once
 
+#include <memory>
 #include <string>
+
 #include <yaml-cpp/yaml.h>
 
 class QGUploader {
@@ -13,7 +15,7 @@ public:
 	void pushIntermediate(const std::string &fileName, const char *data, int dataSize);
 	void push(const std::string &fileName, const char *data, int dataSize, bool wait = false);
 
-	static QGUploader *CreateUploader(const YAML::Node &config);
+	static std::unique_ptr<QGUploader> CreateUploader(const YAML::Node &config);
 
 private:
 	void _pushThread(std::string fileName, const char *data, int dataSize);

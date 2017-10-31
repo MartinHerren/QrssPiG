@@ -1,6 +1,7 @@
 #pragma once
 
 #include <functional>
+#include <memory>
 
 #include <yaml-cpp/yaml.h>
 
@@ -18,7 +19,7 @@ public:
 	unsigned int baseFreq() { return _baseFreq; };
 	int ppm() { return _ppm; };
 
-	static QGInputDevice *CreateInputDevice(const YAML::Node &config);
+	static std::unique_ptr<QGInputDevice> CreateInputDevice(const YAML::Node &config);
 
 protected:
 	unsigned int _sampleRate;

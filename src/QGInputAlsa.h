@@ -28,7 +28,7 @@ private:
 	int _bytesPerSample;
 	int _samplesPerCall;
 	int _bufferSize;
-	unsigned char *_buffer;
+	std::unique_ptr<unsigned char[]> _buffer;
 	snd_pcm_t *_device;
 	snd_async_handler_t *_async;
 	std::function<void(std::complex<float>)>_cb;

@@ -3,7 +3,7 @@
 #include <iostream>
 #include <stdexcept>
 
-QGInputAlsa::QGInputAlsa(const YAML::Node &config): QGInputDevice(config), _buffer(nullptr), _device(nullptr), _async(nullptr) {
+QGInputAlsa::QGInputAlsa(const YAML::Node &config): QGInputDevice(config), _device(nullptr), _async(nullptr) {
 	_deviceName = "hw:0,0";
 	_channel = Channel::LEFT;
 
@@ -35,7 +35,7 @@ QGInputAlsa::QGInputAlsa(const YAML::Node &config): QGInputDevice(config), _buff
 
 	_samplesPerCall = 4096;
 	_bufferSize = _samplesPerCall * _bytesPerSample * _numChannels;
-	_buffer = new unsigned char[_bufferSize];
+	_buffer.reset(new unsigned char[_bufferSize]);
 
 	int err;
 	snd_pcm_hw_params_t *hw_params;
@@ -59,7 +59,6 @@ QGInputAlsa::QGInputAlsa(const YAML::Node &config): QGInputDevice(config), _buff
 QGInputAlsa::~QGInputAlsa() {
 	stop();
 	if (_device) snd_pcm_close(_device);
-	if (_buffer) delete[] _buffer;
 }
 
 void QGInputAlsa::run(std::function<void(std::complex<float>)>cb) {
@@ -93,7 +92,7 @@ void QGInputAlsa::process() {
 
 	while (avail >= _samplesPerCall) {
 		// successfull reads < _samplesPerCall should not happen due to while condition
-		if ((err = snd_pcm_readi(_device, _buffer, _samplesPerCall)) != _samplesPerCall) {
+		if ((err = snd_pcm_readi(_device, _buffer.get(), _samplesPerCall)) != _samplesPerCall) {
 			throw std::runtime_error(std::string("Error reading from audio device: ") + snd_strerror(err));
 		}
 
