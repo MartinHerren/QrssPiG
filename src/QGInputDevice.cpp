@@ -20,7 +20,7 @@
 #include "QGInputRtlSdr.h"
 #endif // HAVE_LIBRTLSDR
 
-QGInputDevice::QGInputDevice(const YAML::Node &config) {
+QGInputDevice::QGInputDevice(const YAML::Node &config, std::function<void(std::complex<float>)>cb) {
     _sampleRate = 48000;
     _baseFreq = 0;
     _ppm = 0;
@@ -28,30 +28,32 @@ QGInputDevice::QGInputDevice(const YAML::Node &config) {
     if (config["samplerate"]) _sampleRate = config["samplerate"].as<unsigned int>();
     if (config["basefreq"]) _baseFreq = config["basefreq"].as<unsigned int>();
     if (config["ppm"]) _ppm = config["ppm"].as<int>();
+
+    _cb = cb;
 }
 
-std::unique_ptr<QGInputDevice> QGInputDevice::CreateInputDevice(const YAML::Node &config) {
+std::unique_ptr<QGInputDevice> QGInputDevice::CreateInputDevice(const YAML::Node &config, std::function<void(std::complex<float>)>cb) {
     if (!config["type"] || (config["type"].as<std::string>().compare("stdin") == 0)) {
         std::cout << "Input type stdin" << std::endl;
-        return std::unique_ptr<QGInputDevice>(new QGInputStdIn(config));
+        return std::unique_ptr<QGInputDevice>(new QGInputStdIn(config, cb));
     } else if (config["type"].as<std::string>().compare("alsa") == 0) {
 #ifdef HAVE_LIBALSA
         std::cout << "Input type alsa" << std::endl;
-        return std::unique_ptr<QGInputDevice>(new QGInputAlsa(config));
+        return std::unique_ptr<QGInputDevice>(new QGInputAlsa(config, cb));
 #else
         throw std::runtime_error(std::string("QGInputDevice: alsa support not builtin into this build"));
 #endif //HAVE_LIBALSA
     } else if (config["type"].as<std::string>().compare("hackrf") == 0) {
 #ifdef HAVE_LIBHACKRF
         std::cout << "Input type hackrf" << std::endl;
-        return std::unique_ptr<QGInputDevice>(new QGInputHackRF(config));
+        return std::unique_ptr<QGInputDevice>(new QGInputHackRF(config, cb));
 #else
         throw std::runtime_error(std::string("QGInputDevice: hackrf support not builtin into this build"));
 #endif //HAVE_LIBHACKRF
     } else if (config["type"].as<std::string>().compare("rtlsdr") == 0) {
 #ifdef HAVE_LIBRTLSDR
         std::cout << "Input type rtlsdr" << std::endl;
-        return std::unique_ptr<QGInputDevice>(new QGInputRtlSdr(config));
+        return std::unique_ptr<QGInputDevice>(new QGInputRtlSdr(config, cb));
 #else
         throw std::runtime_error(std::string("QGInputDevice: rtlsdr support not uiltin into this build"));
 #endif //HAVE_LIBRTLSDR

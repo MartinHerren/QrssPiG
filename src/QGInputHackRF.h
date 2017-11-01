@@ -8,12 +8,12 @@
 
 class QGInputHackRF: public QGInputDevice {
 public:
-	QGInputHackRF(const YAML::Node &config);
+	QGInputHackRF(const YAML::Node &config, std::function<void(std::complex<float>)>cb);
 	~QGInputHackRF();
 
 	void deviceList();
 
-	void run(std::function<void(std::complex<float>)>cb);
+	void run();
 	void stop();
 
 	void process(uint8_t *buf, int len);
@@ -22,7 +22,6 @@ public:
 
 private:
 	hackrf_device *_device;
-	std::function<void(std::complex<float>)>_cb;
 
 	std::mutex _running;
 };

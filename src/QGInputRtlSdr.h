@@ -6,12 +6,12 @@
 
 class QGInputRtlSdr: public QGInputDevice {
 public:
-	QGInputRtlSdr(const YAML::Node &config);
+	QGInputRtlSdr(const YAML::Node &config, std::function<void(std::complex<float>)>cb);
 	~QGInputRtlSdr();
 
 	void deviceList();
 
-	void run(std::function<void(std::complex<float>)>cb);
+	void run();
 	void stop();
 
 	void process(unsigned char *buf, uint32_t len);
@@ -22,5 +22,4 @@ private:
 	int _deviceIndex;
 
 	rtlsdr_dev_t *_device;
-	std::function<void(std::complex<float>)>_cb;
 };

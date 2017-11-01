@@ -3,7 +3,7 @@
 #include <iostream>
 #include <stdexcept>
 
-QGInputAlsa::QGInputAlsa(const YAML::Node &config): QGInputDevice(config), _device(nullptr), _async(nullptr) {
+QGInputAlsa::QGInputAlsa(const YAML::Node &config, std::function<void(std::complex<float>)>cb): QGInputDevice(config, cb), _device(nullptr), _async(nullptr) {
 	_deviceName = "hw:0,0";
 	_channel = Channel::LEFT;
 
@@ -61,9 +61,8 @@ QGInputAlsa::~QGInputAlsa() {
 	if (_device) snd_pcm_close(_device);
 }
 
-void QGInputAlsa::run(std::function<void(std::complex<float>)>cb) {
+void QGInputAlsa::run() {
 	_running.lock(); // lock to running state.
-	_cb = cb;
 
 	int err;
 

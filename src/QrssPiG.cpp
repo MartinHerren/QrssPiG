@@ -3,6 +3,8 @@
 #include <stdexcept>
 #include <string>
 
+using std::placeholders::_1;
+
 QrssPiG::QrssPiG() :
 	_inputDevice(nullptr),
 	_chunkSize(32),
@@ -19,7 +21,7 @@ QrssPiG::QrssPiG() :
 QrssPiG::QrssPiG(const std::string &format, int sampleRate, int N, const std::string &dir, const std::string &sshHost, const std::string &sshUser, int sshPort) : QrssPiG() {
 	_N = N;
 
-	_inputDevice = QGInputDevice::CreateInputDevice(YAML::Load("{format: " + format + ", samplerate: " + std::to_string(sampleRate) + ", basefreq: 0}"));
+	_inputDevice = QGInputDevice::CreateInputDevice(YAML::Load("{format: " + format + ", samplerate: " + std::to_string(sampleRate) + ", basefreq: 0}"), std::bind(&QrssPiG::_addIQ, this, _1));
 
 	if (sshHost.length()) {
 		_uploaders.push_back(std::unique_ptr<QGUploader>(QGUploader::CreateUploader(YAML::Load("{type: scp, host: " + sshHost + ", port: " + std::to_string(sshPort) + ", user: " + sshUser + ", dir: " + dir + "}"))));
@@ -41,7 +43,7 @@ QrssPiG::QrssPiG(const std::string &configFile) : QrssPiG() {
 	if (config["input"]) {
 		if (config["input"].Type() != YAML::NodeType::Map) throw std::runtime_error("YAML: input must be a map");
 
-		_inputDevice = QGInputDevice::CreateInputDevice(config["input"]);
+		_inputDevice = QGInputDevice::CreateInputDevice(config["input"], std::bind(&QrssPiG::_addIQ, this, _1));
 
 		// Patch real samplerate back to config so image class will have the correct value
 		config["input"]["samplerate"] = _inputDevice->sampleRate();
@@ -119,8 +121,7 @@ QrssPiG::~QrssPiG() {
 }
 
 void QrssPiG::run() {
-	using std::placeholders::_1;
-	_inputDevice->run(std::bind(&QrssPiG::_addIQ, this, _1));
+	_inputDevice->run();
 }
 
 void QrssPiG::stop() {

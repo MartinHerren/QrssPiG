@@ -3,7 +3,7 @@
 #include <iostream>
 #include <stdexcept>
 
-QGInputHackRF::QGInputHackRF(const YAML::Node &config): QGInputDevice(config), _device(nullptr) {
+QGInputHackRF::QGInputHackRF(const YAML::Node &config, std::function<void(std::complex<float>)>cb): QGInputDevice(config, cb), _device(nullptr) {
 	int r = hackrf_init();
 
 	if (r != HACKRF_SUCCESS) {
@@ -69,9 +69,8 @@ void QGInputHackRF::deviceList() {
 	hackrf_exit();
 }
 
-void QGInputHackRF::run(std::function<void(std::complex<float>)>cb) {
+void QGInputHackRF::run() {
 	_running.lock(); // lock to running state.
-	_cb = cb;
 
 	int r = hackrf_start_rx(_device, async, this);
 

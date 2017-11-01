@@ -8,10 +8,10 @@
 
 class QGInputAlsa: public QGInputDevice {
 public:
-	QGInputAlsa(const YAML::Node &config);
+	QGInputAlsa(const YAML::Node &config, std::function<void(std::complex<float>)>cb);
 	~QGInputAlsa();
 
-	void run(std::function<void(std::complex<float>)>cb);
+	void run();
 	void stop();
 
 	void process();
@@ -31,7 +31,6 @@ private:
 	std::unique_ptr<unsigned char[]> _buffer;
 	snd_pcm_t *_device;
 	snd_async_handler_t *_async;
-	std::function<void(std::complex<float>)>_cb;
 
 	std::mutex _running;
 };

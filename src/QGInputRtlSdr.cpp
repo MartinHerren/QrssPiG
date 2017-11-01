@@ -3,7 +3,7 @@
 #include <iostream>
 #include <stdexcept>
 
-QGInputRtlSdr::QGInputRtlSdr(const YAML::Node &config): QGInputDevice(config), _device(nullptr) {
+QGInputRtlSdr::QGInputRtlSdr(const YAML::Node &config, std::function<void(std::complex<float>)>cb): QGInputDevice(config, cb), _device(nullptr) {
 	_deviceIndex = 0;
 
 	if (config["deviceindex"]) _deviceIndex = config["deviceindex"].as<int>();
@@ -50,9 +50,7 @@ void QGInputRtlSdr::deviceList() {
 	std::cout << "Devices: " << rtlsdr_get_device_count() << std::endl;
 }
 
-void QGInputRtlSdr::run(std::function<void(std::complex<float>)>cb) {
-	_cb = cb;
-
+void QGInputRtlSdr::run() {
 	if (rtlsdr_reset_buffer(_device)) throw std::runtime_error("Error reseting device");
 	rtlsdr_read_async(_device, this->async, this, 0, 0);
 

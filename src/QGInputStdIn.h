@@ -4,10 +4,10 @@
 
 class QGInputStdIn: public QGInputDevice {
 public:
-	QGInputStdIn(const YAML::Node &config);
+	QGInputStdIn(const YAML::Node &config, std::function<void(std::complex<float>)>cb);
 	~QGInputStdIn();
 
-	void run(std::function<void(std::complex<float>)>cb);
+	void run();
 	void stop();
 
 private:
