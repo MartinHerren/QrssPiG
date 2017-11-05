@@ -6,7 +6,8 @@ QGFft::QGFft(int N) {
 	_in = (std::complex<float>*)fftwf_malloc(sizeof(std::complex<float>) * N);
 	_out = (std::complex<float>*)fftwf_malloc(sizeof(std::complex<float>) * N);
 
-	_p = fftwf_plan_dft_1d(N, reinterpret_cast<fftwf_complex*>(_in), reinterpret_cast<fftwf_complex*>(_out), FFTW_FORWARD, FFTW_ESTIMATE);
+	// TODO: enable to chose patient or exaustive plan creation. Save and restore plan
+	_p = fftwf_plan_dft_1d(N, reinterpret_cast<fftwf_complex*>(_in), reinterpret_cast<fftwf_complex*>(_out), FFTW_FORWARD, FFTW_MEASURE);
 }
 
 QGFft::~QGFft() {

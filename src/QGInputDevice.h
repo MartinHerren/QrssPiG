@@ -26,5 +26,5 @@ protected:
 	unsigned int _baseFreq;
 	int _ppm;
 
-	std::function<void(std::complex<float>)>_cb;
+	std::function<void(std::complex<float>)> _cb;
 };
