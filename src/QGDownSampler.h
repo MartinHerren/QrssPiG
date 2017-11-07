@@ -18,8 +18,8 @@ public:
 	~QGDownSampler();
 
 	float getRealRate();
-	unsigned int processChunk(std::complex<float> *in, std::complex<float> *out);
-	unsigned int process(std::complex<float> *in, unsigned int inSize, std::complex<float> *out);
+	unsigned int processChunk(const std::complex<float> *in, std::complex<float> *out);
+	unsigned int process(const std::complex<float> *in, unsigned int inSize, std::complex<float> *out);
 
 private:
 	float _rate;

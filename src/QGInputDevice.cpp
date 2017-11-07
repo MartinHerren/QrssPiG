@@ -20,7 +20,7 @@
 #include "QGInputRtlSdr.h"
 #endif // HAVE_LIBRTLSDR
 
-QGInputDevice::QGInputDevice(const YAML::Node &config, std::function<void(std::complex<float>)>cb) {
+QGInputDevice::QGInputDevice(const YAML::Node &config, std::function<void(const std::complex<float>*, unsigned int)>cb) {
     _sampleRate = 48000;
     _baseFreq = 0;
     _ppm = 0;
@@ -32,7 +32,7 @@ QGInputDevice::QGInputDevice(const YAML::Node &config, std::function<void(std::c
     _cb = cb;
 }
 
-std::unique_ptr<QGInputDevice> QGInputDevice::CreateInputDevice(const YAML::Node &config, std::function<void(std::complex<float>)>cb) {
+std::unique_ptr<QGInputDevice> QGInputDevice::CreateInputDevice(const YAML::Node &config, std::function<void(const std::complex<float>*, unsigned int)>cb) {
     if (!config["type"] || (config["type"].as<std::string>().compare("stdin") == 0)) {
         std::cout << "Input type stdin" << std::endl;
         return std::unique_ptr<QGInputDevice>(new QGInputStdIn(config, cb));

@@ -3,7 +3,7 @@
 #include <iostream>
 #include <stdexcept>
 
-QGInputRtlSdr::QGInputRtlSdr(const YAML::Node &config, std::function<void(std::complex<float>)>cb): QGInputDevice(config, cb), _device(nullptr) {
+QGInputRtlSdr::QGInputRtlSdr(const YAML::Node &config, std::function<void(const std::complex<float>*, unsigned int)>cb): QGInputDevice(config, cb), _device(nullptr) {
 	_deviceIndex = 0;
 
 	if (config["deviceindex"]) _deviceIndex = config["deviceindex"].as<int>();
@@ -65,11 +65,13 @@ void QGInputRtlSdr::stop() {
 void QGInputRtlSdr::process(unsigned char *buf, uint32_t len) {
 	// U8 IQ data
 	unsigned char i, q;
+	std::complex<float> iq;
 
 	for (unsigned int j = 0; j < len;) {
 		i = buf[j++];
 		q = buf[j++];
-		_cb(std::complex<float>((i - 128) / 128., (q - 128) / 128.));
+		iq = std::complex<float>((i - 128) / 128., (q - 128) / 128.);
+		_cb(&iq, 1);
 	}
 }
 

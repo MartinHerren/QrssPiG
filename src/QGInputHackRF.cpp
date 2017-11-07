@@ -5,7 +5,7 @@
 #include <stdexcept>
 #include <thread>
 
-QGInputHackRF::QGInputHackRF(const YAML::Node &config, std::function<void(std::complex<float>)>cb): QGInputDevice(config, cb), _device(nullptr) {
+QGInputHackRF::QGInputHackRF(const YAML::Node &config, std::function<void(const std::complex<float>*, unsigned int)>cb): QGInputDevice(config, cb), _device(nullptr) {
 	int r = hackrf_init();
 
 	if (r != HACKRF_SUCCESS) {
@@ -88,9 +88,9 @@ void QGInputHackRF::run() {
 
 	while (!_running.try_lock()) { // loop until lock as been freed by stop()
 		if (_bufferSize > 8192*10) {
-			for (int j = 0; j < 8192*10; j++) {
-				_cb(_buffer[_bufferTail++]);
-				//_bufferTail++;
+			for (int j = 0; j < 8192*10; j += 32) {
+				_cb(&_buffer[_bufferTail], 32);
+				_bufferTail += 32;
 				_bufferTail %= _bufferCapacity;
 			}
 

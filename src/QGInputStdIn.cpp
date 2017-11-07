@@ -3,7 +3,7 @@
 #include <iostream>
 #include <stdexcept>
 
-QGInputStdIn::QGInputStdIn(const YAML::Node &config, std::function<void(std::complex<float>)>cb): QGInputDevice(config, cb) {
+QGInputStdIn::QGInputStdIn(const YAML::Node &config, std::function<void(const std::complex<float>*, unsigned int)>cb): QGInputDevice(config, cb) {
 	_format = Format::U8IQ;
 
 	if (config["format"]) {
@@ -25,7 +25,10 @@ QGInputStdIn::~QGInputStdIn() {
 
 void QGInputStdIn::run() {
 	char b[8192];
+	std::complex<float> iq;
+
 	_running = true;
+
 	std::cin >> std::noskipws;
 
 	switch (_format) {
@@ -36,7 +39,8 @@ void QGInputStdIn::run() {
 				for (int j = 0; j < 8192;) {
 					i = b[j++];
 					q = b[j++];
-					_cb(std::complex<float>((i - 128) / 128., (q - 128) / 128.));
+					iq = std::complex<float>((i - 128) / 128., (q - 128) / 128.);
+					_cb(&iq, 1);
 				}
 			}
 			break;
@@ -49,7 +53,8 @@ void QGInputStdIn::run() {
 				for (int j = 0; j < 8192;) {
 					i = b[j++];
 					q = b[j++];
-					_cb(std::complex<float>(i / 128., q / 128.));
+					iq = std::complex<float>(i / 128., q / 128.);
+					_cb(&iq, 1);
 				}
 			}
 			break;
@@ -64,7 +69,8 @@ void QGInputStdIn::run() {
 					i += b[j++] << 8;
 					q = b[j++];
 					q += b[j++] << 8;
-					_cb(std::complex<float>((i - 32768) / 32768., (q - 32768) / 32768.));
+					iq = std::complex<float>((i - 32768) / 32768., (q - 32768) / 32768.);
+					_cb(&iq, 1);
 				}
 			}
 			break;
@@ -79,7 +85,8 @@ void QGInputStdIn::run() {
 					i += b[j++] << 8;
 					q = b[j++];
 					q += b[j++] << 8;
-					_cb(std::complex<float>(i / 32768., q / 32768.));
+					iq = std::complex<float>(i / 32768., q / 32768.);
+					_cb(&iq, 1);
 				}
 			}
 			break;
@@ -92,7 +99,8 @@ void QGInputStdIn::run() {
 				for (int j = 0; j < 8192;) {
 					r = b[j++];
 					r += b[j++] << 8;
-					_cb(std::complex<float>(r / 32768., 0.));
+					iq = std::complex<float>(r / 32768., 0.);
+					_cb(&iq, 1);
 				}
 			}
 		}
@@ -105,7 +113,8 @@ void QGInputStdIn::run() {
 					r = b[j++];
 					r += b[j++] << 8;
 					j += 2;
-					_cb(std::complex<float>(r / 32768., 0.));
+					iq = std::complex<float>(r / 32768., 0.);
+					_cb(&iq, 1);
 				}
 			}
 		}
@@ -118,7 +127,8 @@ void QGInputStdIn::run() {
 					j += 2;
 					r = b[j++];
 					r += b[j++] << 8;
-					_cb(std::complex<float>(r / 32768., 0.));
+					iq = std::complex<float>(r / 32768., 0.);
+					_cb(&iq, 1);
 				}
 			}
 		}

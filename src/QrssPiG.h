@@ -28,7 +28,7 @@ public:
 private:
 	void _init();
 
-	void _addIQ(std::complex<float> iq);
+	void _addIQ(const std::complex<float> *iq, unsigned int len);
 	void _computeFft();
 	void _pushIntermediateImage();
 	void _pushImage(bool wait = false);

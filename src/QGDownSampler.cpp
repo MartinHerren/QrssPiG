@@ -41,11 +41,11 @@ float QGDownSampler::getRealRate() {
 	return _rate;
 }
 
-unsigned int QGDownSampler::processChunk(std::complex<float> *in, std::complex<float> *out) {
+unsigned int QGDownSampler::processChunk(const std::complex<float> *in, std::complex<float> *out) {
 	unsigned int outSize = 0;
 
 #ifdef HAVE_LIBLIQUIDSDR
-	resamp_crcf_execute_block(_liquidSdrResampler, in, _cs, out, &outSize);
+	resamp_crcf_execute_block(_liquidSdrResampler, const_cast<std::complex<float>*>(in), _cs, out, &outSize);
 #else
 #ifdef HAVE_LIBRTFILTER
 	outSize = rtf_filter(_rtFilterResampler, in, out, _cs);
@@ -60,7 +60,7 @@ unsigned int QGDownSampler::processChunk(std::complex<float> *in, std::complex<f
 	return outSize;
 }
 
-unsigned int QGDownSampler::process(std::complex<float> *in, unsigned int inSize, std::complex<float> *out) {
+unsigned int QGDownSampler::process(const std::complex<float> *in, unsigned int inSize, std::complex<float> *out) {
 	unsigned int remSize = inSize;
 	unsigned int outSize = 0;
 
@@ -69,7 +69,7 @@ unsigned int QGDownSampler::process(std::complex<float> *in, unsigned int inSize
 		unsigned int o = 0;
 
 #ifdef HAVE_LIBLIQUIDSDR
-		resamp_crcf_execute_block(_liquidSdrResampler, in, i, out, &o);
+		resamp_crcf_execute_block(_liquidSdrResampler, const_cast<std::complex<float>*>(in), i, out, &o);
 #else
 #ifdef HAVE_LIBRTFILTER
 		o = rtf_filter(_rtFilterResampler, in, out, i);

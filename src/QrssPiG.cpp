@@ -4,6 +4,7 @@
 #include <string>
 
 using std::placeholders::_1;
+using std::placeholders::_2;
 
 QrssPiG::QrssPiG() :
 	_inputDevice(nullptr),
@@ -21,7 +22,7 @@ QrssPiG::QrssPiG() :
 QrssPiG::QrssPiG(const std::string &format, int sampleRate, int N, const std::string &dir, const std::string &sshHost, const std::string &sshUser, int sshPort) : QrssPiG() {
 	_N = N;
 
-	_inputDevice = QGInputDevice::CreateInputDevice(YAML::Load("{format: " + format + ", samplerate: " + std::to_string(sampleRate) + ", basefreq: 0}"), std::bind(&QrssPiG::_addIQ, this, _1));
+	_inputDevice = QGInputDevice::CreateInputDevice(YAML::Load("{format: " + format + ", samplerate: " + std::to_string(sampleRate) + ", basefreq: 0}"), std::bind(&QrssPiG::_addIQ, this, _1, _2));
 
 	if (sshHost.length()) {
 		_uploaders.push_back(std::unique_ptr<QGUploader>(QGUploader::CreateUploader(YAML::Load("{type: scp, host: " + sshHost + ", port: " + std::to_string(sshPort) + ", user: " + sshUser + ", dir: " + dir + "}"))));
@@ -43,9 +44,10 @@ QrssPiG::QrssPiG(const std::string &configFile) : QrssPiG() {
 	if (config["input"]) {
 		if (config["input"].Type() != YAML::NodeType::Map) throw std::runtime_error("YAML: input must be a map");
 
-		_inputDevice = QGInputDevice::CreateInputDevice(config["input"], std::bind(&QrssPiG::_addIQ, this, _1));
+		_inputDevice = QGInputDevice::CreateInputDevice(config["input"], std::bind(&QrssPiG::_addIQ, this, _1, _2));
 
-		// Patch real samplerate back to config so image class will have the correct value
+		// Patch real samplerate and basefreq back to config so image class will have the correct value
+		// Same for remaining ppm
 		config["input"]["samplerate"] = _inputDevice->sampleRate();
 		config["input"]["basefreq"] = _inputDevice->baseFreq();
 		config["input"]["ppm"] = _inputDevice->ppm();
@@ -144,26 +146,43 @@ void QrssPiG::_init() {
 	_frameIndex = 0;
 }
 
-void QrssPiG::_addIQ(std::complex<float> iq) {
-	_input[_inputIndex++] = iq;
+void QrssPiG::_addIQ(const std::complex<float> *iq, unsigned int len) {
+	switch (len) {
+	case 1:
+		_input[_inputIndex++] = *iq;
 
-	if (_inputIndex >= _inputIndexThreshold) {
-		if (_resampler) {
-			// Adding 1 sample, we know _inputIndex == _inputIndexThreshold == _chunksSize, and not bigger
-			_resampledIndex += _resampler->processChunk(_input, _resampled + _resampledIndex);
-			_inputIndex = 0;
-			if (_resampledIndex >= _N) {
+		if (_inputIndex >= _inputIndexThreshold) {
+			if (_resampler) {
+				// Adding 1 sample, we know _inputIndex == _inputIndexThreshold == _chunksSize, and not bigger
+				_resampledIndex += _resampler->processChunk(_input, _resampled + _resampledIndex);
+				_inputIndex = 0;
+				if (_resampledIndex >= _N) {
+					_computeFft();
+					// TODO: Usually adds at most 1 sample, so we know _inputIndex == _inputIndexThreshold == _N, and not bigger
+					for (auto i = 0; i < _overlap + _resampledIndex - _N; i++) _resampled[i] = _resampled[_N - _overlap + i];
+					_resampledIndex = _overlap + _resampledIndex - _N;
+				}
+			} else {
 				_computeFft();
-				// TODO: Usually adds at most 1 sample, so we know _inputIndex == _inputIndexThreshold == _N, and not bigger
-				for (auto i = 0; i < _overlap + _resampledIndex - _N; i++) _resampled[i] = _resampled[_N - _overlap + i];
-				_resampledIndex = _overlap + _resampledIndex - _N;
+				// Adding 1 sample, we know _inputIndex == _inputIndexThreshold == _N, and not bigger
+				for (auto i = 0; i < _overlap; i++) _input[i] = _input[_N - _overlap + i];
+				_inputIndex = _overlap;
 			}
-		} else {
-			_computeFft();
-			// Adding 1 sample, we know _inputIndex == _inputIndexThreshold == _N, and not bigger
-			for (auto i = 0; i < _overlap; i++) _input[i] = _input[_N - _overlap + i];
-			_inputIndex = _overlap;
 		}
+		break;
+
+	case 32:
+		_resampledIndex += _resampler->processChunk(iq, _resampled + _resampledIndex);
+		if (_resampledIndex >= _N) {
+			_computeFft();
+			// TODO: Usually adds at most 1 sample, so we know _inputIndex == _inputIndexThreshold == _N, and not bigger
+			for (auto i = 0; i < _overlap + _resampledIndex - _N; i++) _resampled[i] = _resampled[_N - _overlap + i];
+			_resampledIndex = _overlap + _resampledIndex - _N;
+		}
+		break;
+
+	default:
+		throw std::runtime_error("Chunksize not supported");
 	}
 }
 

@@ -3,7 +3,7 @@
 #include <iostream>
 #include <stdexcept>
 
-QGInputAlsa::QGInputAlsa(const YAML::Node &config, std::function<void(std::complex<float>)>cb): QGInputDevice(config, cb), _device(nullptr), _async(nullptr) {
+QGInputAlsa::QGInputAlsa(const YAML::Node &config, std::function<void(const std::complex<float>*, unsigned int)>cb): QGInputDevice(config, cb), _device(nullptr), _async(nullptr) {
 	_deviceName = "hw:0,0";
 	_channel = Channel::LEFT;
 
@@ -85,6 +85,7 @@ void QGInputAlsa::stop() {
 }
 
 void QGInputAlsa::process() {
+	std::complex<float> iq;
 	int err;
 
 	snd_pcm_sframes_t avail = snd_pcm_avail_update(_device);
@@ -103,7 +104,8 @@ void QGInputAlsa::process() {
 			for (int j = 0; j < _bufferSize;) {
 				i = _buffer[j++];
 				i += _buffer[j++] << 8;
-				_cb(std::complex<float>(i / 32768., q / 32768.));
+				iq = std::complex<float>(i / 32768., q / 32768.);
+				_cb(&iq, 1);
 			}
 			break;
 
@@ -112,7 +114,8 @@ void QGInputAlsa::process() {
 				i = _buffer[j++];
 				i += _buffer[j++] << 8;
 				j += 2;
-				_cb(std::complex<float>(i / 32768., q / 32768.));
+				iq = std::complex<float>(i / 32768., q / 32768.);
+				_cb(&iq, 1);
 			}
 			break;
 
@@ -121,7 +124,8 @@ void QGInputAlsa::process() {
 				j += 2;
 				i = _buffer[j++];
 				i += _buffer[j++] << 8;
-				_cb(std::complex<float>(i / 32768., q / 32768.));
+				iq = std::complex<float>(i / 32768., q / 32768.);
+				_cb(&iq, 1);
 			}
 			break;
 
@@ -131,7 +135,8 @@ void QGInputAlsa::process() {
 				i += _buffer[j++] << 8;
 				q = _buffer[j++];
 				q += _buffer[j++] << 8;
-				_cb(std::complex<float>(i / 32768., q / 32768.));
+				iq = std::complex<float>(i / 32768., q / 32768.);
+				_cb(&iq, 1);
 			}
 			break;
 
@@ -141,7 +146,8 @@ void QGInputAlsa::process() {
 				q += _buffer[j++] << 8;
 				i = _buffer[j++];
 				i += _buffer[j++] << 8;
-				_cb(std::complex<float>(i / 32768., q / 32768.));
+				iq = std::complex<float>(i / 32768., q / 32768.);
+				_cb(&iq, 1);
 			}
 			break;
 		}
