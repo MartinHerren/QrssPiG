@@ -2,7 +2,6 @@
 
 #include "QGInputDevice.h"
 
-#include <vector>
 #include <mutex>
 
 #include <libhackrf/hackrf.h>
@@ -14,22 +13,13 @@ public:
 
 	void deviceList();
 
-	void run();
-	void stop();
-
-	void process(uint8_t *buf, int len);
-
 	static int async(hackrf_transfer* transfer);
 
 private:
+	void _startDevice();
+	void _stopDevice();
+
+	void _process(uint8_t *buf, int len);
+
 	hackrf_device *_device;
-
-	std::mutex _running;
-
-	std::mutex _bufferMutex;
-	size_t _bufferCapacity;
-	size_t _bufferSize;
-	volatile size_t _bufferHead;
-	volatile size_t _bufferTail;
-	std::vector<std::complex<float>> _buffer;
 };

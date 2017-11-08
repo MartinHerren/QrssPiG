@@ -34,8 +34,8 @@ QGInputAlsa::QGInputAlsa(const YAML::Node &config, std::function<void(const std:
 	_bytesPerSample = 2;
 
 	_samplesPerCall = 4096;
-	_bufferSize = _samplesPerCall * _bytesPerSample * _numChannels;
-	_buffer.reset(new unsigned char[_bufferSize]);
+	_readBufferSize = _samplesPerCall * _bytesPerSample * _numChannels;
+	_readBuffer.reset(new unsigned char[_readBufferSize]);
 
 	int err;
 	snd_pcm_hw_params_t *hw_params;
@@ -57,42 +57,30 @@ QGInputAlsa::QGInputAlsa(const YAML::Node &config, std::function<void(const std:
 }
 
 QGInputAlsa::~QGInputAlsa() {
-	stop();
 	if (_device) snd_pcm_close(_device);
 }
 
-void QGInputAlsa::run() {
-	_running.lock(); // lock to running state.
-
+void QGInputAlsa::_startDevice() {
 	int err;
 
 	if ((err = snd_async_add_pcm_handler(&_async, _device, this->async, this))) throw std::runtime_error(std::string("Error setting async handler: ") + snd_strerror(err));
 	if ((err = snd_pcm_start(_device))) throw std::runtime_error(std::string("Error starting async capture: ") + snd_strerror(err));
-
-	_running.lock(); // block until lock as been freed by stop()
-	_running.unlock(); // Cleanup
-
-	return;
 }
 
-void QGInputAlsa::stop() {
-	if (!_running.try_lock()) {
-		snd_pcm_drain(_device); // or snd_pcm_drop for immediate stop
-		snd_async_del_handler(_async);
-		_async = nullptr;
-	}
-	_running.unlock();// Enable run() to return, or release the lock we just gained if it was not running
+void QGInputAlsa::_stopDevice() {
+	snd_pcm_drain(_device); // or snd_pcm_drop for immediate stop
+	snd_async_del_handler(_async);
+	_async = nullptr;
 }
 
-void QGInputAlsa::process() {
-	std::complex<float> iq;
+void QGInputAlsa::_process() {
 	int err;
 
 	snd_pcm_sframes_t avail = snd_pcm_avail_update(_device);
 
 	while (avail >= _samplesPerCall) {
 		// successfull reads < _samplesPerCall should not happen due to while condition
-		if ((err = snd_pcm_readi(_device, _buffer.get(), _samplesPerCall)) != _samplesPerCall) {
+		if ((err = snd_pcm_readi(_device, _readBuffer.get(), _samplesPerCall)) != _samplesPerCall) {
 			throw std::runtime_error(std::string("Error reading from audio device: ") + snd_strerror(err));
 		}
 
@@ -101,54 +89,59 @@ void QGInputAlsa::process() {
 		// Only S16_LE supported so far
 		switch (_channel) {
 		case Channel::MONO:
-			for (int j = 0; j < _bufferSize;) {
-				i = _buffer[j++];
-				i += _buffer[j++] << 8;
-				iq = std::complex<float>(i / 32768., q / 32768.);
-				_cb(&iq, 1);
+			for (int j = 0; j < _readBufferSize;) {
+				i = _readBuffer[j++];
+				i += _readBuffer[j++] << 8;
+				_buffer[_bufferHead++] = std::complex<float>(i / 32768., q / 32768.);
+				_bufferHead %= _bufferCapacity;
 			}
+			_incBuffer(_readBufferSize/2);
 			break;
 
 		case Channel::LEFT:
-			for (int j = 0; j < _bufferSize;) {
-				i = _buffer[j++];
-				i += _buffer[j++] << 8;
+			for (int j = 0; j < _readBufferSize;) {
+				i = _readBuffer[j++];
+				i += _readBuffer[j++] << 8;
 				j += 2;
-				iq = std::complex<float>(i / 32768., q / 32768.);
-				_cb(&iq, 1);
+				_buffer[_bufferHead++] = std::complex<float>(i / 32768., q / 32768.);
+				_bufferHead %= _bufferCapacity;
 			}
+			_incBuffer(_readBufferSize/4);
 			break;
 
 		case Channel::RIGHT:
-			for (int j = 0; j < _bufferSize;) {
+			for (int j = 0; j < _readBufferSize;) {
 				j += 2;
-				i = _buffer[j++];
-				i += _buffer[j++] << 8;
-				iq = std::complex<float>(i / 32768., q / 32768.);
-				_cb(&iq, 1);
+				i = _readBuffer[j++];
+				i += _readBuffer[j++] << 8;
+				_buffer[_bufferHead++] = std::complex<float>(i / 32768., q / 32768.);
+				_bufferHead %= _bufferCapacity;
 			}
+			_incBuffer(_readBufferSize/4);
 			break;
 
 		case Channel::IQ:
-			for (int j = 0; j < _bufferSize;) {
-				i = _buffer[j++];
-				i += _buffer[j++] << 8;
-				q = _buffer[j++];
-				q += _buffer[j++] << 8;
-				iq = std::complex<float>(i / 32768., q / 32768.);
-				_cb(&iq, 1);
+			for (int j = 0; j < _readBufferSize;) {
+				i = _readBuffer[j++];
+				i += _readBuffer[j++] << 8;
+				q = _readBuffer[j++];
+				q += _readBuffer[j++] << 8;
+				_buffer[_bufferHead++] = std::complex<float>(i / 32768., q / 32768.);
+				_bufferHead %= _bufferCapacity;
 			}
+			_incBuffer(_readBufferSize/4);
 			break;
 
 		case Channel::INVIQ:
-			for (int j = 0; j < _bufferSize;) {
-				q = _buffer[j++];
-				q += _buffer[j++] << 8;
-				i = _buffer[j++];
-				i += _buffer[j++] << 8;
-				iq = std::complex<float>(i / 32768., q / 32768.);
-				_cb(&iq, 1);
+			for (int j = 0; j < _readBufferSize;) {
+				q = _readBuffer[j++];
+				q += _readBuffer[j++] << 8;
+				i = _readBuffer[j++];
+				i += _readBuffer[j++] << 8;
+				_buffer[_bufferHead++] = std::complex<float>(i / 32768., q / 32768.);
+				_bufferHead %= _bufferCapacity;
 			}
+			_incBuffer(_readBufferSize/4);
 			break;
 		}
 
@@ -158,7 +151,7 @@ void QGInputAlsa::process() {
 
 void QGInputAlsa::async(snd_async_handler_t *async) {
 	try {
-		static_cast<QGInputAlsa *>(snd_async_handler_get_callback_private(async))->process();
+		static_cast<QGInputAlsa *>(snd_async_handler_get_callback_private(async))->_process();
 	} catch (const std::exception &e) {
 		// TODO prepare device again if error is from pcm device read and ignore if from fft ?
 	}

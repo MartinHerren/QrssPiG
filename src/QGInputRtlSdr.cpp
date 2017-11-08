@@ -42,7 +42,6 @@ QGInputRtlSdr::QGInputRtlSdr(const YAML::Node &config, std::function<void(const 
 }
 
 QGInputRtlSdr::~QGInputRtlSdr() {
-	stop();
 	if (_device) rtlsdr_close(_device);
 }
 
@@ -50,34 +49,35 @@ void QGInputRtlSdr::deviceList() {
 	std::cout << "Devices: " << rtlsdr_get_device_count() << std::endl;
 }
 
-void QGInputRtlSdr::run() {
+void QGInputRtlSdr::_startDevice() {
 	if (rtlsdr_reset_buffer(_device)) throw std::runtime_error("Error reseting device");
-	rtlsdr_read_async(_device, this->async, this, 0, 0);
+	_t = std::thread(rtlsdr_read_async, _device, this->async, this, 0, 0);
 
 	return;
 }
 
-void QGInputRtlSdr::stop() {
-	// TODO: check i frunning
+void QGInputRtlSdr::_stopDevice() {
 	rtlsdr_cancel_async(_device);
+	_t.join();
 }
 
-void QGInputRtlSdr::process(unsigned char *buf, uint32_t len) {
+void QGInputRtlSdr::_process(unsigned char *buf, uint32_t len) {
 	// U8 IQ data
 	unsigned char i, q;
-	std::complex<float> iq;
 
 	for (unsigned int j = 0; j < len;) {
 		i = buf[j++];
 		q = buf[j++];
-		iq = std::complex<float>((i - 128) / 128., (q - 128) / 128.);
-		_cb(&iq, 1);
+		_buffer[_bufferHead++] = std::complex<float>((i - 128) / 128., (q - 128) / 128.);
+		_bufferHead %= _bufferCapacity;
 	}
+
+	_incBuffer(len/2);
 }
 
 void QGInputRtlSdr::async(unsigned char *buf, uint32_t len, void *ctx) {
 	try {
-		static_cast<QGInputRtlSdr *>(ctx)->process(buf, len);
+		static_cast<QGInputRtlSdr *>(ctx)->_process(buf, len);
 	} catch (const std::exception &e) {
 		// TODO reset device  if error is from rtl device read and ignore if from fft ?
 	}

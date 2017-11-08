@@ -3,6 +3,7 @@
 #include <iostream>
 #include <stdexcept>
 #include <string>
+#include <thread>
 
 #include "Config.h"
 
@@ -30,6 +31,53 @@ QGInputDevice::QGInputDevice(const YAML::Node &config, std::function<void(const 
     if (config["ppm"]) _ppm = config["ppm"].as<int>();
 
     _cb = cb;
+
+// TODO calculate buffer size frm _sampleRate and configurable size. Multiple of chuncksize
+	_bufferCapacity = 10 * 32 * 262144; // ~10 seconds of buffer @ 8MS/s
+	_buffer.resize(_bufferCapacity);
+	_bufferSize = 0;
+	_bufferHead = 0;
+	_bufferTail = 0;
+}
+
+void QGInputDevice::run() {
+	if (_running.try_lock()) {
+        _startDevice();
+
+//TODO get correct chunksize
+        while (!_running.try_lock()) { // loop until lock as been freed by stop()
+            if (_bufferSize > 8192*10) {
+                for (int j = 0; j < 8192*10; j += 32) {
+                    _cb(&_buffer[_bufferTail], 32);
+                    _bufferTail += 32;
+                    _bufferTail %= _bufferCapacity;
+                }
+
+                // Update size
+                _bufferMutex.lock();
+                _bufferSize -= 8192*10;
+                _bufferMutex.unlock();
+            } else {
+                std::this_thread::sleep_for(std::chrono::microseconds(100));
+            }
+        }
+        _running.unlock(); // Cleanup lock acquired on exit condition
+    }
+}
+
+void QGInputDevice::stop() {
+	if (!_running.try_lock()) {
+        _bufferMutex.unlock(); // To ensure _stopDevice won't stick
+        _stopDevice();
+	}
+
+	_running.unlock();// Enable run() to exit, or release the lock we just gained if it was not running
+}
+
+void QGInputDevice::_incBuffer(size_t added) {
+    _bufferMutex.lock();
+    _bufferSize += added;
+    _bufferMutex.unlock();
 }
 
 std::unique_ptr<QGInputDevice> QGInputDevice::CreateInputDevice(const YAML::Node &config, std::function<void(const std::complex<float>*, unsigned int)>cb) {
