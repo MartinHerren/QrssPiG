@@ -10,7 +10,9 @@ QGInputRtlSdr::QGInputRtlSdr(const YAML::Node &config, std::function<void(const 
 
 	std::cout << "Opening rtlsdr: " << rtlsdr_get_device_name(_deviceIndex) << std::endl;
 
-	rtlsdr_open(&_device, _deviceIndex);
+	if (rtlsdr_open(&_device, _deviceIndex)) {
+		throw std::runtime_error("Failed to open device");
+	}
 
 	if (rtlsdr_set_sample_rate(_device, _sampleRate)) {
 		throw std::runtime_error("Failed setting samplerate");
