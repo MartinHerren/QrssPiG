@@ -51,7 +51,7 @@ void QGInputRtlSdr::deviceList() {
 
 void QGInputRtlSdr::_startDevice() {
 	if (rtlsdr_reset_buffer(_device)) throw std::runtime_error("Error reseting device");
-	_t = std::thread(rtlsdr_read_async, _device, this->async, this, 0, 0);
+	_t = std::thread(rtlsdr_read_async, _device, &this->async, this, 0, 0);
 
 	return;
 }
