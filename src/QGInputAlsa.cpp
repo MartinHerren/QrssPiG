@@ -3,7 +3,7 @@
 #include <iostream>
 #include <stdexcept>
 
-QGInputAlsa::QGInputAlsa(const YAML::Node &config, std::function<void(const std::complex<float>*, unsigned int)>cb): QGInputDevice(config, cb), _device(nullptr), _async(nullptr) {
+QGInputAlsa::QGInputAlsa(const YAML::Node &config): QGInputDevice(config), _device(nullptr), _async(nullptr) {
 	_deviceName = "hw:0,0";
 	_channel = Channel::LEFT;
 

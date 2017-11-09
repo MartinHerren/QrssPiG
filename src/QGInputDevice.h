@@ -9,10 +9,12 @@
 
 class QGInputDevice {
 protected:
-	QGInputDevice(const YAML::Node &config, std::function<void(const std::complex<float>*, unsigned int)>cb);
+	QGInputDevice(const YAML::Node &config);
 
 public:
 	virtual ~QGInputDevice() {};
+
+	void setCb(std::function<void(const std::complex<float>*, unsigned int)>cb, unsigned int chunkSize);
 
 	void run();
 	void stop();
@@ -21,11 +23,11 @@ public:
 	unsigned int baseFreq() { return _baseFreq; };
 	int ppm() { return _ppm; };
 
-	static std::unique_ptr<QGInputDevice> CreateInputDevice(const YAML::Node &config, std::function<void(const std::complex<float>*, unsigned int)>cb);
+	static std::unique_ptr<QGInputDevice> CreateInputDevice(const YAML::Node &config);
 
 protected:
 	void _incBuffer(size_t added);
-	
+
 	unsigned int _sampleRate;
 	unsigned int _baseFreq;
 	int _ppm;
@@ -44,4 +46,5 @@ private:
 	virtual void _stopDevice() = 0;
 
 	std::function<void(const std::complex<float>*, unsigned int)> _cb;
+	unsigned int _chunkSize;
 };

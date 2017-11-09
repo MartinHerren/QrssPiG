@@ -4,7 +4,7 @@
 #include <iostream>
 #include <stdexcept>
 
-QGInputHackRF::QGInputHackRF(const YAML::Node &config, std::function<void(const std::complex<float>*, unsigned int)>cb): QGInputDevice(config, cb), _device(nullptr) {
+QGInputHackRF::QGInputHackRF(const YAML::Node &config): QGInputDevice(config), _device(nullptr) {
 	int r = hackrf_init();
 
 	if (r != HACKRF_SUCCESS) {

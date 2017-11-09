@@ -8,7 +8,7 @@
 
 class QGInputHackRF: public QGInputDevice {
 public:
-	QGInputHackRF(const YAML::Node &config, std::function<void(const std::complex<float>*, unsigned int)>cb);
+	QGInputHackRF(const YAML::Node &config);
 	~QGInputHackRF();
 
 	void deviceList();

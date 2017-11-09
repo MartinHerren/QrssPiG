@@ -3,7 +3,7 @@
 #include <iostream>
 #include <stdexcept>
 
-QGInputRtlSdr::QGInputRtlSdr(const YAML::Node &config, std::function<void(const std::complex<float>*, unsigned int)>cb): QGInputDevice(config, cb), _device(nullptr) {
+QGInputRtlSdr::QGInputRtlSdr(const YAML::Node &config): QGInputDevice(config), _device(nullptr) {
 	_deviceIndex = 0;
 
 	if (config["deviceindex"]) _deviceIndex = config["deviceindex"].as<int>();

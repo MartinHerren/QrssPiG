@@ -8,7 +8,7 @@
 
 class QGInputAlsa: public QGInputDevice {
 public:
-	QGInputAlsa(const YAML::Node &config, std::function<void(const std::complex<float>*, unsigned int)>cb);
+	QGInputAlsa(const YAML::Node &config);
 	~QGInputAlsa();
 
 	static void async(snd_async_handler_t *async);

@@ -6,7 +6,7 @@
 
 class QGInputStdIn: public QGInputDevice {
 public:
-	QGInputStdIn(const YAML::Node &config, std::function<void(const std::complex<float>*, unsigned int)>cb);
+	QGInputStdIn(const YAML::Node &config);
 	~QGInputStdIn();
 
 private:
