@@ -43,10 +43,7 @@ private:
 
 	// Processing buffer
 	int _inputIndex;
-	int _inputIndexThreshold;
-	int _resampledIndex;
-	std::complex<float> *_input;
-	std::complex<float> *_resampled;
+	std::unique_ptr<std::complex<float>[]> _input;
 	std::unique_ptr<float[]> _hannW;
 	std::complex<float> *_fftIn;
 	std::complex<float> *_fftOut;

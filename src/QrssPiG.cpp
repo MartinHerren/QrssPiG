@@ -1,5 +1,6 @@
 #include "QrssPiG.h"
 
+#include <cstring>
 #include <stdexcept>
 #include <string>
 
@@ -7,11 +8,7 @@ using std::placeholders::_1;
 using std::placeholders::_2;
 
 QrssPiG::QrssPiG() :
-	_inputDevice(nullptr),
 	_chunkSize(32),
-	_input(nullptr),
-	_resampled(nullptr),
-	_hannW(nullptr),
 	_fftIn(nullptr),
 	_fftOut(nullptr),
 	_fft(nullptr) {
@@ -76,20 +73,11 @@ QrssPiG::QrssPiG(const std::string &configFile) : QrssPiG() {
 		// Patch config with real samplerate from resampler
 		pSampleRate = iSampleRate / _resampler->getRealRate();
 		if (config["processing"]) config["processing"]["samplerate"] = pSampleRate;
-
-		_input = (std::complex<float>*)fftwf_malloc(sizeof(std::complex<float>) * _chunkSize);
-		// Add provision to add a full resampled chunksize (+10% + 4 due to variable resampler output) when only one sample left before reaching N
-		_resampled = (std::complex<float>*)fftwf_malloc(sizeof(std::complex<float>) * (_N + (1.1 * _chunkSize / pSampleRate + 4) - 1));
-		_inputIndexThreshold = _chunkSize; // Trig when input size reaches chunksize to start resampling
-
-	} else {
-		// Add provision to add a full chunksize when only one sample left before reaching N
-		_input = (std::complex<float>*)fftwf_malloc(sizeof(std::complex<float>) * (_N + _chunkSize - 1));
-		_resampled = _input;
-		_inputIndexThreshold = _N; // Trig when input size reaches N to start fft
 	}
+
+	// Add provision to add a full chunksize when only one sample left before reaching N. If resampling, will be smaller in worst case
+	_input.reset(new std::complex<float>[_N + _chunkSize - 1]);
 	_inputIndex = 0;
-	_resampledIndex = 0;
 
 	// Could be inlined, should be part of a processing init
 	_init();
@@ -118,8 +106,6 @@ QrssPiG::~QrssPiG() {
 	_pushImage(true);
 
 	if (_fft) delete _fft;
-	if (_input) fftwf_free(_input);
-	if (_resampled && (_resampled != _input)) fftwf_free(_resampled); // When no resampling is used both pointer point to the same buffer
 }
 
 void QrssPiG::run() {
@@ -150,9 +136,11 @@ void QrssPiG::_init() {
 void QrssPiG::_addIQ(const std::complex<float> *iq, unsigned int len) {
 	switch (len) {
 	case 1:
+std::cout << "Old api" << std::endl;
+/*
 		_input[_inputIndex++] = *iq;
 
-		if (_inputIndex >= _inputIndexThreshold) {
+		if (_input >= _inputIndexThreshold) {
 			if (_resampler) {
 				// Adding 1 sample, we know _inputIndex == _inputIndexThreshold == _chunksSize, and not bigger
 				_resampledIndex += _resampler->processChunk(_input, _resampled + _resampledIndex);
@@ -170,15 +158,23 @@ void QrssPiG::_addIQ(const std::complex<float> *iq, unsigned int len) {
 				_inputIndex = _overlap;
 			}
 		}
+*/
 		break;
 
 	case 32:
-		_resampledIndex += _resampler->processChunk(iq, _resampled + _resampledIndex);
-		if (_resampledIndex >= _N) {
+		if (_resampler) {
+			_inputIndex += _resampler->processChunk(iq, _input.get() + _inputIndex);
+		} else {
+			std::memcpy(_input.get() + _inputIndex, iq, _chunkSize);
+			_inputIndex += _chunkSize;
+		}
+
+		if (_inputIndex >= _N) {
 			_computeFft();
-			// TODO: Usually adds at most 1 sample, so we know _inputIndex == _inputIndexThreshold == _N, and not bigger
-			for (auto i = 0; i < _overlap + _resampledIndex - _N; i++) _resampled[i] = _resampled[_N - _overlap + i];
-			_resampledIndex = _overlap + _resampledIndex - _N;
+
+			// Shift overlap to buffer start
+			for (auto i = 0; i < _overlap + _inputIndex - _N; i++) _input[i] = _input[_N - _overlap + i];
+			_inputIndex = _overlap + _inputIndex - _N;
 		}
 		break;
 
@@ -188,7 +184,7 @@ void QrssPiG::_addIQ(const std::complex<float> *iq, unsigned int len) {
 }
 
 void QrssPiG::_computeFft() {
-	for (int i = 0; i < _N; i++) _fftIn[i] = _resampled[i] * _hannW[i / 2];
+	for (int i = 0; i < _N; i++) _fftIn[i] = _input.get()[i] * _hannW[i / 2];
 	_fft->process();
 
 	switch(_im->addLine(_fftOut)) {
