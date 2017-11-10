@@ -8,7 +8,7 @@
 
 class QGInputRtlSdr: public QGInputDevice {
 public:
-	QGInputRtlSdr(const YAML::Node &config, std::function<void(const std::complex<float>*, unsigned int)>cb);
+	QGInputRtlSdr(const YAML::Node &config);
 	~QGInputRtlSdr();
 
 	void deviceList();

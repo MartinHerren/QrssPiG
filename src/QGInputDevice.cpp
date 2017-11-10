@@ -21,7 +21,7 @@
 #include "QGInputRtlSdr.h"
 #endif // HAVE_LIBRTLSDR
 
-QGInputDevice::QGInputDevice(const YAML::Node &config, std::function<void(const std::complex<float>*, unsigned int)>cb) {
+QGInputDevice::QGInputDevice(const YAML::Node &config) {
     _sampleRate = 48000;
     _baseFreq = 0;
     _ppm = 0;
@@ -29,33 +29,33 @@ QGInputDevice::QGInputDevice(const YAML::Node &config, std::function<void(const 
     if (config["samplerate"]) _sampleRate = config["samplerate"].as<unsigned int>();
     if (config["basefreq"]) _baseFreq = config["basefreq"].as<unsigned int>();
     if (config["ppm"]) _ppm = config["ppm"].as<int>();
+}
 
+void QGInputDevice::setCb(std::function<void(const std::complex<float>*, unsigned int)>cb, unsigned int chunkSize) {
     _cb = cb;
+    _chunkSize = chunkSize;
 
-// TODO calculate buffer size frm _sampleRate and configurable size. Multiple of chuncksize
-	_bufferCapacity = 10 * 32 * 262144; // ~10 seconds of buffer @ 8MS/s
-	_buffer.resize(_bufferCapacity);
-	_bufferSize = 0;
-	_bufferHead = 0;
-	_bufferTail = 0;
+    // TODO calculate buffer size frm _sampleRate and configurable size. Multiple of chuncksize
+    _bufferCapacity = 10 * 32 * 262144; // ~10 seconds of buffer @ 8MS/s
+    _buffer.resize(_bufferCapacity);
+    _bufferSize = 0;
+    _bufferHead = 0;
+    _bufferTail = 0;
 }
 
 void QGInputDevice::run() {
 	if (_running.try_lock()) {
         _startDevice();
 
-//TODO get correct chunksize
         while (!_running.try_lock()) { // loop until lock as been freed by stop()
-            if (_bufferSize > 8192*10) {
-                for (int j = 0; j < 8192*10; j += 32) {
-                    _cb(&_buffer[_bufferTail], 32);
-                    _bufferTail += 32;
-                    _bufferTail %= _bufferCapacity;
-                }
+            if (_bufferSize > _chunkSize) {
+                _cb(&_buffer[_bufferTail], _chunkSize);
+                _bufferTail += _chunkSize;
+                _bufferTail %= _bufferCapacity;
 
                 // Update size
                 _bufferMutex.lock();
-                _bufferSize -= 8192*10;
+                _bufferSize -= _chunkSize;
                 _bufferMutex.unlock();
             } else {
                 std::this_thread::sleep_for(std::chrono::microseconds(100));
@@ -80,28 +80,28 @@ void QGInputDevice::_incBuffer(size_t added) {
     _bufferMutex.unlock();
 }
 
-std::unique_ptr<QGInputDevice> QGInputDevice::CreateInputDevice(const YAML::Node &config, std::function<void(const std::complex<float>*, unsigned int)>cb) {
+std::unique_ptr<QGInputDevice> QGInputDevice::CreateInputDevice(const YAML::Node &config) {
     if (!config["type"] || (config["type"].as<std::string>().compare("stdin") == 0)) {
         std::cout << "Input type stdin" << std::endl;
-        return std::unique_ptr<QGInputDevice>(new QGInputStdIn(config, cb));
+        return std::unique_ptr<QGInputDevice>(new QGInputStdIn(config));
     } else if (config["type"].as<std::string>().compare("alsa") == 0) {
 #ifdef HAVE_LIBALSA
         std::cout << "Input type alsa" << std::endl;
-        return std::unique_ptr<QGInputDevice>(new QGInputAlsa(config, cb));
+        return std::unique_ptr<QGInputDevice>(new QGInputAlsa(config));
 #else
         throw std::runtime_error(std::string("QGInputDevice: alsa support not builtin into this build"));
 #endif //HAVE_LIBALSA
     } else if (config["type"].as<std::string>().compare("hackrf") == 0) {
 #ifdef HAVE_LIBHACKRF
         std::cout << "Input type hackrf" << std::endl;
-        return std::unique_ptr<QGInputDevice>(new QGInputHackRF(config, cb));
+        return std::unique_ptr<QGInputDevice>(new QGInputHackRF(config));
 #else
         throw std::runtime_error(std::string("QGInputDevice: hackrf support not builtin into this build"));
 #endif //HAVE_LIBHACKRF
     } else if (config["type"].as<std::string>().compare("rtlsdr") == 0) {
 #ifdef HAVE_LIBRTLSDR
         std::cout << "Input type rtlsdr" << std::endl;
-        return std::unique_ptr<QGInputDevice>(new QGInputRtlSdr(config, cb));
+        return std::unique_ptr<QGInputDevice>(new QGInputRtlSdr(config));
 #else
         throw std::runtime_error(std::string("QGInputDevice: rtlsdr support not uiltin into this build"));
 #endif //HAVE_LIBRTLSDR

@@ -3,7 +3,7 @@
 #include <iostream>
 #include <stdexcept>
 
-QGInputStdIn::QGInputStdIn(const YAML::Node &config, std::function<void(const std::complex<float>*, unsigned int)>cb): QGInputDevice(config, cb) {
+QGInputStdIn::QGInputStdIn(const YAML::Node &config): QGInputDevice(config) {
 	_format = Format::U8IQ;
 
 	if (config["format"]) {
