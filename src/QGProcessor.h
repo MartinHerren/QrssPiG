@@ -12,10 +12,10 @@
 #endif // HAVE_LIBRTFILTER
 #endif // HAVE_LIBLIQUIDSDR
 
-class QGDownSampler {
+class QGProcessor {
 public:
-	QGDownSampler(float rate, unsigned int cs);
-	~QGDownSampler();
+	QGProcessor(float rate, unsigned int cs);
+	~QGProcessor();
 
 	float getRealRate();
 	unsigned int processChunk(const std::complex<float> *in, std::complex<float> *out);

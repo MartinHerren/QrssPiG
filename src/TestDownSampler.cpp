@@ -3,7 +3,7 @@
 #include <chrono>
 #include <iostream>
 
-#include "QGDownSampler.h"
+#include "QGProcessor.h"
 
 using namespace std::chrono;
 
@@ -25,7 +25,7 @@ int main(int argc, char *argv[]) {
 
 	std::cout << inA << " " << outA << "->" << in << " " << out << std::endl;
 
-	QGDownSampler *d = new QGDownSampler(rate, 32);
+	QGProcessor *d = new QGProcessor(rate, 32);
 	std::cout << rate << "->" << d->getRealRate() << " " << inSize << "->" << (inSize/d->getRealRate()) << std::endl;
 
 	milliseconds start = duration_cast<milliseconds>(system_clock::now().time_since_epoch());

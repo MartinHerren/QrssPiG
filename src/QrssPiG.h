@@ -7,7 +7,7 @@
 
 #include <yaml-cpp/yaml.h>
 
-#include "QGDownSampler.h"
+#include "QGProcessor.h"
 #include "QGFft.h"
 #include "QGImage.h"
 #include "QGInputDevice.h"
@@ -48,7 +48,7 @@ private:
 	std::complex<float> *_fftIn;
 	std::complex<float> *_fftOut;
 
-	std::unique_ptr<QGDownSampler> _resampler;
+	std::unique_ptr<QGProcessor> _resampler;
 	QGFft *_fft;
 
 	// Image

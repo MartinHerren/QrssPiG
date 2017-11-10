@@ -41,7 +41,7 @@ if (LIBCURL_FOUND)
 	include_directories(${LIBCURL_INCLUDE_DIR})
 endif (LIBCURL_FOUND)
 
-list(APPEND QRSSPIG_SOURCES main.cpp QrssPiG.cpp QGInputDevice.cpp QGInputStdIn.cpp QGDownSampler.cpp QGFft.cpp QGImage.cpp QGUploader.cpp QGUploaderLocal.cpp)
+list(APPEND QRSSPIG_SOURCES main.cpp QrssPiG.cpp QGInputDevice.cpp QGInputStdIn.cpp QGProcessor.cpp QGFft.cpp QGImage.cpp QGUploader.cpp QGUploaderLocal.cpp)
 
 if (LIBALSA_FOUND)
 	list(APPEND QRSSPIG_SOURCES QGInputAlsa.cpp)
@@ -109,7 +109,7 @@ endif (LIBCURL_FOUND)
 add_executable (IQGen IQGen.cpp)
 target_link_libraries(IQGen boost_program_options)
 
-add_executable (TestDownSampler TestDownSampler.cpp QGDownSampler.cpp)
+add_executable (TestDownSampler TestDownSampler.cpp QGProcessor.cpp)
 if (LIBLIQUIDSDR_FOUND)
 	target_link_libraries(TestDownSampler ${LIBLIQUIDSDR_LIBRARY})
 	set(HAVE_LIBLIQUIDSDR 1)

@@ -68,7 +68,7 @@ QrssPiG::QrssPiG(const std::string &configFile) : QrssPiG() {
 	}
 
 	if (pSampleRate && (iSampleRate != pSampleRate)) {
-		_resampler.reset(new QGDownSampler((float)iSampleRate/(float)pSampleRate, _chunkSize));
+		_resampler.reset(new QGProcessor((float)iSampleRate/(float)pSampleRate, _chunkSize));
 
 		// Patch config with real samplerate from resampler
 		pSampleRate = iSampleRate / _resampler->getRealRate();

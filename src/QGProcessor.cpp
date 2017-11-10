@@ -1,4 +1,4 @@
-#include "QGDownSampler.h"
+#include "QGProcessor.h"
 
 #include <iostream>
 #include <math.h>
@@ -11,7 +11,7 @@
 #endif // HAVE_LIBRTFILTER
 #endif // HAVE_LIBLIQUIDSDR
 
-QGDownSampler::QGDownSampler(float rate, unsigned int cs): _cs(cs) {
+QGProcessor::QGProcessor(float rate, unsigned int cs): _cs(cs) {
 #ifdef HAVE_LIBLIQUIDSDR
 	_rate = rate;
 	_liquidSdrResampler = resamp_crcf_create(1./_rate, 6000, .49/_rate, 60., 32);
@@ -27,7 +27,7 @@ QGDownSampler::QGDownSampler(float rate, unsigned int cs): _cs(cs) {
 #endif // HAVE_LIBLIQUIDSDR
 }
 
-QGDownSampler::~QGDownSampler() {
+QGProcessor::~QGProcessor() {
 #ifdef HAVE_LIBLIQUIDSDR
 	resamp_crcf_destroy(_liquidSdrResampler);
 #else
@@ -37,11 +37,11 @@ QGDownSampler::~QGDownSampler() {
 #endif // HAVE_LIBLIQUIDSDR
 }
 
-float QGDownSampler::getRealRate() {
+float QGProcessor::getRealRate() {
 	return _rate;
 }
 
-unsigned int QGDownSampler::processChunk(const std::complex<float> *in, std::complex<float> *out) {
+unsigned int QGProcessor::processChunk(const std::complex<float> *in, std::complex<float> *out) {
 	unsigned int outSize = 0;
 
 #ifdef HAVE_LIBLIQUIDSDR
@@ -60,7 +60,7 @@ unsigned int QGDownSampler::processChunk(const std::complex<float> *in, std::com
 	return outSize;
 }
 
-unsigned int QGDownSampler::process(const std::complex<float> *in, unsigned int inSize, std::complex<float> *out) {
+unsigned int QGProcessor::process(const std::complex<float> *in, unsigned int inSize, std::complex<float> *out) {
 	unsigned int remSize = inSize;
 	unsigned int outSize = 0;
 
