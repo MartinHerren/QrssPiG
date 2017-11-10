@@ -24,6 +24,8 @@ QGInputStdIn::QGInputStdIn(const YAML::Node &config): QGInputDevice(config) {
 }
 
 QGInputStdIn::~QGInputStdIn() {
+	// If stopping because cin ran out, stop() hasn't been called and exited thread must still be joined
+	if (_t.joinable()) _t.join();
 }
 
 void QGInputStdIn::_startDevice() {
@@ -157,5 +159,7 @@ void QGInputStdIn::_process() {
 		}
 	}
 
-	_running.unlock(); // Free mutex acquired on while break condition
+	// Free mutex acquired on while break condition
+	// If while break was due to cin running out, this signals to stop to QGInputDevice
+	_running.unlock();
 }
