@@ -1,10 +1,9 @@
 #pragma once
 
 #include <chrono>
-#include <complex> // Must be included before fftw3
+#include <complex>
 #include <iostream>
 
-#include <fftw3.h>
 #include <gd.h>
 #include <yaml-cpp/yaml.h>
 
@@ -13,10 +12,8 @@ public:
 	enum class Orientation { Horizontal, Vertical };
 	enum class Status { Ok, IntermediateReady, FrameReady };
 
-	QGImage(int fftSize, int fftOverlap);
+	QGImage(const YAML::Node &config, unsigned int index);
 	~QGImage();
-
-	void configure(const YAML::Node &config, unsigned int index = 0);
 
 	void startNewFrame(bool incrementTime = true);
 	Status addLine(const std::complex<float> *fft);
