@@ -109,16 +109,6 @@ endif (LIBCURL_FOUND)
 add_executable (IQGen IQGen.cpp)
 target_link_libraries(IQGen boost_program_options)
 
-add_executable (TestDownSampler TestDownSampler.cpp QGProcessor.cpp)
-if (LIBLIQUIDSDR_FOUND)
-	target_link_libraries(TestDownSampler ${LIBLIQUIDSDR_LIBRARY})
-	set(HAVE_LIBLIQUIDSDR 1)
-endif (LIBLIQUIDSDR_FOUND)
-if (LIBRTFILTER_FOUND)
-	target_link_libraries(TestDownSampler ${LIBRTFILTER_LIBRARY})
-	set(HAVE_LIBRTFILTER 1)
-endif (LIBRTFILTER_FOUND)
-
 # Generate and include Config.h
 configure_file ("Config.h.in" "${PROJECT_BINARY_DIR}/Config.h")
 include_directories("${PROJECT_BINARY_DIR}")
