@@ -14,7 +14,7 @@ protected:
 public:
 	virtual ~QGInputDevice() {};
 
-	void setCb(std::function<void(const std::complex<float>*, unsigned int)>cb, unsigned int chunkSize);
+	void setCb(std::function<void(const std::complex<float>*)>cb, unsigned int chunkSize);
 
 	void run();
 	void stop();
@@ -45,6 +45,6 @@ private:
 	virtual void _startDevice() = 0;
 	virtual void _stopDevice() = 0;
 
-	std::function<void(const std::complex<float>*, unsigned int)> _cb;
+	std::function<void(const std::complex<float>*)> _cb;
 	unsigned int _chunkSize;
 };

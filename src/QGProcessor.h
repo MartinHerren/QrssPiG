@@ -2,7 +2,11 @@
 
 #include "Config.h"
 
-#include <complex>
+#include <complex> // Must be included before fftw3
+#include <functional>
+
+#include <fftw3.h>
+#include <yaml-cpp/yaml.h>
 
 #ifdef HAVE_LIBLIQUIDSDR
 #include <liquid/liquid.h>
@@ -14,18 +18,31 @@
 
 class QGProcessor {
 public:
-	QGProcessor(float rate, unsigned int cs);
+	QGProcessor(const YAML::Node &config);
 	~QGProcessor();
 
-	float getRealRate();
-	unsigned int processChunk(const std::complex<float> *in, std::complex<float> *out);
-	unsigned int process(const std::complex<float> *in, unsigned int inSize, std::complex<float> *out);
+	void setCb(std::function<void(const std::complex<float>*)>cb);
+
+	void addIQ(const std::complex<float> *iq);
+
+	unsigned int sampleRate() { return _sampleRate; };
+	unsigned int chunkSize() { return _chunkSize; };
 
 private:
-	float _rate;
-	unsigned int _cs;
+	unsigned int _resample(const std::complex<float> *in, std::complex<float> *out);
+	void _fft();
 
-	// internal
+	unsigned int _sampleRate;
+	unsigned int _chunkSize;
+	int _N;
+	int _overlap; // 0: no overlap, 1: 1/2, 2: 2/3...
+	float _rate;
+
+	// Input buffer
+	int _inputIndex;
+	std::unique_ptr<std::complex<float>[]> _input;
+
+	// Resampler
 #ifdef HAVE_LIBLIQUIDSDR
 	resamp_crcf _liquidSdrResampler;
 #else
@@ -36,4 +53,14 @@ private:
 	unsigned int _counterLimit;
 #endif // HAVE_LIBRTFILTER
 #endif // HAVE_LIBLIQUIDSDR
+
+	// Window function
+	std::unique_ptr<float[]> _hannW;
+
+	// FFT
+	fftwf_plan _plan;
+	std::complex<float> *_fftIn;
+	std::complex<float> *_fftOut;
+
+	std::function<void(const std::complex<float>*)> _cb;
 };

@@ -41,7 +41,7 @@ if (LIBCURL_FOUND)
 	include_directories(${LIBCURL_INCLUDE_DIR})
 endif (LIBCURL_FOUND)
 
-list(APPEND QRSSPIG_SOURCES main.cpp QrssPiG.cpp QGInputDevice.cpp QGInputStdIn.cpp QGProcessor.cpp QGFft.cpp QGImage.cpp QGUploader.cpp QGUploaderLocal.cpp)
+list(APPEND QRSSPIG_SOURCES main.cpp QrssPiG.cpp QGInputDevice.cpp QGInputStdIn.cpp QGProcessor.cpp QGImage.cpp QGUploader.cpp QGUploaderLocal.cpp)
 
 if (LIBALSA_FOUND)
 	list(APPEND QRSSPIG_SOURCES QGInputAlsa.cpp)

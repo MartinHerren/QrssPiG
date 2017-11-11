@@ -1,22 +1,16 @@
 #pragma once
 
-#include <complex>
-#include <iostream>
 #include <string>
 #include <vector>
 
 #include <yaml-cpp/yaml.h>
 
-#include "QGProcessor.h"
-#include "QGFft.h"
-#include "QGImage.h"
 #include "QGInputDevice.h"
+#include "QGProcessor.h"
+#include "QGImage.h"
 #include "QGUploader.h"
 
 class QrssPiG {
-private:
-	QrssPiG();
-
 public:
 	QrssPiG(const std::string &format, int sampleRate, int N, const std::string &dir, const std::string &sshHost, const std::string &sshUser, int sshPort);
 	QrssPiG(const std::string &configFile);
@@ -26,34 +20,8 @@ public:
 	void stop();
 
 private:
-	void _init();
-
-	void _addIQ(const std::complex<float> *iq, unsigned int len);
-	void _computeFft();
-
-	// Input device
-	std::unique_ptr<QGInputDevice> _inputDevice;
-
-	// Processing
-	int _chunkSize;
-	int _N;
-	int _overlap; // 0: no overlap, 1: 1/2, 2: 2/3...
-
-	// Processing buffer
-	int _inputIndex;
-	std::unique_ptr<std::complex<float>[]> _input;
-	std::unique_ptr<float[]> _hannW;
-	std::complex<float> *_fftIn;
-	std::complex<float> *_fftOut;
-
-	std::unique_ptr<QGProcessor> _resampler;
-	QGFft *_fft;
-
-	// Image
-	std::unique_ptr<QGImage> _im;
-
-	// Uploaders
+	std::shared_ptr<QGInputDevice> _inputDevice;
+	std::shared_ptr<QGProcessor> _processor;
+	std::shared_ptr<QGImage> _image;
 	std::vector<std::shared_ptr<QGUploader>> _uploaders;
-
-	int _frameIndex;
 };

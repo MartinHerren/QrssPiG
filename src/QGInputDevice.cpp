@@ -31,7 +31,7 @@ QGInputDevice::QGInputDevice(const YAML::Node &config) {
     if (config["ppm"]) _ppm = config["ppm"].as<int>();
 }
 
-void QGInputDevice::setCb(std::function<void(const std::complex<float>*, unsigned int)>cb, unsigned int chunkSize) {
+void QGInputDevice::setCb(std::function<void(const std::complex<float>*)>cb, unsigned int chunkSize) {
     _cb = cb;
     _chunkSize = chunkSize;
 
@@ -49,7 +49,7 @@ void QGInputDevice::run() {
 
         while (!_running.try_lock()) { // loop until lock as been freed by stop()
             if (_bufferSize > _chunkSize) {
-                _cb(&_buffer[_bufferTail], _chunkSize);
+                _cb(&_buffer[_bufferTail]);
                 _bufferTail += _chunkSize;
                 _bufferTail %= _bufferCapacity;
 
