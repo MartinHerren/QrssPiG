@@ -30,8 +30,6 @@ private:
 
 	void _addIQ(const std::complex<float> *iq, unsigned int len);
 	void _computeFft();
-	void _pushIntermediateImage();
-	void _pushImage(bool wait = false);
 
 	// Input device
 	std::unique_ptr<QGInputDevice> _inputDevice;
@@ -55,7 +53,7 @@ private:
 	std::unique_ptr<QGImage> _im;
 
 	// Uploaders
-	std::vector<std::unique_ptr<QGUploader>> _uploaders;
+	std::vector<std::shared_ptr<QGUploader>> _uploaders;
 
 	int _frameIndex;
 };

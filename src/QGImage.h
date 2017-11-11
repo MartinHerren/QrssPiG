@@ -3,6 +3,7 @@
 #include <chrono>
 #include <complex>
 #include <iostream>
+#include <vector>
 
 #include <gd.h>
 #include <yaml-cpp/yaml.h>
@@ -10,17 +11,17 @@
 class QGImage {
 public:
 	enum class Orientation { Horizontal, Vertical };
-	enum class Status { Ok, IntermediateReady, FrameReady };
 
 	QGImage(const YAML::Node &config, unsigned int index);
 	~QGImage();
 
-	void startNewFrame(bool incrementTime = true);
-	Status addLine(const std::complex<float> *fft);
-	char *getFrame(int &frameSize, std::string &frameName);
+	void addCb(std::function<void(const std::string&, const char*, int, bool, bool)>cb);
+
+	void addLine(const std::complex<float> *fft);
 
 private:
 	void _init();
+	void _new(bool incrementTime = true);
 	void _free();
 
 	void _computeTitleHeight();
@@ -34,6 +35,8 @@ private:
 	void _drawTimeScale();
 
 	int _db2Color(float v);
+
+	void _pushFrame(bool intermediate = false, bool wait = false);
 
 	// Params given at constructor time, cannot be changed
 	int N;
@@ -114,4 +117,6 @@ private:
 	int _dBLabelHeight;
 	int _timeLabelWidth;
 	int _timeLabelHeight;
+
+	std::vector<std::function<void(const std::string&, const char*, int, bool, bool)>> _cbs;
 };

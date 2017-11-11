@@ -6,6 +6,9 @@
 
 using std::placeholders::_1;
 using std::placeholders::_2;
+using std::placeholders::_3;
+using std::placeholders::_4;
+using std::placeholders::_5;
 
 QrssPiG::QrssPiG() :
 	_chunkSize(32),
@@ -99,14 +102,13 @@ QrssPiG::~QrssPiG() {
 		_im->addLine(_fftOut);
 	} catch (const std::exception &e) {};
 
-	// Push and wait on dtor
-	_pushImage(true);
-
 	if (_fft) delete _fft;
 }
 
 void QrssPiG::run() {
 	_inputDevice->setCb(std::bind(&QrssPiG::_addIQ, this, _1, _2), _chunkSize);
+	for (auto&& uploader: _uploaders) _im->addCb(std::bind(&QGUploader::push, uploader, _1, _2, _3, _4, _5));
+	
 	_inputDevice->run();
 }
 
@@ -183,50 +185,5 @@ std::cout << "Old api" << std::endl;
 void QrssPiG::_computeFft() {
 	for (int i = 0; i < _N; i++) _fftIn[i] = _input.get()[i] * _hannW[i / 2];
 	_fft->process();
-
-	switch(_im->addLine(_fftOut)) {
-	case QGImage::Status::IntermediateReady:
-		_pushIntermediateImage();
-		break;
-
-	case QGImage::Status::FrameReady:
-		_pushImage();
-		break;
-
-	default:
-		break;
-	}
-}
-
-void QrssPiG::_pushIntermediateImage() {
-	try {
-		int frameSize;
-		std::string frameName;
-		char * frame;
-
-		frame = _im->getFrame(frameSize, frameName);
-
-std::cout << "pushing intermediate" << frameName << std::endl;
-		for (auto& up: _uploaders) up->push(frameName, frame, frameSize, true);
-	} catch (const std::exception &e) {
-	}
-}
-
-void QrssPiG::_pushImage(bool wait) {
-	try {
-		int frameSize;
-		std::string frameName;
-		char * frame;
-
-		frame = _im->getFrame(frameSize, frameName);
-
-std::cout << "pushing " << frameName << std::endl;
-		for (auto& up: _uploaders) up->push(frameName, frame, frameSize, wait);
-
-		_im->startNewFrame();
-	} catch (const std::exception &e) {
-		std::cerr << "Error pushing file: " << e.what() << std::endl;
-	}
-
-	_frameIndex++;
+	_im->addLine(_fftOut);
 }

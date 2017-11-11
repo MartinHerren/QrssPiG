@@ -167,81 +167,23 @@ QGImage::QGImage(const YAML::Node &config, unsigned int index) {
 	_drawDbScale(); // draw first as still overlaps with freq scales
 	_drawFreqScale();
 
-	startNewFrame(false);
+	_new(false);
 }
 
 QGImage::~QGImage() {
+	_pushFrame(false, true);
 	_free();
 }
 
-void QGImage::startNewFrame(bool incrementTime) {
-	int black = gdTrueColor(0, 0, 0);
-
-	switch (_orientation) {
-	case Orientation::Horizontal:
-		gdImageFilledRectangle(_im,
-			_borderSize + _freqLabelWidth + _markerSize,
-			_borderSize + _titleHeight + _markerSize,
-			_borderSize + _freqLabelWidth + _markerSize + _size - 1,
-			_borderSize + _titleHeight + _markerSize + _fDelta - 1,
-			black);
-		gdImageFilledRectangle(_im,
-			_borderSize + _freqLabelWidth + _markerSize + _size + _markerSize + _freqLabelWidth,
-			_borderSize + _titleHeight + _markerSize,
-			_borderSize + _freqLabelWidth + _markerSize + _size + _markerSize + _freqLabelWidth + _scopeSize - 1,
-			_borderSize + _titleHeight + _markerSize + _fDelta - 1,
-			black);
-		break;
-
-	case Orientation::Vertical:
-		gdImageFilledRectangle(_im,
-			_borderSize + _timeLabelWidth + _markerSize,
-			_borderSize + _titleHeight + _freqLabelHeight + _markerSize,
-			_borderSize + _timeLabelWidth + _markerSize + _fDelta - 1,
-			_borderSize + _titleHeight + _freqLabelHeight + _markerSize + _size - 1,
-			black);
-		gdImageFilledRectangle(_im,
-			_borderSize + _timeLabelWidth + _markerSize,
-			_borderSize + _titleHeight + _freqLabelHeight + _markerSize + _size + _markerSize + _freqLabelHeight,
-			_borderSize + _timeLabelWidth + _markerSize + _fDelta - 1,
-			_borderSize + _titleHeight + _freqLabelHeight + _markerSize + _size + _markerSize + _freqLabelHeight + _scopeSize - 1,
-			black);
-		break;
-	}
-
-	using namespace std::chrono;
-
-	bool backSync = false; // Syncing can bring the current line into the past regarding new current frame, better said the new frame was created to early
-	if (incrementTime) _started += seconds(_secondsPerFrame);
-
-	if (_syncFrames) {
-		milliseconds s = _started;
-		_started = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
-		backSync = (_started < s) ? true : false;
-	}
-
-	if (_runningSince == milliseconds(0)) _runningSince = _started;
-
-	if (_alignFrame) {
-		_startedIntoFrame = _started % seconds(_secondsPerFrame); // Time into frame to align frames on correct boundary
-		if (backSync) _startedIntoFrame -= seconds(_secondsPerFrame); // Negative value
-		_started -= _startedIntoFrame;
-		_currentLine = (_startedIntoFrame.count() * _timeK) / 1000;
-	} else {
-		_startedIntoFrame = milliseconds(0);
-		_currentLine = 0;
-	}
-
-	_renderTitle();
-	_drawTimeScale();
+void QGImage::addCb(std::function<void(const std::string&, const char*, int, bool, bool)>cb) {
+	_cbs.push_back(cb);
 }
 
-QGImage::Status QGImage::addLine(const std::complex<float> *fft) {
+void QGImage::addLine(const std::complex<float> *fft) {
 	if (_currentLine < 0) {
 		_currentLine++;
-		return Status::Ok;
+		return;
 	}
-	if (_currentLine >= _size) return Status::FrameReady;
 
 	int whiteA = gdTrueColorAlpha(255, 255, 255, 125);
 
@@ -289,26 +231,7 @@ QGImage::Status QGImage::addLine(const std::complex<float> *fft) {
 
 	_currentLine++;
 
-	if (_currentLine >= _size) return Status::FrameReady;
-
-	return Status::Ok;
-}
-
-char *QGImage::getFrame(int &frameSize, std::string &frameName) {
-	if (_imBuffer) gdFree(_imBuffer);
-
-	// _imBuffer is usually constant, but frameSize changes
-	// _imBuffer might change in case of realloc, so don't cache its value
-	_imBuffer = (char *)gdImagePngPtr(_im, &frameSize);
-
-	time_t t = std::chrono::duration_cast<std::chrono::seconds>(_started).count();
-	std::tm *tm = {};
-	tm = std::gmtime(&t);
-	char s[21];
-	std::strftime(s, sizeof(s), "%FT%TZ", tm);
-	frameName = std::string(s) + "_" + std::to_string(_baseFreq) + "Hz.png";
-
-	return _imBuffer;
+	if (_currentLine >= _size) _pushFrame();
 }
 
 // Private members
@@ -377,6 +300,68 @@ void QGImage::_init() {
 	for (int i = 0; i <= 255; i+= 4) _c[ii++] = gdImageColorAllocate(_im, 255, 255 - i, 0);
 
 	_currentLine = 0;
+}
+
+void QGImage::_new(bool incrementTime) {
+	int black = gdTrueColor(0, 0, 0);
+
+	switch (_orientation) {
+	case Orientation::Horizontal:
+		gdImageFilledRectangle(_im,
+			_borderSize + _freqLabelWidth + _markerSize,
+			_borderSize + _titleHeight + _markerSize,
+			_borderSize + _freqLabelWidth + _markerSize + _size - 1,
+			_borderSize + _titleHeight + _markerSize + _fDelta - 1,
+			black);
+		gdImageFilledRectangle(_im,
+			_borderSize + _freqLabelWidth + _markerSize + _size + _markerSize + _freqLabelWidth,
+			_borderSize + _titleHeight + _markerSize,
+			_borderSize + _freqLabelWidth + _markerSize + _size + _markerSize + _freqLabelWidth + _scopeSize - 1,
+			_borderSize + _titleHeight + _markerSize + _fDelta - 1,
+			black);
+		break;
+
+	case Orientation::Vertical:
+		gdImageFilledRectangle(_im,
+			_borderSize + _timeLabelWidth + _markerSize,
+			_borderSize + _titleHeight + _freqLabelHeight + _markerSize,
+			_borderSize + _timeLabelWidth + _markerSize + _fDelta - 1,
+			_borderSize + _titleHeight + _freqLabelHeight + _markerSize + _size - 1,
+			black);
+		gdImageFilledRectangle(_im,
+			_borderSize + _timeLabelWidth + _markerSize,
+			_borderSize + _titleHeight + _freqLabelHeight + _markerSize + _size + _markerSize + _freqLabelHeight,
+			_borderSize + _timeLabelWidth + _markerSize + _fDelta - 1,
+			_borderSize + _titleHeight + _freqLabelHeight + _markerSize + _size + _markerSize + _freqLabelHeight + _scopeSize - 1,
+			black);
+		break;
+	}
+
+	using namespace std::chrono;
+
+	bool backSync = false; // Syncing can bring the current line into the past regarding new current frame, better said the new frame was created to early
+	if (incrementTime) _started += seconds(_secondsPerFrame);
+
+	if (_syncFrames) {
+		milliseconds s = _started;
+		_started = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
+		backSync = (_started < s) ? true : false;
+	}
+
+	if (_runningSince == milliseconds(0)) _runningSince = _started;
+
+	if (_alignFrame) {
+		_startedIntoFrame = _started % seconds(_secondsPerFrame); // Time into frame to align frames on correct boundary
+		if (backSync) _startedIntoFrame -= seconds(_secondsPerFrame); // Negative value
+		_started -= _startedIntoFrame;
+		_currentLine = (_startedIntoFrame.count() * _timeK) / 1000;
+	} else {
+		_startedIntoFrame = milliseconds(0);
+		_currentLine = 0;
+	}
+
+	_renderTitle();
+	_drawTimeScale();
 }
 
 void QGImage::_free() {
@@ -971,4 +956,26 @@ int QGImage::_db2Color(float v) {
 	if (v > _dBmax) v = _dBmax;
 
 	return _c[(int)trunc((_cd - 1) * (v - _dBmin) / _dBdelta)];
+}
+
+void QGImage::_pushFrame(bool intermediate, bool wait) {
+	int frameSize;
+	std::string frameName;
+
+	if (_imBuffer) gdFree(_imBuffer);
+
+	// _imBuffer is usually constant, but frameSize changes
+	// _imBuffer might change in case of realloc, so don't cache its value
+	_imBuffer = (char *)gdImagePngPtr(_im, &frameSize);
+
+	time_t t = std::chrono::duration_cast<std::chrono::seconds>(_started).count();
+	std::tm *tm = {};
+	tm = std::gmtime(&t);
+	char s[21];
+	std::strftime(s, sizeof(s), "%FT%TZ", tm);
+	frameName = std::string(s) + "_" + std::to_string(_baseFreq) + "Hz.png";
+
+	for (auto& cb: _cbs) cb(frameName, _imBuffer, frameSize, intermediate, wait);
+
+	if (!intermediate) _new();
 }
