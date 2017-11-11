@@ -6,40 +6,34 @@
 #include <string>
 #include <math.h>
 
-QGImage::QGImage(int fftSize, int fftOverlap): N(fftSize), _overlap(fftOverlap) {
+QGImage::QGImage(const YAML::Node &config, unsigned int index) {
 	_im = nullptr;
 	_imBuffer = nullptr;
 	_cd = 0;
 	_started = std::chrono::milliseconds(0);
 	_runningSince = std::chrono::milliseconds(0);
 	_currentLine = 0;
-}
 
-QGImage::~QGImage() {
-	_free();
-}
-
-void QGImage::configure(const YAML::Node &config, unsigned int index) {
-	_free();
-
-	_inputType = "";
-	_inputSampleRate = 0;
-	_baseFreq = 7038300;
-	_baseFreqCorrected = 7038300;
-
+	// Input and Processing already parsed, so missing fields should have been already patched with default value
 	if (config["input"]) {
 		YAML::Node input = config["input"];
+
 		if (input["type"]) _inputType = input["type"].as<std::string>();
 		if (input["samplerate"]) _inputSampleRate = input["samplerate"].as<long int>();
 		if (input["basefreq"]) _baseFreqCorrected =_baseFreq = input["basefreq"].as<int>();
 		if (input["ppm"]) _baseFreqCorrected = _baseFreq + (_baseFreq * input["ppm"].as<int>()) / 1000000;
 	}
 
-	_sampleRate = 6000;
-
 	if (config["processing"]) {
 		YAML::Node processing = config["processing"];
+
 		if (processing["samplerate"]) _sampleRate = processing["samplerate"].as<int>();
+		if (processing["fft"]) N = processing["fft"].as<int>();
+		if (processing["fftoverlap"]) {
+			int o = processing["fftoverlap"].as<int>();
+			if ((o < 0) || (o >= N)) throw std::runtime_error("YAML: overlap value out of range [0..N[");
+			_overlap = (o * N) / (o + 1);
+		}
 	}
 
 	// Freq/time constants used for mapping freq/time to pixel
@@ -174,6 +168,10 @@ void QGImage::configure(const YAML::Node &config, unsigned int index) {
 	_drawFreqScale();
 
 	startNewFrame(false);
+}
+
+QGImage::~QGImage() {
+	_free();
 }
 
 void QGImage::startNewFrame(bool incrementTime) {

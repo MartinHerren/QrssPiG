@@ -28,8 +28,6 @@ QrssPiG::QrssPiG(const std::string &format, int sampleRate, int N, const std::st
 	}
 
 	_init();
-
-	_im->configure(YAML::Load("")); // Start with default config
 }
 
 QrssPiG::QrssPiG(const std::string &configFile) : QrssPiG() {
@@ -82,10 +80,9 @@ QrssPiG::QrssPiG(const std::string &configFile) : QrssPiG() {
 	// Could be inlined, should be part of a processing init
 	_init();
 
-	_im.reset(new QGImage(_N, _overlap));
 	if (config["output"]) {
-		if (config["output"].Type() == YAML::NodeType::Map) _im->configure(config, 0);
-		// else if (config["output"].Type() == YAML::NodeType::Sequence) for (unsigned int i = 0; i < config["output"].size(); i++) _im->configure(config, i);
+		if (config["output"].Type() == YAML::NodeType::Map) _im.reset(new QGImage(config, 0));
+		// else if (config["output"].Type() == YAML::NodeType::Sequence) for (unsigned int i = 0; i < config["output"].size(); i++) _im.reset(new QGImage((config, i));
 		else throw std::runtime_error("YAML: output must be a map or a sequence");
 	}
 
