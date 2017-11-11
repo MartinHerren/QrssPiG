@@ -12,8 +12,7 @@ protected:
 public:
 	virtual ~QGUploader() {};
 
-	void pushIntermediate(const std::string &fileName, const char *data, int dataSize);
-	void push(const std::string &fileName, const char *data, int dataSize, bool wait = false);
+	void push(const std::string &fileName, const char *data, int dataSize, bool intermediate = false, bool wait = false);
 
 	static std::unique_ptr<QGUploader> CreateUploader(const YAML::Node &config);
 

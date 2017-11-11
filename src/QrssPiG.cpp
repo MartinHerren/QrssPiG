@@ -207,7 +207,7 @@ void QrssPiG::_pushIntermediateImage() {
 		frame = _im->getFrame(frameSize, frameName);
 
 std::cout << "pushing intermediate" << frameName << std::endl;
-		for (auto& up: _uploaders) up->pushIntermediate(frameName, frame, frameSize);
+		for (auto& up: _uploaders) up->push(frameName, frame, frameSize, true);
 	} catch (const std::exception &e) {
 	}
 }
