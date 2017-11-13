@@ -95,7 +95,7 @@ void QGInputAlsa::_process() {
 				_buffer[_bufferHead++] = std::complex<float>(i / 32768., q / 32768.);
 				_bufferHead %= _bufferCapacity;
 			}
-			_incBuffer(_readBufferSize/2);
+			_adjBufferSize(_readBufferSize/2);
 			break;
 
 		case Channel::LEFT:
@@ -106,7 +106,7 @@ void QGInputAlsa::_process() {
 				_buffer[_bufferHead++] = std::complex<float>(i / 32768., q / 32768.);
 				_bufferHead %= _bufferCapacity;
 			}
-			_incBuffer(_readBufferSize/4);
+			_adjBufferSize(_readBufferSize/4);
 			break;
 
 		case Channel::RIGHT:
@@ -117,7 +117,7 @@ void QGInputAlsa::_process() {
 				_buffer[_bufferHead++] = std::complex<float>(i / 32768., q / 32768.);
 				_bufferHead %= _bufferCapacity;
 			}
-			_incBuffer(_readBufferSize/4);
+			_adjBufferSize(_readBufferSize/4);
 			break;
 
 		case Channel::IQ:
@@ -129,7 +129,7 @@ void QGInputAlsa::_process() {
 				_buffer[_bufferHead++] = std::complex<float>(i / 32768., q / 32768.);
 				_bufferHead %= _bufferCapacity;
 			}
-			_incBuffer(_readBufferSize/4);
+			_adjBufferSize(_readBufferSize/4);
 			break;
 
 		case Channel::INVIQ:
@@ -141,7 +141,7 @@ void QGInputAlsa::_process() {
 				_buffer[_bufferHead++] = std::complex<float>(i / 32768., q / 32768.);
 				_bufferHead %= _bufferCapacity;
 			}
-			_incBuffer(_readBufferSize/4);
+			_adjBufferSize(_readBufferSize/4);
 			break;
 		}
 

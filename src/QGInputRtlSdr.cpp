@@ -74,7 +74,7 @@ void QGInputRtlSdr::_process(unsigned char *buf, uint32_t len) {
 		_bufferHead %= _bufferCapacity;
 	}
 
-	_incBuffer(len/2);
+	_adjBufferSize(len/2);
 }
 
 void QGInputRtlSdr::async(unsigned char *buf, uint32_t len, void *ctx) {

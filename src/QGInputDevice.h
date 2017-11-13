@@ -1,5 +1,6 @@
 #pragma once
 
+#include <atomic>
 #include <functional>
 #include <memory>
 #include <mutex>
@@ -26,7 +27,7 @@ public:
 	static std::unique_ptr<QGInputDevice> CreateInputDevice(const YAML::Node &config);
 
 protected:
-	void _incBuffer(size_t added);
+	void _adjBufferSize(int adj);
 
 	unsigned int _sampleRate;
 	unsigned int _baseFreq;
@@ -39,7 +40,7 @@ protected:
 	volatile size_t _bufferTail;
 	std::vector<std::complex<float>> _buffer;
 
-	std::mutex _running;
+	std::atomic<bool> _running;
 
 private:
 	virtual void _startDevice() = 0;

@@ -29,6 +29,8 @@ QGInputDevice::QGInputDevice(const YAML::Node &config) {
     if (config["samplerate"]) _sampleRate = config["samplerate"].as<unsigned int>();
     if (config["basefreq"]) _baseFreq = config["basefreq"].as<unsigned int>();
     if (config["ppm"]) _ppm = config["ppm"].as<int>();
+
+    _running = false;
 }
 
 void QGInputDevice::setCb(std::function<void(const std::complex<float>*)>cb, unsigned int chunkSize) {
@@ -36,7 +38,7 @@ void QGInputDevice::setCb(std::function<void(const std::complex<float>*)>cb, uns
     _chunkSize = chunkSize;
 
     // TODO calculate buffer size frm _sampleRate and configurable size. Multiple of chuncksize
-    _bufferCapacity = 10 * 32 * 262144; // ~10 seconds of buffer @ 8MS/s
+    _bufferCapacity = _sampleRate;
     _buffer.resize(_bufferCapacity);
     _bufferSize = 0;
     _bufferHead = 0;
@@ -44,40 +46,44 @@ void QGInputDevice::setCb(std::function<void(const std::complex<float>*)>cb, uns
 }
 
 void QGInputDevice::run() {
-	if (_running.try_lock()) {
-        _startDevice();
+	if (_running) throw std::runtime_error("Already running");
 
-        while (!_running.try_lock()) { // loop until lock as been freed by stop()
-            if (_bufferSize > _chunkSize) {
-                _cb(&_buffer[_bufferTail]);
-                _bufferTail += _chunkSize;
-                _bufferTail %= _bufferCapacity;
+    _running = true;
+    bool stopping = false;
+    bool running;
 
-                // Update size
-                _bufferMutex.lock();
-                _bufferSize -= _chunkSize;
-                _bufferMutex.unlock();
-            } else {
-                std::this_thread::sleep_for(std::chrono::microseconds(100));
-            }
+    _startDevice();
+
+    do {
+        running = _running;
+
+        // Detect stop() and shutdown device only once
+        if (!running && !stopping) {
+            _stopDevice();
+            stopping = true;
         }
-        _running.unlock(); // Cleanup lock acquired on exit condition
-    }
+
+        if (_bufferSize >= _chunkSize) {
+            _cb(&_buffer[_bufferTail]);
+            _bufferTail += _chunkSize;
+            _bufferTail %= _bufferCapacity;
+
+            // Update size
+            _adjBufferSize(-_chunkSize);
+        } else {
+	           std::this_thread::sleep_for(std::chrono::microseconds(100));
+        }
+    } while (running || (_bufferSize > _chunkSize));
 }
 
 void QGInputDevice::stop() {
-	if (!_running.try_lock()) {
-        _bufferMutex.unlock(); // To ensure _stopDevice won't stick
-        _stopDevice();
-	}
-
-	_running.unlock();// Enable run() to exit, or release the lock we just gained if it was not running
+    // Called from signal handler, only do signal handler safe stuff here !
+    _running = false;
 }
 
-void QGInputDevice::_incBuffer(size_t added) {
-    _bufferMutex.lock();
-    _bufferSize += added;
-    _bufferMutex.unlock();
+void QGInputDevice::_adjBufferSize(int adj) {
+    std::lock_guard<std::mutex> lock(_bufferMutex);
+    _bufferSize += adj;
 }
 
 std::unique_ptr<QGInputDevice> QGInputDevice::CreateInputDevice(const YAML::Node &config) {

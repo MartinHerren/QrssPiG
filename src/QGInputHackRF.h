@@ -2,8 +2,6 @@
 
 #include "QGInputDevice.h"
 
-#include <mutex>
-
 #include <libhackrf/hackrf.h>
 
 class QGInputHackRF: public QGInputDevice {

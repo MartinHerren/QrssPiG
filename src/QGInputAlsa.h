@@ -2,8 +2,6 @@
 
 #include "QGInputDevice.h"
 
-#include <mutex>
-
 #include <alsa/asoundlib.h>
 
 class QGInputAlsa: public QGInputDevice {

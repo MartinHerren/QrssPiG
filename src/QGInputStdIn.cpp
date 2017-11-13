@@ -33,7 +33,7 @@ void QGInputStdIn::_startDevice() {
 }
 
 void QGInputStdIn::_stopDevice() {
-	_t.join();
+	if (_t.joinable()) _t.join();
 }
 
 void QGInputStdIn::_process() {
@@ -42,7 +42,7 @@ void QGInputStdIn::_process() {
 	switch (_format) {
 		case Format::U8IQ: {
 			unsigned char i, q;
-			while (std::cin && !_running.try_lock()) {
+			while (std::cin && _running) {
 				std::cin.read(_readBuffer.get(), _readBufferSize);
 				for (int j = 0; j < _readBufferSize;) {
 					i = _readBuffer[j++];
@@ -51,14 +51,14 @@ void QGInputStdIn::_process() {
 					_bufferHead %= _bufferCapacity;
 				}
 
-				_incBuffer(_readBufferSize/2);
+				_adjBufferSize(_readBufferSize/2);
 			}
 			break;
 		}
 
 	case Format::S8IQ: {
 			signed char i, q;
-			while (std::cin && !_running.try_lock()) {
+			while (std::cin && _running) {
 				std::cin.read(_readBuffer.get(), _readBufferSize);
 				for (int j = 0; j < _readBufferSize;) {
 					i = _readBuffer[j++];
@@ -67,14 +67,14 @@ void QGInputStdIn::_process() {
 					_bufferHead %= _bufferCapacity;
 				}
 
-				_incBuffer(_readBufferSize/2);
+				_adjBufferSize(_readBufferSize/2);
 			}
 			break;
 		}
 
 		case Format::U16IQ: {
 			unsigned short int i, q;
-			while (std::cin && !_running.try_lock()) {
+			while (std::cin && _running) {
 				std::cin.read(_readBuffer.get(), _readBufferSize);
 				for (int j = 0; j < _readBufferSize;) {
 					i = _readBuffer[j++];
@@ -85,14 +85,14 @@ void QGInputStdIn::_process() {
 					_bufferHead %= _bufferCapacity;
 				}
 
-				_incBuffer(_readBufferSize/4);
+				_adjBufferSize(_readBufferSize/4);
 			}
 			break;
 		}
 
 		case Format::S16IQ: {
 			signed short int i, q;
-			while (std::cin && !_running.try_lock()) {
+			while (std::cin && _running) {
 				std::cin.read(_readBuffer.get(), _readBufferSize);
 				for (int j = 0; j < _readBufferSize;) {
 					i = _readBuffer[j++];
@@ -103,14 +103,14 @@ void QGInputStdIn::_process() {
 					_bufferHead %= _bufferCapacity;
 				}
 
-				_incBuffer(_readBufferSize/4);
+				_adjBufferSize(_readBufferSize/4);
 			}
 			break;
 		}
 
 		case Format::S16MONO: {
 			signed short int r;
-			while (std::cin && !_running.try_lock()) {
+			while (std::cin && _running) {
 				std::cin.read(_readBuffer.get(), _readBufferSize);
 				for (int j = 0; j < _readBufferSize;) {
 					r = _readBuffer[j++];
@@ -119,14 +119,14 @@ void QGInputStdIn::_process() {
 					_bufferHead %= _bufferCapacity;
 				}
 
-				_incBuffer(_readBufferSize/2);
+				_adjBufferSize(_readBufferSize/2);
 			}
 			break;
 		}
 
 		case Format::S16LEFT: {
 			signed short int r;
-			while (std::cin && !_running.try_lock()) {
+			while (std::cin && _running) {
 				std::cin.read(_readBuffer.get(), _readBufferSize);
 				for (int j = 0; j < _readBufferSize;) {
 					r = _readBuffer[j++];
@@ -136,14 +136,14 @@ void QGInputStdIn::_process() {
 					_bufferHead %= _bufferCapacity;
 				}
 
-				_incBuffer(_readBufferSize/4);
+				_adjBufferSize(_readBufferSize/4);
 			}
 			break;
 		}
 
 		case Format::S16RIGHT: {
 			signed short int r;
-			while (std::cin && !_running.try_lock()) {
+			while (std::cin && _running) {
 				std::cin.read(_readBuffer.get(), _readBufferSize);
 				for (int j = 0; j < _readBufferSize;) {
 					j += 2;
@@ -153,13 +153,12 @@ void QGInputStdIn::_process() {
 					_bufferHead %= _bufferCapacity;
 				}
 
-				_incBuffer(_readBufferSize/4);
+				_adjBufferSize(_readBufferSize/4);
 			}
 			break;
 		}
 	}
 
-	// Free mutex acquired on while break condition
-	// If while break was due to cin running out, this signals to stop to QGInputDevice
-	_running.unlock();
+	// In case we cabe here because of std::cin running out, this will signal main loop to finish
+	_running = false;
 }
