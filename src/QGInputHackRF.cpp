@@ -105,7 +105,7 @@ void QGInputHackRF::_process(uint8_t *buf, int len) {
 		_bufferHead %= _bufferCapacity;
 	}
 
-	_adjBufferSize(len/2);
+	_bufferSize += len/2;
 }
 
 int QGInputHackRF::async(hackrf_transfer* transfer) {

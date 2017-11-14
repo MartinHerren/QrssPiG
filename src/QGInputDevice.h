@@ -27,17 +27,14 @@ public:
 	static std::unique_ptr<QGInputDevice> CreateInputDevice(const YAML::Node &config);
 
 protected:
-	void _adjBufferSize(int adj);
-
 	unsigned int _sampleRate;
 	unsigned int _baseFreq;
 	int _ppm;
 
-	std::mutex _bufferMutex;
-	size_t _bufferCapacity;
-	size_t _bufferSize;
-	volatile size_t _bufferHead;
-	volatile size_t _bufferTail;
+	unsigned int _bufferCapacity;
+	std::atomic<unsigned int> _bufferSize;
+	unsigned int _bufferHead;
+	unsigned int _bufferTail;
 	std::vector<std::complex<float>> _buffer;
 
 	std::atomic<bool> _running;

@@ -51,7 +51,7 @@ void QGInputStdIn::_process() {
 					_bufferHead %= _bufferCapacity;
 				}
 
-				_adjBufferSize(_readBufferSize/2);
+				_bufferSize += _readBufferSize/2;
 			}
 			break;
 		}
@@ -67,7 +67,7 @@ void QGInputStdIn::_process() {
 					_bufferHead %= _bufferCapacity;
 				}
 
-				_adjBufferSize(_readBufferSize/2);
+				_bufferSize += _readBufferSize/2;
 			}
 			break;
 		}
@@ -85,7 +85,7 @@ void QGInputStdIn::_process() {
 					_bufferHead %= _bufferCapacity;
 				}
 
-				_adjBufferSize(_readBufferSize/4);
+				_bufferSize += _readBufferSize/4;
 			}
 			break;
 		}
@@ -103,7 +103,7 @@ void QGInputStdIn::_process() {
 					_bufferHead %= _bufferCapacity;
 				}
 
-				_adjBufferSize(_readBufferSize/4);
+				_bufferSize += _readBufferSize/4;
 			}
 			break;
 		}
@@ -119,7 +119,7 @@ void QGInputStdIn::_process() {
 					_bufferHead %= _bufferCapacity;
 				}
 
-				_adjBufferSize(_readBufferSize/2);
+				_bufferSize += _readBufferSize/2;
 			}
 			break;
 		}
@@ -136,7 +136,7 @@ void QGInputStdIn::_process() {
 					_bufferHead %= _bufferCapacity;
 				}
 
-				_adjBufferSize(_readBufferSize/4);
+				_bufferSize += _readBufferSize/4;
 			}
 			break;
 		}
@@ -153,7 +153,7 @@ void QGInputStdIn::_process() {
 					_bufferHead %= _bufferCapacity;
 				}
 
-				_adjBufferSize(_readBufferSize/4);
+				_bufferSize += _readBufferSize/4;
 			}
 			break;
 		}

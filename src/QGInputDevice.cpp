@@ -69,7 +69,7 @@ void QGInputDevice::run() {
             _bufferTail %= _bufferCapacity;
 
             // Update size
-            _adjBufferSize(-_chunkSize);
+            _bufferSize -= _chunkSize;
         } else {
 	           std::this_thread::sleep_for(std::chrono::microseconds(100));
         }
@@ -79,11 +79,6 @@ void QGInputDevice::run() {
 void QGInputDevice::stop() {
     // Called from signal handler, only do signal handler safe stuff here !
     _running = false;
-}
-
-void QGInputDevice::_adjBufferSize(int adj) {
-    std::lock_guard<std::mutex> lock(_bufferMutex);
-    _bufferSize += adj;
 }
 
 std::unique_ptr<QGInputDevice> QGInputDevice::CreateInputDevice(const YAML::Node &config) {
