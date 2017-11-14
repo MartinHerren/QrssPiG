@@ -67,6 +67,12 @@ void QGInputRtlSdr::_process(unsigned char *buf, uint32_t len) {
 	// U8 IQ data
 	unsigned char i, q;
 
+	// Drop new data if buffer full
+	if (_bufferSize + len/2 > _bufferCapacity) {
+		std::cout << "drop" << std::endl;
+		return;
+	}
+
 	for (unsigned int j = 0; j < len;) {
 		i = buf[j++];
 		q = buf[j++];
