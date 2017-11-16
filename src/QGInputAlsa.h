@@ -6,16 +6,19 @@
 
 class QGInputAlsa: public QGInputDevice {
 public:
+	static std::vector<std::string> listDevices();
+
 	QGInputAlsa(const YAML::Node &config);
 	~QGInputAlsa();
-
-	static void async(snd_async_handler_t *async);
 
 private:
 	void _startDevice();
 	void _stopDevice();
 
 	void _process();
+
+public:
+	static void async(snd_async_handler_t *async);
 
 	enum class Channel { MONO, LEFT, RIGHT, IQ, INVIQ };
 

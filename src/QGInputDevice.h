@@ -9,6 +9,9 @@
 #include <yaml-cpp/yaml.h>
 
 class QGInputDevice {
+public:
+	static std::vector<std::string> listDevices() { return std::vector<std::string>(); };
+
 protected:
 	QGInputDevice(const YAML::Node &config);
 
@@ -24,6 +27,7 @@ public:
 	unsigned int baseFreq() { return _baseFreq; };
 	int ppm() { return _ppm; };
 
+	static void ListDevices();
 	static std::unique_ptr<QGInputDevice> CreateInputDevice(const YAML::Node &config);
 
 protected:

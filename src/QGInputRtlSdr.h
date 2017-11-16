@@ -8,12 +8,10 @@
 
 class QGInputRtlSdr: public QGInputDevice {
 public:
+	static std::vector<std::string> listDevices();
+
 	QGInputRtlSdr(const YAML::Node &config);
 	~QGInputRtlSdr();
-
-	void deviceList();
-
-	static void async(unsigned char *buf, uint32_t len, void *ctx);
 
 private:
 	void _startDevice();
@@ -21,6 +19,10 @@ private:
 
 	void _process(unsigned char *buf, uint32_t len);
 
+public:
+	static void async(unsigned char *buf, uint32_t len, void *ctx);
+
+private:
 	int _deviceIndex;
 
 	std::thread _t;

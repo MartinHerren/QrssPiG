@@ -3,6 +3,12 @@
 #include <iostream>
 #include <stdexcept>
 
+std::vector<std::string> QGInputAlsa::listDevices() {
+	std::vector<std::string> list;
+
+	return list;
+}
+
 QGInputAlsa::QGInputAlsa(const YAML::Node &config): QGInputDevice(config), _device(nullptr), _async(nullptr) {
 	_deviceName = "hw:0,0";
 	_channel = Channel::LEFT;
