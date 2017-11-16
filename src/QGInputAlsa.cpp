@@ -89,64 +89,84 @@ void QGInputAlsa::_process() {
 		// Only S16_LE supported so far
 		switch (_channel) {
 		case Channel::MONO:
-			for (int j = 0; j < _readBufferSize;) {
-				i = _readBuffer[j++];
-				i += _readBuffer[j++] << 8;
-				_buffer[_bufferHead++] = std::complex<float>(i / 32768., q / 32768.);
-				_bufferHead %= _bufferCapacity;
-			}
+			if (_bufferSize + _readBufferSize/2 <= _bufferCapacity) {
+				for (int j = 0; j < _readBufferSize;) {
+					i = _readBuffer[j++];
+					i += _readBuffer[j++] << 8;
+					_buffer[_bufferHead++] = std::complex<float>(i / 32768., q / 32768.);
+					_bufferHead %= _bufferCapacity;
+				}
 
-			_bufferSize += _readBufferSize/2;
+				_bufferSize += _readBufferSize/2;
+			} else {
+				std::cout << "drop" << std::endl;
+			}
 			break;
 
 		case Channel::LEFT:
-			for (int j = 0; j < _readBufferSize;) {
-				i = _readBuffer[j++];
-				i += _readBuffer[j++] << 8;
-				j += 2;
-				_buffer[_bufferHead++] = std::complex<float>(i / 32768., q / 32768.);
-				_bufferHead %= _bufferCapacity;
-			}
+			if (_bufferSize + _readBufferSize/4 <= _bufferCapacity) {
+				for (int j = 0; j < _readBufferSize;) {
+					i = _readBuffer[j++];
+					i += _readBuffer[j++] << 8;
+					j += 2;
+					_buffer[_bufferHead++] = std::complex<float>(i / 32768., q / 32768.);
+					_bufferHead %= _bufferCapacity;
+				}
 
-			_bufferSize += _readBufferSize/4;
+				_bufferSize += _readBufferSize/4;
+			} else {
+				std::cout << "drop" << std::endl;
+			}
 			break;
 
 		case Channel::RIGHT:
-			for (int j = 0; j < _readBufferSize;) {
-				j += 2;
-				i = _readBuffer[j++];
-				i += _readBuffer[j++] << 8;
-				_buffer[_bufferHead++] = std::complex<float>(i / 32768., q / 32768.);
-				_bufferHead %= _bufferCapacity;
-			}
+			if (_bufferSize + _readBufferSize/4 <= _bufferCapacity) {
+				for (int j = 0; j < _readBufferSize;) {
+					j += 2;
+					i = _readBuffer[j++];
+					i += _readBuffer[j++] << 8;
+					_buffer[_bufferHead++] = std::complex<float>(i / 32768., q / 32768.);
+					_bufferHead %= _bufferCapacity;
+				}
 
-			_bufferSize += _readBufferSize/4;
+				_bufferSize += _readBufferSize/4;
+			} else {
+				std::cout << "drop" << std::endl;
+			}
 			break;
 
 		case Channel::IQ:
-			for (int j = 0; j < _readBufferSize;) {
-				i = _readBuffer[j++];
-				i += _readBuffer[j++] << 8;
-				q = _readBuffer[j++];
-				q += _readBuffer[j++] << 8;
-				_buffer[_bufferHead++] = std::complex<float>(i / 32768., q / 32768.);
-				_bufferHead %= _bufferCapacity;
-			}
+			if (_bufferSize + _readBufferSize/4 <= _bufferCapacity) {
+				for (int j = 0; j < _readBufferSize;) {
+					i = _readBuffer[j++];
+					i += _readBuffer[j++] << 8;
+					q = _readBuffer[j++];
+					q += _readBuffer[j++] << 8;
+					_buffer[_bufferHead++] = std::complex<float>(i / 32768., q / 32768.);
+					_bufferHead %= _bufferCapacity;
+				}
 
-			_bufferSize += _readBufferSize/4;
+				_bufferSize += _readBufferSize/4;
+			} else {
+				std::cout << "drop" << std::endl;
+			}
 			break;
 
 		case Channel::INVIQ:
-			for (int j = 0; j < _readBufferSize;) {
-				q = _readBuffer[j++];
-				q += _readBuffer[j++] << 8;
-				i = _readBuffer[j++];
-				i += _readBuffer[j++] << 8;
-				_buffer[_bufferHead++] = std::complex<float>(i / 32768., q / 32768.);
-				_bufferHead %= _bufferCapacity;
-			}
+			if (_bufferSize + _readBufferSize/4 <= _bufferCapacity) {
+				for (int j = 0; j < _readBufferSize;) {
+					q = _readBuffer[j++];
+					q += _readBuffer[j++] << 8;
+					i = _readBuffer[j++];
+					i += _readBuffer[j++] << 8;
+					_buffer[_bufferHead++] = std::complex<float>(i / 32768., q / 32768.);
+					_bufferHead %= _bufferCapacity;
+				}
 
-			_bufferSize += _readBufferSize/4;
+				_bufferSize += _readBufferSize/4;
+			} else {
+				std::cout << "drop" << std::endl;
+			}
 			break;
 		}
 
