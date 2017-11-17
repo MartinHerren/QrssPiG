@@ -9,6 +9,10 @@ using std::placeholders::_3;
 using std::placeholders::_4;
 using std::placeholders::_5;
 
+void QrssPiG::ListDevices() {
+	QGInputDevice::ListDevices();
+}
+
 QrssPiG::QrssPiG(const std::string &format, int sampleRate, int N, const std::string &dir, const std::string &sshHost, const std::string &sshUser, int sshPort) {
 	_inputDevice = QGInputDevice::CreateInputDevice(YAML::Load("{format: " + format + ", samplerate: " + std::to_string(sampleRate) + ", basefreq: 0}"));
 	_processor.reset(new QGProcessor(YAML::Load("{samplerate: " + std::to_string(sampleRate) + ", fft: " + std::to_string(N) + "}")));

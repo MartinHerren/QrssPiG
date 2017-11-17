@@ -20,6 +20,7 @@ int main(int argc, char *argv[]) {
 		options_description desc{"Options"};
 		desc.add_options()
 		("help,h", "Help screen")
+		("listdevices,l", "List devices")
 		("configfile,c", value<std::string>(), "Config file")
 		("format,F", value<std::string>()->default_value("rtlsdr"), "Format, 'rtlsdr' or 'hackrf'")
 		("samplerate,s", value<int>()->default_value(6000), "Samplerate in S/s")
@@ -33,6 +34,11 @@ int main(int argc, char *argv[]) {
 
 		if (vm.count("help")) {
 			std::cout << desc << std::endl;
+			exit(0);
+		}
+
+		if (vm.count("listdevices")) {
+			QrssPiG::ListDevices();
 			exit(0);
 		}
 

@@ -83,16 +83,22 @@ void QGInputDevice::stop() {
 
 void QGInputDevice::ListDevices() {
     std::vector<std::string> list;
+
+    std::cout << "Available input devices:" << std::endl;
 #ifdef HAVE_LIBALSA
-    //list = QGInputAlsa::_listDevices();
+    list = QGInputAlsa::listDevices();
+    if (list.size())
+	    for (auto &s: list) std::cout << "Alsa:\t" << s << std::endl;
 #endif //HAVE_LIBALSA
 #ifdef HAVE_LIBHACKRF
-    //list = QGInputHackRF::_listDevices();
+    list = QGInputHackRF::listDevices();
+    if (list.size())
+	    for (auto &s: list) std::cout << "HackRf:\t" << s << std::endl;
 #endif //HAVE_LIBHACKRF
 #ifdef HAVE_LIBRTLSDR
     list = QGInputRtlSdr::listDevices();
-    std::cout << "RTLSDR [" << list.size() << "]" << std::endl;
-    for (auto &s: list) std::cout << "\t" << s << std::endl;
+    if (list.size())
+	    for (auto &s: list) std::cout << "RtlSdr:\t" << s << std::endl;
 #endif //HAVE_LIBRTLSDR
 }
 
