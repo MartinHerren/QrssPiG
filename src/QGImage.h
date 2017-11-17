@@ -3,6 +3,7 @@
 #include <chrono>
 #include <complex>
 #include <iostream>
+#include <memory>
 #include <vector>
 
 #include <gd.h>

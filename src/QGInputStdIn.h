@@ -2,6 +2,7 @@
 
 #include "QGInputDevice.h"
 
+#include <memory>
 #include <thread>
 
 class QGInputStdIn: public QGInputDevice {

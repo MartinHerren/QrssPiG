@@ -4,6 +4,7 @@
 
 #include <complex> // Must be included before fftw3
 #include <functional>
+#include <memory>
 
 #include <fftw3.h>
 #include <yaml-cpp/yaml.h>
