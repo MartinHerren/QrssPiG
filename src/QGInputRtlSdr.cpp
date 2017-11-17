@@ -1,7 +1,24 @@
 #include "QGInputRtlSdr.h"
 
 #include <iostream>
+#include <memory>
 #include <stdexcept>
+
+std::vector<std::string> QGInputRtlSdr::listDevices() {
+	std::vector<std::string> list;
+	unsigned int c = rtlsdr_get_device_count();
+
+	for (unsigned int i = 0; i < c; i++) {
+		std::unique_ptr<char[]> manufacturer(new char[256]);
+		std::unique_ptr<char[]> product(new char[256]);
+		std::unique_ptr<char[]> serial(new char[256]);
+		rtlsdr_get_device_usb_strings(i, manufacturer.get(), product.get(), serial.get());
+		const char *name = rtlsdr_get_device_name(i);
+		list.push_back(std::to_string(i) + "\t" + manufacturer.get() + " " + product.get() + " - " + name + " (serial: " + serial.get() + ")");
+	}
+
+	return list;
+}
 
 QGInputRtlSdr::QGInputRtlSdr(const YAML::Node &config): QGInputDevice(config), _device(nullptr) {
 	_deviceIndex = 0;
@@ -45,10 +62,6 @@ QGInputRtlSdr::QGInputRtlSdr(const YAML::Node &config): QGInputDevice(config), _
 
 QGInputRtlSdr::~QGInputRtlSdr() {
 	if (_device) rtlsdr_close(_device);
-}
-
-void QGInputRtlSdr::deviceList() {
-	std::cout << "Devices: " << rtlsdr_get_device_count() << std::endl;
 }
 
 void QGInputRtlSdr::_startDevice() {

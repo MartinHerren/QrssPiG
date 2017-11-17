@@ -3,6 +3,48 @@
 #include <iostream>
 #include <stdexcept>
 
+std::vector<std::string> QGInputAlsa::listDevices() {
+	std::vector<std::string> list;
+	int err;
+
+	int card = -1;
+	while (!(err = snd_card_next(&card))) {
+		if (card == -1) break;
+
+		char *name;
+		if ((err = snd_card_get_longname(card, &name))) throw std::runtime_error(std::string("Error getting card name: " ) + snd_strerror(err));;
+		list.push_back(std::string("hw:") + std::to_string(card) + "\t" + name);
+		free(name);
+	}
+/*
+	void **hints;
+
+	if ((err = snd_device_name_hint(-1, "pcm", &hints))) throw std::runtime_error(std::string("Error setting audio device access: ") + snd_strerror(err));
+
+	if (hints) {
+		void **i = hints;
+		while (i) {
+			char *s = snd_device_name_get_hint(*i, "NAME");
+			char *d = snd_device_name_get_hint(*i, "DESC");
+			char *io = snd_device_name_get_hint(*i, "IOID");
+
+			std::cout << s << " " << d << " " << std::endl;
+			free(s);
+			free(d);
+			free(io);
+
+			i++;
+		}
+	}
+
+	std::cout << "done" << std::endl;
+
+	if ((err = snd_device_name_free_hint(hints))) throw std::runtime_error(std::string("Error setting audio device access: ") + snd_strerror(err));
+*/
+
+	return list;
+}
+
 QGInputAlsa::QGInputAlsa(const YAML::Node &config): QGInputDevice(config), _device(nullptr), _async(nullptr) {
 	_deviceName = "hw:0,0";
 	_channel = Channel::LEFT;

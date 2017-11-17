@@ -4,6 +4,37 @@
 #include <iostream>
 #include <stdexcept>
 
+std::vector<std::string> QGInputHackRF::listDevices() {
+	std::vector<std::string> list;
+	hackrf_device* device;
+	int r = hackrf_init();
+
+	if (r != HACKRF_SUCCESS) {
+		throw std::runtime_error(std::string("HackRF init returned ") + std::to_string(r));
+	}
+
+	hackrf_device_list_t *l = hackrf_device_list();
+
+	for (int i = 0; i < l->devicecount; i++) {
+		if ((r = hackrf_device_list_open(l, i, &device)) == 0) {
+			unsigned char boardId;
+			std::unique_ptr<char[]> version(new char[255]);
+			hackrf_board_id_read(device, &boardId);
+			hackrf_version_string_read(device, version.get(), 255);
+			list.push_back(std::to_string(i) + "\t" + hackrf_board_id_name((hackrf_board_id)boardId) + " v" + version.get() + " (serial: " + l->serial_numbers[i] + ")");
+			hackrf_close(device);
+		} else {
+			list.push_back(std::to_string(i) + "\tError opening device: " + hackrf_error_name((hackrf_error)r));
+		}
+	}
+
+	hackrf_device_list_free(l);
+
+	hackrf_exit();
+
+	return list;
+}
+
 QGInputHackRF::QGInputHackRF(const YAML::Node &config): QGInputDevice(config), _device(nullptr) {
 	int r = hackrf_init();
 
@@ -50,22 +81,6 @@ QGInputHackRF::~QGInputHackRF() {
 			std::cout << "HackRF closing failed: " << r << std::endl;
 		}
 	}
-
-	hackrf_exit();
-}
-
-void QGInputHackRF::deviceList() {
-	int r = hackrf_init();
-
-	if (r != HACKRF_SUCCESS) {
-		throw std::runtime_error(std::string("HackRF init returned ") + std::to_string(r));
-	}
-
-	hackrf_device_list_t *l = hackrf_device_list();
-
-	std::cout << "Devices: " << l->devicecount << std::endl;
-
-	hackrf_device_list_free(l);
 
 	hackrf_exit();
 }

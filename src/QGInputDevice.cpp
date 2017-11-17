@@ -81,6 +81,27 @@ void QGInputDevice::stop() {
     _running = false;
 }
 
+void QGInputDevice::ListDevices() {
+    std::vector<std::string> list;
+
+    std::cout << "Available input devices:" << std::endl;
+#ifdef HAVE_LIBALSA
+    list = QGInputAlsa::listDevices();
+    if (list.size())
+	    for (auto &s: list) std::cout << "Alsa:\t" << s << std::endl;
+#endif //HAVE_LIBALSA
+#ifdef HAVE_LIBHACKRF
+    list = QGInputHackRF::listDevices();
+    if (list.size())
+	    for (auto &s: list) std::cout << "HackRf:\t" << s << std::endl;
+#endif //HAVE_LIBHACKRF
+#ifdef HAVE_LIBRTLSDR
+    list = QGInputRtlSdr::listDevices();
+    if (list.size())
+	    for (auto &s: list) std::cout << "RtlSdr:\t" << s << std::endl;
+#endif //HAVE_LIBRTLSDR
+}
+
 std::unique_ptr<QGInputDevice> QGInputDevice::CreateInputDevice(const YAML::Node &config) {
     if (!config["type"] || (config["type"].as<std::string>().compare("stdin") == 0)) {
         std::cout << "Input type stdin" << std::endl;
