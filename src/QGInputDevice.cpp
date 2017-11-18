@@ -25,10 +25,12 @@ QGInputDevice::QGInputDevice(const YAML::Node &config) {
     _sampleRate = 48000;
     _baseFreq = 0;
     _ppm = 0;
+    _bufferlength = 1000;
 
     if (config["samplerate"]) _sampleRate = config["samplerate"].as<unsigned int>();
     if (config["basefreq"]) _baseFreq = config["basefreq"].as<unsigned int>();
     if (config["ppm"]) _ppm = config["ppm"].as<int>();
+    if (config["bufferlength"]) _bufferlength = config["bufferlength"].as<int>();
 
     _running = false;
 }
@@ -37,8 +39,9 @@ void QGInputDevice::setCb(std::function<void(const std::complex<float>*)>cb, uns
     _cb = cb;
     _chunkSize = chunkSize;
 
-    // TODO calculate buffer size frm _sampleRate and configurable size. Multiple of chuncksize
-    _bufferCapacity = _sampleRate;
+    // buffercapacity based bufferlength in milliseconds, rounded down to multiple of chunksize
+    _bufferCapacity = _bufferlength / 1000. * _sampleRate;
+    _bufferCapacity = (_bufferCapacity / _chunkSize) * _chunkSize;
     _buffer.resize(_bufferCapacity);
     _bufferSize = 0;
     _bufferHead = 0;

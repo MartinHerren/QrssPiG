@@ -34,6 +34,7 @@ protected:
 	unsigned int _sampleRate;
 	unsigned int _baseFreq;
 	int _ppm;
+	int _bufferlength;
 
 	unsigned int _bufferCapacity;
 	std::atomic<unsigned int> _bufferSize;
