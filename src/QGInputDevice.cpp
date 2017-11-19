@@ -26,11 +26,16 @@ QGInputDevice::QGInputDevice(const YAML::Node &config) {
     _baseFreq = 0;
     _ppm = 0;
     _bufferlength = 1000;
+    _debugBufferMonitor = false;
 
     if (config["samplerate"]) _sampleRate = config["samplerate"].as<unsigned int>();
     if (config["basefreq"]) _baseFreq = config["basefreq"].as<unsigned int>();
     if (config["ppm"]) _ppm = config["ppm"].as<int>();
     if (config["bufferlength"]) _bufferlength = config["bufferlength"].as<int>();
+
+    if (config["debug"]) {
+        if (config["debug"]["buffermonitor"]) _debugBufferMonitor = config["debug"]["buffermonitor"].as<bool>();
+    }
 
     _running = false;
 }
@@ -57,6 +62,9 @@ void QGInputDevice::run() {
 
     _startDevice();
 
+    std::thread monitor;
+    if (_debugBufferMonitor) monitor = std::thread(std::bind(&QGInputDevice::_bufferMonitor, this));
+
     do {
         running = _running;
 
@@ -77,6 +85,8 @@ void QGInputDevice::run() {
 	           std::this_thread::sleep_for(std::chrono::microseconds(100));
         }
     } while (running || (_bufferSize > _chunkSize));
+
+    if (_debugBufferMonitor) monitor.join();
 }
 
 void QGInputDevice::stop() {
@@ -133,4 +143,12 @@ std::unique_ptr<QGInputDevice> QGInputDevice::CreateInputDevice(const YAML::Node
     } else {
         throw std::runtime_error(std::string("QGInputDevice: unknown type ") + config["type"].as<std::string>());
     }
+}
+
+void QGInputDevice::_bufferMonitor() {
+    while (_running) {
+        std::this_thread::sleep_for(std::chrono::seconds(5));
+        std::cout << "Buffer: " << _bufferSize << " / " << _bufferCapacity << " (" << (100.*_bufferSize/_bufferCapacity) << "%)" << std::endl;
+    }
+    return;
 }

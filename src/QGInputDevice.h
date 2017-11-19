@@ -45,9 +45,12 @@ protected:
 	std::atomic<bool> _running;
 
 private:
+	void _bufferMonitor();
 	virtual void _startDevice() = 0;
 	virtual void _stopDevice() = 0;
 
 	std::function<void(const std::complex<float>*)> _cb;
 	unsigned int _chunkSize;
+
+	bool _debugBufferMonitor;
 };
