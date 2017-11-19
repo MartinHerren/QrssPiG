@@ -84,7 +84,7 @@ void QGInputDevice::run() {
         } else {
 	           std::this_thread::sleep_for(std::chrono::microseconds(100));
         }
-    } while (running || (_bufferSize > _chunkSize));
+    } while (running || (_bufferSize >= _chunkSize));
 
     if (_debugBufferMonitor) monitor.join();
 }
@@ -146,9 +146,9 @@ std::unique_ptr<QGInputDevice> QGInputDevice::CreateInputDevice(const YAML::Node
 }
 
 void QGInputDevice::_bufferMonitor() {
-    while (_running) {
+    while (_running || _bufferSize >= _chunkSize) {
         std::this_thread::sleep_for(std::chrono::seconds(5));
-        std::cout << "Buffer: " << _bufferSize << " / " << _bufferCapacity << " (" << (100.*_bufferSize/_bufferCapacity) << "%)" << std::endl;
+        std::cout << (_running ? "[Running]" : "[Stopping]") << "\tBuffer: " << _bufferSize << " / " << _bufferCapacity << " (" << (100.*_bufferSize/_bufferCapacity) << "%)" << std::endl;
     }
     return;
 }
