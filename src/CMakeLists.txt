@@ -106,9 +106,6 @@ if (LIBCURL_FOUND)
 	set(HAVE_LIBCURL 1)
 endif (LIBCURL_FOUND)
 
-add_executable (IQGen IQGen.cpp)
-target_link_libraries(IQGen boost_program_options)
-
 # Generate and include Config.h
 configure_file ("Config.h.in" "${PROJECT_BINARY_DIR}/Config.h")
 include_directories("${PROJECT_BINARY_DIR}")
