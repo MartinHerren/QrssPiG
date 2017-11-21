@@ -69,7 +69,7 @@ QrssPiG::~QrssPiG() {
 
 void QrssPiG::run() {
 	_inputDevice->setCb(std::bind(&QGProcessor::addIQ, _processor, _1), _processor->chunkSize());
-	_processor->setCb(std::bind(&QGImage::addLine, _image, _1));
+	_processor->addCb(std::bind(&QGImage::addLine, _image, _1));
 	for (auto&& uploader: _uploaders) _image->addCb(std::bind(&QGUploader::push, uploader, _1, _2, _3, _4, _5));
 
 	std::cout << "Run" << std::endl;

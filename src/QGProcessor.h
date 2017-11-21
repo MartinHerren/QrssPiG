@@ -5,6 +5,7 @@
 #include <complex> // Must be included before fftw3
 #include <functional>
 #include <memory>
+#include <vector>
 
 #include <fftw3.h>
 #include <yaml-cpp/yaml.h>
@@ -22,7 +23,7 @@ public:
 	QGProcessor(const YAML::Node &config);
 	~QGProcessor();
 
-	void setCb(std::function<void(const std::complex<float>*)>cb);
+	void addCb(std::function<void(const std::complex<float>*)>cb);
 
 	void addIQ(const std::complex<float> *iq);
 
@@ -62,5 +63,5 @@ private:
 	std::complex<float> *_fftIn;
 	std::complex<float> *_fftOut;
 
-	std::function<void(const std::complex<float>*)> _cb;
+	std::vector<std::function<void(const std::complex<float>*)>> _cbs;
 };

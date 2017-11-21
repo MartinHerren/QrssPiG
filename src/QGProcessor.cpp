@@ -101,8 +101,8 @@ QGProcessor::~QGProcessor() {
 	}
 }
 
-void QGProcessor::setCb(std::function<void(const std::complex<float>*)>cb) {
-    _cb = cb;
+void QGProcessor::addCb(std::function<void(const std::complex<float>*)>cb) {
+	_cbs.push_back(cb);
 }
 
 void QGProcessor::addIQ(const std::complex<float> *iq) {
@@ -145,5 +145,5 @@ void QGProcessor::_fft() {
 	for (int i = 0; i < _N; i++) _fftIn[i] = _input.get()[i] * _hannW[i / 2];
 	fftwf_execute(_plan);
 
-	_cb(_fftOut);
+	for (auto& cb: _cbs) cb(_fftOut);
 }
