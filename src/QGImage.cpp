@@ -193,7 +193,7 @@ void QGImage::addLine(const std::complex<float> *fft) {
 	for (int i = _fMin; i < _fMax; i++) {
 		// TODO: evaluate to do this in fft class once, for multi-image support
 		float v = 10 * log10(abs(fft[(i + N) % N]) / N); // Current value, DC centered
-		if (isnan(v)) continue;
+		if (std::isnan(v)) continue;
 
 		switch (_orientation) {
 		case Orientation::Horizontal:
