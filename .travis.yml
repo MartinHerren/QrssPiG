@@ -24,7 +24,7 @@ addons:
       - libcurl4-openssl-dev
 
 before_install:
-  - ./install-libhackrf.sh
+  - ./scripts/install-libhackrf.sh
 
 script:
   - mkdir -p build && cd build && cmake .. && cmake --build .
