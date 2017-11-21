@@ -69,7 +69,6 @@ QGProcessor::QGProcessor(const YAML::Node &config) {
 		_rtFilterResampler = rtf_create_downsampler(1, RTF_CFLOAT, (unsigned int)_rate);
 #else
 		_counter = 0;
-		_counterLimit = (unsigned int)floor(_rate);
 #endif // HAVE_LIBRTFILTER
 #endif // HAVE_LIBLIQUIDSDR
 	}
@@ -132,9 +131,9 @@ unsigned int QGProcessor::_resample(const std::complex<float> *in, std::complex<
 #ifdef HAVE_LIBRTFILTER
 	outSize = rtf_filter(_rtFilterResampler, in, out, _chunkSize);
 #else
-	for (int i = 0; i < _chunkSize; i++) { // Reuse i, so outer while loop will run only once
+	for (unsigned int i = 0; i < _chunkSize; i++) { // Reuse i, so outer while loop will run only once
 		if (!_counter++) out[outSize++] = in[i];
-		if (_counter >= _counterLimit) _counter = 0;
+		if (_counter >= _rate) _counter = 0;
 	}
 #endif // HAVE_LIBRTFILTER
 #endif // HAVE_LIBLIQUIDSDR

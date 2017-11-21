@@ -51,7 +51,6 @@ private:
 	hfilter _rtFilterResampler;
 #else
 	unsigned int _counter;
-	unsigned int _counterLimit;
 #endif // HAVE_LIBRTFILTER
 #endif // HAVE_LIBLIQUIDSDR
 
