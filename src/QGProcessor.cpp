@@ -87,13 +87,15 @@ QGProcessor::~QGProcessor() {
 	fftwf_free(_fftIn);
 	fftwf_free(_fftOut);
 
+	if (_rate != 1.0) {
 #ifdef HAVE_LIBLIQUIDSDR
-	resamp_crcf_destroy(_liquidSdrResampler);
+		resamp_crcf_destroy(_liquidSdrResampler);
 #else
 #ifdef HAVE_LIBRTFILTER
-	rtf_destroy_filter(_rtFilterResampler);
+		rtf_destroy_filter(_rtFilterResampler);
 #endif // HAVE_LIBRTFILTER
 #endif // HAVE_LIBLIQUIDSDR
+	}
 }
 
 void QGProcessor::setCb(std::function<void(const std::complex<float>*)>cb) {
