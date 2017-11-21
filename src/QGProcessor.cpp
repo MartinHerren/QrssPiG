@@ -15,7 +15,7 @@
 QGProcessor::QGProcessor(const YAML::Node &config) {
 	unsigned int iSampleRate = 48000;
 
-	_sampleRate = 6000;
+	_sampleRate = 0;
 	_chunkSize = 32;
 	_N = 2048;
 	_overlap = (3 * _N) / 4;
@@ -51,6 +51,10 @@ QGProcessor::QGProcessor(const YAML::Node &config) {
 
 		// Patch config with real samplerate from resampler
 		_sampleRate = iSampleRate / _rate;
+	}
+
+	if (_sampleRate == 0) {
+		_sampleRate = iSampleRate;
 	}
 
 	_inputIndex = 0;
