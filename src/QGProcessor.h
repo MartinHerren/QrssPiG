@@ -29,6 +29,9 @@ public:
 
 	unsigned int sampleRate() { return _sampleRate; };
 	unsigned int chunkSize() { return _chunkSize; };
+	int fftSize() { return _N; };
+	int fftOverlap() { return _overlap; };
+	float downsamplingRate() { return _rate; };
 
 private:
 	unsigned int _resample(const std::complex<float> *in, std::complex<float> *out);
