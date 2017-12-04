@@ -21,6 +21,39 @@
 #include "QGInputRtlSdr.h"
 #endif // HAVE_LIBRTLSDR
 
+std::vector<std::string> QGInputDevice::listModules() {
+    std::vector<std::string> modules;
+
+    modules.push_back("File");
+#ifdef HAVE_LIBALSA
+    modules.push_back("Alsa");
+#endif //HAVE_LIBALSA
+#ifdef HAVE_LIBHACKRF
+    modules.push_back("HackRF");
+#endif //HAVE_LIBHACKRF
+#ifdef HAVE_LIBRTLSDR
+    modules.push_back("RtlSdr");
+#endif //HAVE_LIBRTLSDR
+
+    return modules;
+}
+
+std::vector<std::pair<std::string, std::vector<std::string>>> QGInputDevice::listDevices() {
+    std::vector<std::pair<std::string, std::vector<std::string>>> devices;
+
+#ifdef HAVE_LIBALSA
+    devices.push_back(std::make_pair("Alsa", QGInputAlsa::listDevices()));
+#endif //HAVE_LIBALSA
+#ifdef HAVE_LIBHACKRF
+    devices.push_back(std::make_pair("HackRF", QGInputHackRF::listDevices()));
+#endif //HAVE_LIBHACKRF
+#ifdef HAVE_LIBRTLSDR
+    devices.push_back(std::make_pair("RtlSdr", QGInputRtlSdr::listDevices()));
+#endif //HAVE_LIBRTLSDR
+
+    return devices;
+}
+
 QGInputDevice::QGInputDevice(const YAML::Node &config) {
     _sampleRate = 48000;
     _baseFreq = 0;
@@ -92,27 +125,6 @@ void QGInputDevice::run() {
 void QGInputDevice::stop() {
     // Called from signal handler, only do signal handler safe stuff here !
     _running = false;
-}
-
-void QGInputDevice::ListDevices() {
-    std::vector<std::string> list;
-
-    std::cout << "Available input devices:" << std::endl;
-#ifdef HAVE_LIBALSA
-    list = QGInputAlsa::listDevices();
-    if (list.size())
-	    for (auto &s: list) std::cout << "Alsa:\t" << s << std::endl;
-#endif //HAVE_LIBALSA
-#ifdef HAVE_LIBHACKRF
-    list = QGInputHackRF::listDevices();
-    if (list.size())
-	    for (auto &s: list) std::cout << "HackRf:\t" << s << std::endl;
-#endif //HAVE_LIBHACKRF
-#ifdef HAVE_LIBRTLSDR
-    list = QGInputRtlSdr::listDevices();
-    if (list.size())
-	    for (auto &s: list) std::cout << "RtlSdr:\t" << s << std::endl;
-#endif //HAVE_LIBRTLSDR
 }
 
 std::unique_ptr<QGInputDevice> QGInputDevice::CreateInputDevice(const YAML::Node &config) {

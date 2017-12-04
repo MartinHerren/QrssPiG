@@ -10,7 +10,8 @@
 
 class QGInputDevice {
 public:
-	static std::vector<std::string> listDevices() { return std::vector<std::string>(); };
+	static std::vector<std::string> listModules();
+	static std::vector<std::pair<std::string, std::vector<std::string>>> listDevices();
 
 protected:
 	QGInputDevice(const YAML::Node &config);
@@ -27,7 +28,6 @@ public:
 	unsigned int baseFreq() { return _baseFreq; };
 	int ppm() { return _ppm; };
 
-	static void ListDevices();
 	static std::unique_ptr<QGInputDevice> CreateInputDevice(const YAML::Node &config);
 
 protected:

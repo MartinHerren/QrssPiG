@@ -6,6 +6,9 @@
 #include <yaml-cpp/yaml.h>
 
 class QGUploader {
+public:
+	static std::vector<std::string> listModules();
+
 protected:
 	QGUploader(const YAML::Node &config);
 
