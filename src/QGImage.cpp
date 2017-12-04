@@ -24,6 +24,9 @@ QGImage::QGImage(const YAML::Node &config, unsigned int index) {
 		if (input["ppm"]) _baseFreqCorrected = _baseFreq + (_baseFreq * input["ppm"].as<int>()) / 1000000;
 	}
 
+	// TODO Default initialization of N and overlap already done in processor, take values from there
+	N = 2048;
+	_overlap = (3 * N) / 4;
 	if (config["processing"]) {
 		YAML::Node processing = config["processing"];
 
