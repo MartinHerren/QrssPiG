@@ -9,8 +9,22 @@ using std::placeholders::_3;
 using std::placeholders::_4;
 using std::placeholders::_5;
 
-void QrssPiG::ListDevices() {
-	QGInputDevice::ListDevices();
+void QrssPiG::listModules() {
+	std::cout << "Available input modules:" << std::endl;
+	for (const auto&m: QGInputDevice::listModules()) std::cout << "\t" << m << std::endl;
+
+	std::cout << "Available upload modules:" << std::endl;
+	for (const auto&m: QGUploader::listModules()) std::cout << "\t" << m << std::endl;
+}
+
+void QrssPiG::listDevices() {
+	auto devices = QGInputDevice::listDevices();
+
+  	std::cout << "Available input devices:" << std::endl;
+	for (const auto& m: devices) {
+		if (m.second.size()) for (const auto &d: m.second) std::cout << "\t" << m.first << ":\t" << d << std::endl;
+		else std::cout << "\t" << m.first << ":\tNo device found" << std::endl;
+	}
 }
 
 QrssPiG::QrssPiG(const std::string &format, int sampleRate, int N, const std::string &dir, const std::string &sshHost, const std::string &sshUser, int sshPort) {

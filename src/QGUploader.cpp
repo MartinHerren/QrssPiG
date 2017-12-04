@@ -8,13 +8,27 @@
 
 #include "QGUploaderLocal.h"
 
+#ifdef HAVE_LIBCURL
+#include "QGUploaderFTP.h"
+#endif // HAVE_LIBCURL
+
 #ifdef HAVE_LIBSSH
 #include "QGUploaderSCP.h"
 #endif // HAVE_LIBSSH
 
+std::vector<std::string> QGUploader::listModules() {
+    std::vector<std::string> modules;
+
+    modules.push_back("File");
 #ifdef HAVE_LIBCURL
-#include "QGUploaderFTP.h"
-#endif // HAVE_LIBCURL
+    modules.push_back("FTP");
+#endif //HAVE_LIBCURL
+#ifdef HAVE_LIBSSH
+    modules.push_back("SCP");
+#endif //HAVE_LIBSSH
+
+    return modules;
+}
 
 QGUploader::QGUploader(const YAML::Node &config) {
     _verbose = false;
