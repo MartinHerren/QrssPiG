@@ -116,8 +116,11 @@ QGImage::QGImage(const YAML::Node &config, unsigned int index) {
 			else throw std::runtime_error("QGImage::configure: illegal value for noalign");
 		}
 
-		// Configure start time
+		// Sync frames on time can be enabled/disabled, unless started given, where it is forced to disabled
 		_syncFrames = true;
+		if (output["sync"])  _syncFrames = output["sync"].as<bool>();
+
+		// Configure start time
 		if (output["started"]) {
 			using namespace std::chrono;
 
