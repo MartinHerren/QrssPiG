@@ -33,20 +33,24 @@ int main(int argc, char *argv[]) {
 		variables_map vm;
 		store(parse_command_line(argc, argv, desc), vm);
 
+		bool stop = false;
+
 		if (vm.count("help")) {
 			std::cout << desc << std::endl;
-			exit(0);
+			stop = true;
 		}
 
 		if (vm.count("listmodules")) {
 			QrssPiG::listModules();
-			exit(0);
+			stop = true;
 		}
 
 		if (vm.count("listdevices")) {
 			QrssPiG::listDevices();
-			exit(0);
+			stop = true;
 		}
+
+		if (stop) exit(0);
 
 		if (vm.count("configfile")) {
 			std::string configFile = vm["configfile"].as<std::string>();
