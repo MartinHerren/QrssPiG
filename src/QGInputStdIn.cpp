@@ -39,123 +39,136 @@ void QGInputStdIn::_stopDevice() {
 void QGInputStdIn::_process() {
 	std::cin >> std::noskipws;
 
-	switch (_format) {
-		case Format::U8IQ: {
-			unsigned char i, q;
-			while (std::cin && _running) {
-				std::cin.read(_readBuffer.get(), _readBufferSize);
-				for (int j = 0; j < _readBufferSize;) {
-					i = _readBuffer[j++];
-					q = _readBuffer[j++];
-					_buffer[_bufferHead++] = std::complex<float>((i - 128) / 128., (q - 128) / 128.);
-					_bufferHead %= _bufferCapacity;
+	while (std::cin && _running) {
+		std::cin.read(_readBuffer.get(), _readBufferSize);
+
+		switch (_format) {
+			case Format::U8IQ:
+				if (_bufferSize + _readBufferSize/2 <= _bufferCapacity) {
+					unsigned char i, q;
+
+					for (int j = 0; j < _readBufferSize;) {
+						i = _readBuffer[j++];
+						q = _readBuffer[j++];
+						_buffer[_bufferHead++] = std::complex<float>((i - 128) / 128., (q - 128) / 128.);
+						_bufferHead %= _bufferCapacity;
+					}
+
+					_bufferSize += _readBufferSize/2;
+				} else {
+					std::this_thread::sleep_for(std::chrono::microseconds(1000000));
+					std::cout << "drop" << std::endl;
 				}
+				break;
 
-				_bufferSize += _readBufferSize/2;
-			}
-			break;
-		}
+			case Format::S8IQ:
+				if (_bufferSize + _readBufferSize/2 <= _bufferCapacity) {
+					signed char i, q;
 
-	case Format::S8IQ: {
-			signed char i, q;
-			while (std::cin && _running) {
-				std::cin.read(_readBuffer.get(), _readBufferSize);
-				for (int j = 0; j < _readBufferSize;) {
-					i = _readBuffer[j++];
-					q = _readBuffer[j++];
-					_buffer[_bufferHead++] = std::complex<float>(i / 128., q / 128.);
-					_bufferHead %= _bufferCapacity;
+					for (int j = 0; j < _readBufferSize;) {
+						i = _readBuffer[j++];
+						q = _readBuffer[j++];
+						_buffer[_bufferHead++] = std::complex<float>(i / 128., q / 128.);
+						_bufferHead %= _bufferCapacity;
+					}
+
+					_bufferSize += _readBufferSize/2;
+				} else {
+					std::this_thread::sleep_for(std::chrono::microseconds(1000000));
+					std::cout << "drop" << std::endl;
 				}
+				break;
 
-				_bufferSize += _readBufferSize/2;
-			}
-			break;
-		}
+			case Format::U16IQ:
+				if (_bufferSize + _readBufferSize/4 <= _bufferCapacity) {
+					unsigned short int i, q;
 
-		case Format::U16IQ: {
-			unsigned short int i, q;
-			while (std::cin && _running) {
-				std::cin.read(_readBuffer.get(), _readBufferSize);
-				for (int j = 0; j < _readBufferSize;) {
-					i = _readBuffer[j++];
-					i += _readBuffer[j++] << 8;
-					q = _readBuffer[j++];
-					q += _readBuffer[j++] << 8;
-					_buffer[_bufferHead++] = std::complex<float>((i - 32768) / 32768., (q - 32768) / 32768.);
-					_bufferHead %= _bufferCapacity;
+					for (int j = 0; j < _readBufferSize;) {
+						i = _readBuffer[j++];
+						i += _readBuffer[j++] << 8;
+						q = _readBuffer[j++];
+						q += _readBuffer[j++] << 8;
+						_buffer[_bufferHead++] = std::complex<float>((i - 32768) / 32768., (q - 32768) / 32768.);
+						_bufferHead %= _bufferCapacity;
+					}
+
+					_bufferSize += _readBufferSize/4;
+				} else {
+					std::cout << "drop" << std::endl;
 				}
+				break;
 
-				_bufferSize += _readBufferSize/4;
-			}
-			break;
-		}
+			case Format::S16IQ:
+				if (_bufferSize + _readBufferSize/4 <= _bufferCapacity) {
+					signed short int i, q;
 
-		case Format::S16IQ: {
-			signed short int i, q;
-			while (std::cin && _running) {
-				std::cin.read(_readBuffer.get(), _readBufferSize);
-				for (int j = 0; j < _readBufferSize;) {
-					i = _readBuffer[j++];
-					i += _readBuffer[j++] << 8;
-					q = _readBuffer[j++];
-					q += _readBuffer[j++] << 8;
-					_buffer[_bufferHead++] = std::complex<float>(i / 32768., q / 32768.);
-					_bufferHead %= _bufferCapacity;
+					for (int j = 0; j < _readBufferSize;) {
+						i = _readBuffer[j++];
+						i += _readBuffer[j++] << 8;
+						q = _readBuffer[j++];
+						q += _readBuffer[j++] << 8;
+						_buffer[_bufferHead++] = std::complex<float>(i / 32768., q / 32768.);
+						_bufferHead %= _bufferCapacity;
+					}
+
+					_bufferSize += _readBufferSize/4;
+				} else {
+					std::cout << "drop" << std::endl;
 				}
+				break;
 
-				_bufferSize += _readBufferSize/4;
-			}
-			break;
-		}
+			case Format::S16MONO:
+				if (_bufferSize + _readBufferSize/4 <= _bufferCapacity) {
+					signed short int r;
 
-		case Format::S16MONO: {
-			signed short int r;
-			while (std::cin && _running) {
-				std::cin.read(_readBuffer.get(), _readBufferSize);
-				for (int j = 0; j < _readBufferSize;) {
-					r = _readBuffer[j++];
-					r += _readBuffer[j++] << 8;
-					_buffer[_bufferHead++] = std::complex<float>(r / 32768., 0.);
-					_bufferHead %= _bufferCapacity;
+					for (int j = 0; j < _readBufferSize;) {
+						r = _readBuffer[j++];
+						r += _readBuffer[j++] << 8;
+						_buffer[_bufferHead++] = std::complex<float>(r / 32768., 0.);
+						_bufferHead %= _bufferCapacity;
+					}
+
+					_bufferSize += _readBufferSize/2;
+				} else {
+					std::cout << "drop" << std::endl;
 				}
+				break;
 
-				_bufferSize += _readBufferSize/2;
-			}
-			break;
-		}
+			case Format::S16LEFT:
+				if (_bufferSize + _readBufferSize/4 <= _bufferCapacity) {
+					signed short int r;
 
-		case Format::S16LEFT: {
-			signed short int r;
-			while (std::cin && _running) {
-				std::cin.read(_readBuffer.get(), _readBufferSize);
-				for (int j = 0; j < _readBufferSize;) {
-					r = _readBuffer[j++];
-					r += _readBuffer[j++] << 8;
-					j += 2;
-					_buffer[_bufferHead++] = std::complex<float>(r / 32768., 0.);
-					_bufferHead %= _bufferCapacity;
+					for (int j = 0; j < _readBufferSize;) {
+						r = _readBuffer[j++];
+						r += _readBuffer[j++] << 8;
+						j += 2;
+						_buffer[_bufferHead++] = std::complex<float>(r / 32768., 0.);
+						_bufferHead %= _bufferCapacity;
+					}
+
+					_bufferSize += _readBufferSize/4;
+				} else {
+					std::cout << "drop" << std::endl;
 				}
+				break;
 
-				_bufferSize += _readBufferSize/4;
-			}
-			break;
-		}
+			case Format::S16RIGHT:
+				if (_bufferSize + _readBufferSize/4 <= _bufferCapacity) {
+					signed short int r;
 
-		case Format::S16RIGHT: {
-			signed short int r;
-			while (std::cin && _running) {
-				std::cin.read(_readBuffer.get(), _readBufferSize);
-				for (int j = 0; j < _readBufferSize;) {
-					j += 2;
-					r = _readBuffer[j++];
-					r += _readBuffer[j++] << 8;
-					_buffer[_bufferHead++] = std::complex<float>(r / 32768., 0.);
-					_bufferHead %= _bufferCapacity;
+					for (int j = 0; j < _readBufferSize;) {
+						j += 2;
+						r = _readBuffer[j++];
+						r += _readBuffer[j++] << 8;
+						_buffer[_bufferHead++] = std::complex<float>(r / 32768., 0.);
+						_bufferHead %= _bufferCapacity;
+					}
+
+					_bufferSize += _readBufferSize/4;
+				} else {
+					std::cout << "drop" << std::endl;
 				}
-
-				_bufferSize += _readBufferSize/4;
-			}
-			break;
+				break;
 		}
 	}
 
