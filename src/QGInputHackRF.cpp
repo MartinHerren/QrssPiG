@@ -36,6 +36,21 @@ std::vector<std::string> QGInputHackRF::listDevices() {
 }
 
 QGInputHackRF::QGInputHackRF(const YAML::Node &config): QGInputDevice(config), _device(nullptr) {
+	unsigned char antennaPowerEnabled = 0;
+	unsigned char ampEnabled = 0;
+	unsigned int lnaGain = 16;
+	unsigned int vgaGain = 16;
+
+	if (config["antennapower"]) antennaPowerEnabled = config["antennapower"].as<bool>() ? 1 : 0;
+	if (config["amplifier"]) ampEnabled = config["amplifier"].as<bool>() ? 1 : 0;
+	if (config["lnagain"]) lnaGain = config["lnagain"].as<unsigned int>();
+	if (config["vgagain"]) vgaGain = config["vgagain"].as<unsigned int>();
+
+	if (lnaGain > 40) lnaGain = 40;
+	lnaGain &= 0x38;
+	if (vgaGain > 62) vgaGain = 62;
+	vgaGain &= 0x3e;
+
 	int r = hackrf_init();
 
 	if (r != HACKRF_SUCCESS) {
@@ -46,20 +61,14 @@ QGInputHackRF::QGInputHackRF(const YAML::Node &config): QGInputDevice(config), _
 	r = hackrf_open(&_device);
 
 	if (r != HACKRF_SUCCESS) {
-		_device = nullptr;
 		hackrf_exit();
 		throw std::runtime_error(std::string("HackRF opening failed: ") + std::to_string(r));
 	}
 
-	char v[255]; uint8_t vl = 255;
-	hackrf_version_string_read(_device, v, vl);
-
-	std::cout << "Version: " << v << std::endl;
-
 	r = hackrf_set_sample_rate(_device, _sampleRate);
 
 	if (r != HACKRF_SUCCESS) {
-		_device = nullptr;
+		hackrf_close(_device);
 		hackrf_exit();
 		throw std::runtime_error(std::string("HackRF setting samplerate failed: ") + std::to_string(r));
 	}
@@ -67,9 +76,49 @@ QGInputHackRF::QGInputHackRF(const YAML::Node &config): QGInputDevice(config), _
 	r = hackrf_set_freq(_device, _baseFreq);
 
 	if (r != HACKRF_SUCCESS) {
-		_device = nullptr;
+		hackrf_close(_device);
 		hackrf_exit();
 		throw std::runtime_error(std::string("HackRF setting frequency failed: ") + std::to_string(r));
+	}
+
+	r = hackrf_set_antenna_enable(_device, antennaPowerEnabled);
+
+	if (r != HACKRF_SUCCESS) {
+		hackrf_close(_device);
+		hackrf_exit();
+		throw std::runtime_error(std::string("HackRF setting antenna power failed: ") + std::to_string(r));
+	}
+
+	r = hackrf_set_amp_enable(_device, ampEnabled);
+
+	if (r != HACKRF_SUCCESS) {
+		hackrf_close(_device);
+		hackrf_exit();
+		throw std::runtime_error(std::string("HackRF setting amplifier failed: ") + std::to_string(r));
+	}
+
+	r = hackrf_set_lna_gain(_device, lnaGain);
+
+	if (r != HACKRF_SUCCESS) {
+		hackrf_close(_device);
+		hackrf_exit();
+		throw std::runtime_error(std::string("HackRF setting LNA gain failed: ") + std::to_string(r));
+	}
+
+	r = hackrf_set_vga_gain(_device, vgaGain);
+
+	if (r != HACKRF_SUCCESS) {
+		hackrf_close(_device);
+		hackrf_exit();
+		throw std::runtime_error(std::string("HackRF setting VGA gain failed: ") + std::to_string(r));
+	}
+
+	r = hackrf_set_baseband_filter_bandwidth(_device, 1750000);
+
+	if (r != HACKRF_SUCCESS) {
+		hackrf_close(_device);
+		hackrf_exit();
+		throw std::runtime_error(std::string("HackRF setting baseband filter failed: ") + std::to_string(r));
 	}
 }
 
