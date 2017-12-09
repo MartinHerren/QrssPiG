@@ -31,9 +31,11 @@ std::vector<std::string> QGUploader::listModules() {
 }
 
 QGUploader::QGUploader(const YAML::Node &config) {
+    _fileName = "";
     _verbose = false;
     _pushIntermediate = false;
 
+    if (config["filename"]) _fileName = config["filename"].as<std::string>();
     if (config["verbose"]) _verbose = config["verbose"].as<bool>();
     if (config["intermediate"]) _pushIntermediate = config["intermediate"].as<bool>();
 }
@@ -83,7 +85,7 @@ void QGUploader::_pushThread(std::string fileName, const char *data, int dataSiz
     std::string uri;
 
     try {
-        _pushThreadImpl(fileName, data, dataSize, uri);
+        _pushThreadImpl(_fileName.length() > 0 ? _fileName : fileName, data, dataSize, uri);
         std::cout << "pushed " << uri << std::endl;
     } catch (const std::exception &e) {
         std::cout << "pushing " << uri << " failed: " << e.what() << std::endl;

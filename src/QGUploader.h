@@ -27,4 +27,5 @@ private:
 protected:
 	bool _verbose;
 	bool _pushIntermediate;
+	std::string _fileName;
 };
