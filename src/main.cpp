@@ -10,9 +10,6 @@ void signalHandler(int signal) { (void)signal; if (gPig) gPig->stop(); }
 
 int main(int argc, char *argv[]) {
 	std::cout << QRSSPIG_NAME << " v" << QRSSPIG_VERSION_MAJOR << "." << QRSSPIG_VERSION_MINOR << "." << QRSSPIG_VERSION_PATCH << std::endl;
-	signal(SIGINT, signalHandler);
-	signal(SIGTERM, signalHandler);
-	signal(SIGABRT, signalHandler);
 
 	try {
 		using namespace boost::program_options;
@@ -94,6 +91,10 @@ int main(int argc, char *argv[]) {
 		std::cerr << ex.what() << std::endl;
 		exit(-1);
 	}
+
+	signal(SIGINT, signalHandler);
+	signal(SIGTERM, signalHandler);
+	signal(SIGABRT, signalHandler);
 
 	gPig->run();
 
