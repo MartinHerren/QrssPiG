@@ -18,7 +18,7 @@ QGProcessor::QGProcessor(const YAML::Node &config) {
 	_sampleRate = 0;
 	_chunkSize = 32;
 	_N = 2048;
-	_overlap = (3 * _N) / 4;
+	_overlap = (3 * _N) / 4; // As it depends on N, default initialization will be redone later even when not given in config
 	_rate = 1.;
 
 	// input samplerate should already be set to default value by input device if it didn't exist
@@ -38,6 +38,8 @@ QGProcessor::QGProcessor(const YAML::Node &config) {
 			int o = processing["fftoverlap"].as<int>();
 			if ((o < 0) || (o >= _N)) throw std::runtime_error("YAML: overlap value out of range [0..N[");
 			_overlap = (o * _N) / (o + 1);
+		} else {
+			_overlap = (3 * _N) / 4;
 		}
 	}
 
