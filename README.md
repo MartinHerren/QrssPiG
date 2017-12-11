@@ -33,6 +33,15 @@ sudo aptitude install qrsspig
 
 You now can run qrsspig giving it a config file as shown below in the run section.
 
+## Install from SuSE repository
+Thanks to Martin Hauke there are SuSE binaries available. For this you'll need to add the hardware:sdr repository.
+e.g. for openSUSE Leap 42.3:
+```
+$ sudo zypper addrepo -f
+https://download.opensuse.org/repositories/hardware:/sdr/openSUSE_Leap_42.3/hardware:sdr.repo
+$ sudo zypper install QrssPiG
+```
+
 ## Build
 To build QrssPiG you need cmake
 
