@@ -39,6 +39,8 @@ private:
 
 	void _pushFrame(bool intermediate = false, bool wait = false);
 
+	std::string _levelBar(float v);
+
 	// Params given at constructor time, cannot be changed
 	int N;
 	int _overlap;
@@ -81,6 +83,8 @@ private:
 	std::chrono::milliseconds _started;
 	std::chrono::milliseconds _runningSince;
 	std::chrono::milliseconds _startedIntoFrame;
+
+	bool _levelMeter;
 
 	// Internal data
 	gdImagePtr _im;

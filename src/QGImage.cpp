@@ -147,6 +147,9 @@ QGImage::QGImage(const YAML::Node &config, unsigned int index) {
 			_started += seconds(mktime(localtime(&t0)) - mktime(gmtime(&t0)));
 		}
 
+		_levelMeter = false;
+		if (output["levelmeter"]) _levelMeter = output["levelmeter"].as<bool>();
+
 		// Scope size and range arenot configurable yet
 		_scopeSize = 100;
 		_scopeRange = 100;
@@ -195,11 +198,14 @@ void QGImage::addLine(const std::complex<float> *fft) {
 
 	// Draw a data line DC centered
 	float last;
+	float avg = 0;
 
 	for (int i = _fMin; i < _fMax; i++) {
 		// TODO: evaluate to do this in fft class once, for multi-image support
 		float v = 10 * log10(abs(fft[(i + N) % N]) / N); // Current value, DC centered
 		if (std::isnan(v)) continue;
+
+		avg += v;
 
 		switch (_orientation) {
 		case Orientation::Horizontal:
@@ -234,6 +240,9 @@ void QGImage::addLine(const std::complex<float> *fft) {
 
 		last = v;
 	}
+
+	if (_levelMeter)
+		std::cout << std::fixed << std::setprecision(2) << std::setw(6) << avg / _fDelta << " dB " << _levelBar(avg / _fDelta) << "\r" << std::flush;
 
 	_currentLine++;
 
@@ -983,4 +992,19 @@ void QGImage::_pushFrame(bool intermediate, bool wait) {
 	for (auto& cb: _cbs) cb(frameName, _imBuffer, frameSize, intermediate, wait);
 
 	if (!intermediate) _new();
+}
+
+std::string QGImage::_levelBar(float v) {
+	std::string c[] = {" ", "▏", "▎", "▍", "▌", "▋", "▊", "▉", "█"};
+	std::string s("");
+
+	float l;
+	long d = lround(trunc(modf((v + 100) / 2, &l) * 100 / 12.5));
+
+	int i = 0;
+	for (; i < l; i++) s += "█";
+	s += c[d];
+	for (; i < 50; i++) s += " ";
+
+	return s;
 }
