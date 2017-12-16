@@ -1,10 +1,10 @@
 #include "QGImage.h"
 #include "Config.h"
 
+#include <cmath>
 #include <iomanip>
 #include <stdexcept>
 #include <string>
-#include <math.h>
 
 QGImage::QGImage(const YAML::Node &config, unsigned int index) {
 	_im = nullptr;
@@ -998,7 +998,7 @@ std::string QGImage::_levelBar(float v) {
 	std::string c[] = {" ", "▏", "▎", "▍", "▌", "▋", "▊", "▉", "█"};
 	std::string s("");
 
-	float l;
+	double l; // Use double as modf not available on float on ubuntu 14.04/16.04
 	long d = lround(trunc(modf((v + 100) / 2, &l) * 100 / 12.5));
 
 	int i = 0;
