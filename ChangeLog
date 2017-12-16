@@ -1,4 +1,6 @@
- - Multiple input devices: stdin, alsa, rtlsdr
+v0.4.0:
+ - Optional signal level meter
+ - Native support for multiple input devices: stdin, alsa, rtlsdr
  - SCP upload fix, defaulting to home dir without specified directory
 
 v0.3.0:
