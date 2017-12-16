@@ -1,29 +1,28 @@
 #pragma once
 
 #include <chrono>
-#include <complex> // Must be included before fftw3
+#include <complex>
 #include <iostream>
+#include <memory>
+#include <vector>
 
-#include <fftw3.h>
 #include <gd.h>
 #include <yaml-cpp/yaml.h>
 
 class QGImage {
 public:
 	enum class Orientation { Horizontal, Vertical };
-	enum class Status { Ok, IntermediateReady, FrameReady };
 
-	QGImage(int fftSize, int fftOverlap);
+	QGImage(const YAML::Node &config, unsigned int index);
 	~QGImage();
 
-	void configure(const YAML::Node &config, unsigned int index = 0);
+	void addCb(std::function<void(const std::string&, const char*, int, bool, bool)>cb);
 
-	void startNewFrame(bool incrementTime = true);
-	Status addLine(const std::complex<float> *fft);
-	char *getFrame(int *frameSize, std::string &frameName);
+	void addLine(const std::complex<float> *fft);
 
 private:
 	void _init();
+	void _new(bool incrementTime = true);
 	void _free();
 
 	void _computeTitleHeight();
@@ -38,6 +37,10 @@ private:
 
 	int _db2Color(float v);
 
+	void _pushFrame(bool intermediate = false, bool wait = false);
+
+	std::string _levelBar(float v);
+
 	// Params given at constructor time, cannot be changed
 	int N;
 	int _overlap;
@@ -49,7 +52,7 @@ private:
 
 	std::string _title;
 	std::vector<std::string> _subtitles;
-	std::string _inputDevice;
+	std::string _inputType;
 	long int _inputSampleRate;
 	std::string _callsign;
 	std::string _qth;
@@ -81,10 +84,12 @@ private:
 	std::chrono::milliseconds _runningSince;
 	std::chrono::milliseconds _startedIntoFrame;
 
+	bool _levelMeter;
+
 	// Internal data
 	gdImagePtr _im;
 	char *_imBuffer;
-	int *_c;
+	std::unique_ptr<int[]> _c;
 	int _cd; // Color depth
 	int _currentLine;
 
@@ -117,4 +122,6 @@ private:
 	int _dBLabelHeight;
 	int _timeLabelWidth;
 	int _timeLabelHeight;
+
+	std::vector<std::function<void(const std::string&, const char*, int, bool, bool)>> _cbs;
 };

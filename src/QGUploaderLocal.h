@@ -1,8 +1,8 @@
 #pragma once
 
-#include <string>
-
 #include "QGUploader.h"
+
+#include <string>
 
 class QGUploaderLocal: public QGUploader {
 public:

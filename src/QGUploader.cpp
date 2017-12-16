@@ -8,31 +8,45 @@
 
 #include "QGUploaderLocal.h"
 
-#ifdef HAVE_LIBSSH
-#include "QGUploaderSCP.h"
-#endif // HAVE_LIBSSH
-
 #ifdef HAVE_LIBCURL
 #include "QGUploaderFTP.h"
 #endif // HAVE_LIBCURL
 
+#ifdef HAVE_LIBSSH
+#include "QGUploaderSCP.h"
+#endif // HAVE_LIBSSH
+
+std::vector<std::string> QGUploader::listModules() {
+    std::vector<std::string> modules;
+
+    modules.push_back("File");
+#ifdef HAVE_LIBCURL
+    modules.push_back("FTP");
+#endif //HAVE_LIBCURL
+#ifdef HAVE_LIBSSH
+    modules.push_back("SCP");
+#endif //HAVE_LIBSSH
+
+    return modules;
+}
+
 QGUploader::QGUploader(const YAML::Node &config) {
+    _fileName = "";
     _verbose = false;
     _pushIntermediate = false;
 
+    if (config["filename"]) _fileName = config["filename"].as<std::string>();
     if (config["verbose"]) _verbose = config["verbose"].as<bool>();
     if (config["intermediate"]) _pushIntermediate = config["intermediate"].as<bool>();
-}
-
-void QGUploader::pushIntermediate(const std::string &fileName, const char *data, int dataSize) {
-    if (_pushIntermediate) push(fileName, data, dataSize);
 }
 
 // Push is done in a thread on a copy of the data.
 // Parent class handles copying of the data, creation of the thread and finally free the data
 // wait param can be set to true to block until pushed. Used on program exit
 
-void QGUploader::push(const std::string &fileName, const char *data, int dataSize, bool wait) {
+void QGUploader::push(const std::string &fileName, const char *data, int dataSize, bool intermediate, bool wait) {
+    if (intermediate && !_pushIntermediate) return;
+
     char *d = new char[dataSize];
 
     if (!d) throw std::runtime_error("Out of memory");
@@ -45,21 +59,23 @@ void QGUploader::push(const std::string &fileName, const char *data, int dataSiz
         std::thread(std::bind(&QGUploader::_pushThread, this, fileName, d, dataSize)).detach();
 }
 
-QGUploader *QGUploader::CreateUploader(const YAML::Node &config) {
+std::unique_ptr<QGUploader> QGUploader::CreateUploader(const YAML::Node &config) {
     if (!config["type"]) throw std::runtime_error("YAML: uploader must have a type");
 
     if (config["type"].as<std::string>().compare("local") == 0) {
-        return new QGUploaderLocal(config);
+        return std::unique_ptr<QGUploader>(new QGUploaderLocal(config));
     } else if (config["type"].as<std::string>().compare("scp") == 0) {
 #ifdef HAVE_LIBSSH
-        return new QGUploaderSCP(config);
-#endif //  HAVE_LIBSSH
+        return std::unique_ptr<QGUploader>(new QGUploaderSCP(config));
+#else
         throw std::runtime_error("QGUploader: scp uploader support not builtin into this build");
+#endif //  HAVE_LIBSSH
     } else if ((config["type"].as<std::string>().compare("ftp") == 0) || (config["type"].as<std::string>().compare("ftps") == 0)) {
 #ifdef HAVE_LIBCURL
-        return new QGUploaderFTP(config);
-#endif //  HAVE_LIBCURL
+        return std::unique_ptr<QGUploader>(new QGUploaderFTP(config));
+#else
         throw std::runtime_error("QGUploader: ftp uploader support not builtin into this build");
+#endif //  HAVE_LIBCURL
     } else {
         throw std::runtime_error(std::string("QGUploader: unknown type ") + config["type"].as<std::string>());
     }
@@ -69,7 +85,7 @@ void QGUploader::_pushThread(std::string fileName, const char *data, int dataSiz
     std::string uri;
 
     try {
-        _pushThreadImpl(fileName, data, dataSize, uri);
+        _pushThreadImpl(_fileName.length() > 0 ? _fileName : fileName, data, dataSize, uri);
         std::cout << "pushed " << uri << std::endl;
     } catch (const std::exception &e) {
         std::cout << "pushing " << uri << " failed: " << e.what() << std::endl;

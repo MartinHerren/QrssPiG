@@ -1,16 +1,30 @@
 #pragma once
 
-#include <rtl-sdr.h>
-
 #include "QGInputDevice.h"
+
+#include <thread>
+
+#include <rtl-sdr.h>
 
 class QGInputRtlSdr: public QGInputDevice {
 public:
+	static std::vector<std::string> listDevices();
+
 	QGInputRtlSdr(const YAML::Node &config);
 	~QGInputRtlSdr();
 
-	void open();
+private:
+	void _startDevice();
+	void _stopDevice();
+
+	void _process(unsigned char *buf, uint32_t len);
+
+public:
+	static void async(unsigned char *buf, uint32_t len, void *ctx);
 
 private:
+	int _deviceIndex;
+
+	std::thread _t;
 	rtlsdr_dev_t *_device;
 };

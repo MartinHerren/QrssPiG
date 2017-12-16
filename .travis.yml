@@ -15,15 +15,16 @@ addons:
       - libfftw3-dev
       - libgd2-noxpm-dev
       - libfreetype6-dev
-      - libssh-dev
-      - libcurl4-openssl-dev
-      - librtfilter-dev
-      - libusb-1.0-0-dev
+      - libasound-dev
       - libhackrf-dev
       - librtlsdr-dev
+      - libusb-1.0-0-dev
+      - librtfilter-dev
+      - libssh-dev
+      - libcurl4-openssl-dev
 
 before_install:
-  - ./install-libhackrf.sh
+  - ./scripts/install-libhackrf.sh
 
 script:
   - mkdir -p build && cd build && cmake .. && cmake --build .

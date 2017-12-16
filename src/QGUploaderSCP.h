@@ -1,8 +1,11 @@
 #pragma once
 
+#include "QGUploader.h"
+
 #include <string>
 
-#include "QGUploader.h"
+#include <libssh/libssh.h>
+//#include <libssh/libsshpp.hpp> // Not available in debian jessie, available in stretch
 
 class QGUploaderSCP: public QGUploader {
 public:
@@ -11,6 +14,8 @@ public:
 
 private:
 	void _pushThreadImpl(const std::string &fileName, const char *data, int dataSize, std::string &uri);
+
+	void _getServerHash(ssh_session *session);
 
 	std::string _host;
 	std::string _user;

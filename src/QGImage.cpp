@@ -1,46 +1,42 @@
 #include "QGImage.h"
 #include "Config.h"
 
+#include <cmath>
 #include <iomanip>
 #include <stdexcept>
 #include <string>
-#include <math.h>
 
-QGImage::QGImage(int fftSize, int fftOverlap): N(fftSize), _overlap(fftOverlap) {
+QGImage::QGImage(const YAML::Node &config, unsigned int index) {
 	_im = nullptr;
 	_imBuffer = nullptr;
-	_c = nullptr;
 	_cd = 0;
 	_started = std::chrono::milliseconds(0);
 	_runningSince = std::chrono::milliseconds(0);
 	_currentLine = 0;
-}
 
-QGImage::~QGImage() {
-	_free();
-}
-
-void QGImage::configure(const YAML::Node &config, unsigned int index) {
-	_free();
-
-	_inputDevice = "";
-	_inputSampleRate = 0;
-	_baseFreq = 7038300;
-	_baseFreqCorrected = 7038300;
-
+	// Input and Processing already parsed, so missing fields should have been already patched with default value
 	if (config["input"]) {
 		YAML::Node input = config["input"];
-		if (input["device"]) _inputDevice = input["device"].as<std::string>();
+
+		if (input["type"]) _inputType = input["type"].as<std::string>();
 		if (input["samplerate"]) _inputSampleRate = input["samplerate"].as<long int>();
 		if (input["basefreq"]) _baseFreqCorrected =_baseFreq = input["basefreq"].as<int>();
 		if (input["ppm"]) _baseFreqCorrected = _baseFreq + (_baseFreq * input["ppm"].as<int>()) / 1000000;
 	}
 
-	_sampleRate = 6000;
-
+	// TODO Default initialization of N and overlap already done in processor, take values from there
+	N = 2048;
+	_overlap = (3 * N) / 4;
 	if (config["processing"]) {
 		YAML::Node processing = config["processing"];
+
 		if (processing["samplerate"]) _sampleRate = processing["samplerate"].as<int>();
+		if (processing["fft"]) N = processing["fft"].as<int>();
+		if (processing["fftoverlap"]) {
+			int o = processing["fftoverlap"].as<int>();
+			if ((o < 0) || (o >= N)) throw std::runtime_error("YAML: overlap value out of range [0..N[");
+			_overlap = (o * N) / (o + 1);
+		}
 	}
 
 	// Freq/time constants used for mapping freq/time to pixel
@@ -120,8 +116,11 @@ void QGImage::configure(const YAML::Node &config, unsigned int index) {
 			else throw std::runtime_error("QGImage::configure: illegal value for noalign");
 		}
 
-		// Configure start time
+		// Sync frames on time can be enabled/disabled, unless started given, where it is forced to disabled
 		_syncFrames = true;
+		if (output["sync"])  _syncFrames = output["sync"].as<bool>();
+
+		// Configure start time
 		if (output["started"]) {
 			using namespace std::chrono;
 
@@ -147,6 +146,9 @@ void QGImage::configure(const YAML::Node &config, unsigned int index) {
 			// Fix started time to be in UTC
 			_started += seconds(mktime(localtime(&t0)) - mktime(gmtime(&t0)));
 		}
+
+		_levelMeter = false;
+		if (output["levelmeter"]) _levelMeter = output["levelmeter"].as<bool>();
 
 		// Scope size and range arenot configurable yet
 		_scopeSize = 100;
@@ -174,10 +176,148 @@ void QGImage::configure(const YAML::Node &config, unsigned int index) {
 	_drawDbScale(); // draw first as still overlaps with freq scales
 	_drawFreqScale();
 
-	startNewFrame(false);
+	_new(false);
 }
 
-void QGImage::startNewFrame(bool incrementTime) {
+QGImage::~QGImage() {
+	_pushFrame(false, true);
+	_free();
+}
+
+void QGImage::addCb(std::function<void(const std::string&, const char*, int, bool, bool)>cb) {
+	_cbs.push_back(cb);
+}
+
+void QGImage::addLine(const std::complex<float> *fft) {
+	if (_currentLine < 0) {
+		_currentLine++;
+		return;
+	}
+
+	int whiteA = gdTrueColorAlpha(255, 255, 255, 125);
+
+	// Draw a data line DC centered
+	float last;
+	float avg = 0;
+
+	for (int i = _fMin; i < _fMax; i++) {
+		// TODO: evaluate to do this in fft class once, for multi-image support
+		float v = 10 * log10(abs(fft[(i + N) % N]) / N); // Current value, DC centered
+		if (std::isnan(v)) continue;
+
+		avg += v;
+
+		switch (_orientation) {
+		case Orientation::Horizontal:
+			// TODO precalculate position of waterfall ans scope in canvas. All values in loop could be precalculated, just i, v or last added or substracted in loop
+			gdImageSetPixel(_im,
+				_borderSize + _freqLabelWidth + _markerSize + _currentLine,
+				_borderSize + _titleHeight + _markerSize + _fDelta - 1 + _fMin - i, // -1 is to compensate the + _fDelta which goes one pixel after the waterfall zone
+				_db2Color(v));
+			if (i != _fMin)
+				gdImageLine(_im,
+					_borderSize + _freqLabelWidth + _markerSize + _size + _markerSize + _freqLabelWidth - last * _dBK,
+					_borderSize + _titleHeight + _markerSize + _fDelta - 1 + _fMin - i + 1, // -1 as before, + 1 to have last position
+					_borderSize + _freqLabelWidth + _markerSize + _size + _markerSize + _freqLabelWidth - v * _dBK,
+					_borderSize + _titleHeight + _markerSize + _fDelta - 1 + _fMin - i,
+					whiteA);
+			break;
+
+		case Orientation::Vertical:
+			gdImageSetPixel(_im,
+				_borderSize + _timeLabelWidth + _markerSize - _fMin + i,
+				_borderSize + _titleHeight + _freqLabelHeight + _markerSize + _currentLine,
+				_db2Color(v));
+			if (i != _fMin)
+				gdImageLine(_im,
+					_borderSize + _timeLabelWidth + _markerSize - _fMin + i - 1, // -1 to have last position
+					_borderSize + _titleHeight + _freqLabelHeight + _markerSize + _size + _markerSize + _freqLabelHeight - last * _dBK,
+					_borderSize + _timeLabelWidth + _markerSize - _fMin + i,
+					_borderSize + _titleHeight + _freqLabelHeight + _markerSize + _size + _markerSize + _freqLabelHeight - v * _dBK,
+					whiteA);
+			break;
+		}
+
+		last = v;
+	}
+
+	if (_levelMeter)
+		std::cout << std::fixed << std::setprecision(2) << std::setw(6) << avg / _fDelta << " dB " << _levelBar(avg / _fDelta) << "\r" << std::flush;
+
+	_currentLine++;
+
+	if (_currentLine >= _size) _pushFrame();
+}
+
+// Private members
+void QGImage::_init() {
+	int black = gdTrueColor(0, 0, 0); // Not that useful, but once we want to set another background color the code is already here
+
+	// Calculate max bounding boxes for labels, check font existence on first call
+	int brect[8];
+
+	std::stringstream ss;
+	ss << QRSSPIG_NAME << " v" << QRSSPIG_VERSION_MAJOR << "." << QRSSPIG_VERSION_MINOR << "." << QRSSPIG_VERSION_PATCH;
+	_qrsspigString = ss.str();
+	char * err = gdImageStringFT(nullptr, brect, 0, const_cast<char *>(_font.c_str()), _fontSize, 0, 0, 0, const_cast<char *>(_qrsspigString.c_str()));
+	if (err) throw std::runtime_error(err);
+	_qrsspigLabelWidth = brect[2] - brect[0];
+	_qrsspigLabelHeight = brect[1] - brect[7];
+
+	gdImageStringFT(nullptr, brect, 0, const_cast<char *>(_font.c_str()), _fontSize, 0, 0, 0, const_cast<char *>("000000000\u202fHz"));
+	_freqLabelWidth = brect[2] - brect[0];
+	_freqLabelHeight = brect[1] - brect[7];
+
+	gdImageStringFT(nullptr, brect, 0, const_cast<char *>(_font.c_str()), _fontSize, 0, 0, 0, const_cast<char *>("-100\u202fdB"));
+	_dBLabelWidth = brect[2] - brect[0];
+	_dBLabelHeight = brect[1] - brect[7];
+
+	gdImageStringFT(nullptr, brect, 0, const_cast<char *>(_font.c_str()), _fontSize, 0, 0, 0, const_cast<char *>("00:00:00"));
+	_timeLabelWidth = brect[2] - brect[0];
+	_timeLabelHeight = brect[1] - brect[7];
+
+	_computeTitleHeight();
+	_computeFreqScale();
+	_computeDbScale();
+	_computeTimeScale();
+
+	// Allocate canvas
+	switch (_orientation) {
+	case Orientation::Horizontal:
+		_im = gdImageCreateTrueColor(
+			_borderSize + _freqLabelWidth + _markerSize + _size + _markerSize + _freqLabelWidth + _scopeSize + _borderSize,
+			_borderSize + _titleHeight + _markerSize + _fDelta + _markerSize + _timeLabelHeight + _borderSize);
+		gdImageFilledRectangle(_im, 0, 0,
+			_borderSize + _freqLabelWidth + _markerSize + _size + _markerSize + _freqLabelWidth + _scopeSize + _borderSize,
+			_borderSize + _titleHeight + _markerSize + _fDelta + _markerSize + _timeLabelHeight + _borderSize - 1,
+			black);
+		break;
+
+	case Orientation::Vertical:
+		_im = gdImageCreateTrueColor(
+			_borderSize + _timeLabelWidth + _markerSize + _fDelta + _borderSize,
+			_borderSize + _titleHeight + _freqLabelHeight + _markerSize + _size + _markerSize + _freqLabelHeight + _scopeSize + _borderSize);
+		gdImageFilledRectangle(_im, 0, 0,
+			_borderSize + _timeLabelWidth + _markerSize + _fDelta + _borderSize,
+			_borderSize + _titleHeight + _freqLabelHeight + _markerSize + _size + _markerSize + _freqLabelHeight + _scopeSize + _borderSize - 1,
+			black);
+		break;
+	}
+
+	// Allocate colormap, based on modified qrx colormap reduced to 256 colors
+	_cd = 256;
+	_c.reset(new int[_cd]);
+
+	int ii = 0;
+	for (int i = 0; i <= 255; i+= 4) _c[ii++] = gdImageColorAllocate(_im, 0, 0, i);
+	for (int i = 0; i <= 255; i+= 4) _c[ii++] = gdImageColorAllocate(_im, 0, i, 255);
+	for (int i = 0; i <= 255; i+= 4) _c[ii++] = gdImageColorAllocate(_im, i, 255, 255 - i);
+	for (int i = 0; i <= 255; i+= 4) _c[ii++] = gdImageColorAllocate(_im, 255, 255 - i, 0);
+
+	_currentLine = 0;
+}
+
+void QGImage::_new(bool incrementTime) {
 	int black = gdTrueColor(0, 0, 0);
 
 	switch (_orientation) {
@@ -239,154 +379,7 @@ void QGImage::startNewFrame(bool incrementTime) {
 	_drawTimeScale();
 }
 
-QGImage::Status QGImage::addLine(const std::complex<float> *fft) {
-	if (_currentLine < 0) {
-		_currentLine++;
-		return Status::Ok;
-	}
-	if (_currentLine >= _size) return Status::FrameReady;
-
-	int whiteA = gdTrueColorAlpha(255, 255, 255, 125);
-
-	// Draw a data line DC centered
-	float last;
-
-	for (int i = _fMin; i < _fMax; i++) {
-		// TODO: evaluate to do this in fft class once, for multi-image support
-		float v = 10 * log10(abs(fft[(i + N) % N]) / N); // Current value, DC centered
-		if (isnan(v)) continue;
-
-		switch (_orientation) {
-		case Orientation::Horizontal:
-			// TODO precalculate position of waterfall ans scope in canvas. All values in loop could be precalculated, just i, v or last added or substracted in loop
-			gdImageSetPixel(_im,
-				_borderSize + _freqLabelWidth + _markerSize + _currentLine,
-				_borderSize + _titleHeight + _markerSize + _fDelta - 1 + _fMin - i, // -1 is to compensate the + _fDelta which goes one pixel after the waterfall zone
-				_db2Color(v));
-			if (i != _fMin)
-				gdImageLine(_im,
-					_borderSize + _freqLabelWidth + _markerSize + _size + _markerSize + _freqLabelWidth - last * _dBK,
-					_borderSize + _titleHeight + _markerSize + _fDelta - 1 + _fMin - i + 1, // -1 as before, + 1 to have last position
-					_borderSize + _freqLabelWidth + _markerSize + _size + _markerSize + _freqLabelWidth - v * _dBK,
-					_borderSize + _titleHeight + _markerSize + _fDelta - 1 + _fMin - i,
-					whiteA);
-			break;
-
-		case Orientation::Vertical:
-			gdImageSetPixel(_im,
-				_borderSize + _timeLabelWidth + _markerSize - _fMin + i,
-				_borderSize + _titleHeight + _freqLabelHeight + _markerSize + _currentLine,
-				_db2Color(v));
-			if (i != _fMin)
-				gdImageLine(_im,
-					_borderSize + _timeLabelWidth + _markerSize - _fMin + i - 1, // -1 to have last position
-					_borderSize + _titleHeight + _freqLabelHeight + _markerSize + _size + _markerSize + _freqLabelHeight - last * _dBK,
-					_borderSize + _timeLabelWidth + _markerSize - _fMin + i,
-					_borderSize + _titleHeight + _freqLabelHeight + _markerSize + _size + _markerSize + _freqLabelHeight - v * _dBK,
-					whiteA);
-			break;
-		}
-
-		last = v;
-	}
-
-	_currentLine++;
-
-	if (_currentLine >= _size) return Status::FrameReady;
-
-	return Status::Ok;
-}
-
-char *QGImage::getFrame(int *frameSize, std::string &frameName) {
-	if (_imBuffer) gdFree(_imBuffer);
-
-	// _imBuffer is usually constant, but frameSize changes
-	// _imBuffer might change in case of realloc, so don't cache its value
-	_imBuffer = (char *)gdImagePngPtr(_im, frameSize);
-
-	time_t t = std::chrono::duration_cast<std::chrono::seconds>(_started).count();
-	std::tm *tm = {};
-	tm = std::gmtime(&t);
-	char s[21];
-	std::strftime(s, sizeof(s), "%FT%TZ", tm);
-	frameName = std::string(s) + "_" + std::to_string(_baseFreq) + "Hz.png";
-
-	return _imBuffer;
-}
-
-// Private members
-void QGImage::_init() {
-	int white = gdTrueColor(255, 255, 255);
-	int black = gdTrueColor(0, 0, 0); // Not that useful, but once we want to set another background color the code is already here
-
-	// Calculate max bounding boxes for labels, check font existence on first call
-	int brect[8];
-
-	std::stringstream ss;
-	ss << QRSSPIG_NAME << " v" << QRSSPIG_VERSION_MAJOR << "." << QRSSPIG_VERSION_MINOR << "." << QRSSPIG_VERSION_PATCH;
-	_qrsspigString = ss.str();
-	char * err = gdImageStringFT(nullptr, brect, 0, const_cast<char *>(_font.c_str()), _fontSize, 0, 0, 0, const_cast<char *>(_qrsspigString.c_str()));
-	if (err) throw std::runtime_error(err);
-	_qrsspigLabelWidth = brect[2] - brect[0];
-	_qrsspigLabelHeight = brect[1] - brect[7];
-
-	gdImageStringFT(nullptr, brect, 0, const_cast<char *>(_font.c_str()), _fontSize, 0, 0, 0, const_cast<char *>("000000000\u202fHz"));
-	_freqLabelWidth = brect[2] - brect[0];
-	_freqLabelHeight = brect[1] - brect[7];
-
-	gdImageStringFT(nullptr, brect, 0, const_cast<char *>(_font.c_str()), _fontSize, 0, 0, 0, const_cast<char *>("-100\u202fdB"));
-	_dBLabelWidth = brect[2] - brect[0];
-	_dBLabelHeight = brect[1] - brect[7];
-
-	gdImageStringFT(nullptr, brect, 0, const_cast<char *>(_font.c_str()), _fontSize, 0, 0, 0, const_cast<char *>("00:00:00"));
-	_timeLabelWidth = brect[2] - brect[0];
-	_timeLabelHeight = brect[1] - brect[7];
-
-	_computeTitleHeight();
-	_computeFreqScale();
-	_computeDbScale();
-	_computeTimeScale();
-
-	// Allocate canvas
-	switch (_orientation) {
-	case Orientation::Horizontal:
-		_im = gdImageCreateTrueColor(
-			_borderSize + _freqLabelWidth + _markerSize + _size + _markerSize + _freqLabelWidth + _scopeSize + _borderSize,
-			_borderSize + _titleHeight + _markerSize + _fDelta + _markerSize + _timeLabelHeight + _borderSize);
-		gdImageFilledRectangle(_im, 0, 0,
-			_borderSize + _freqLabelWidth + _markerSize + _size + _markerSize + _freqLabelWidth + _scopeSize + _borderSize,
-			_borderSize + _titleHeight + _markerSize + _fDelta + _markerSize + _timeLabelHeight + _borderSize - 1,
-			black);
-		break;
-
-	case Orientation::Vertical:
-		_im = gdImageCreateTrueColor(
-			_borderSize + _timeLabelWidth + _markerSize + _fDelta + _borderSize,
-			_borderSize + _titleHeight + _freqLabelHeight + _markerSize + _size + _markerSize + _freqLabelHeight + _scopeSize + _borderSize);
-		gdImageFilledRectangle(_im, 0, 0,
-			_borderSize + _timeLabelWidth + _markerSize + _fDelta + _borderSize,
-			_borderSize + _titleHeight + _freqLabelHeight + _markerSize + _size + _markerSize + _freqLabelHeight + _scopeSize + _borderSize - 1,
-			black);
-		break;
-	}
-
-	// Allocate colormap, based on modified qrx colormap reduced to 256 colors
-	_cd = 256;
-	_c = new int[_cd];
-
-	int ii = 0;
-	for (int i = 0; i <= 255; i+= 4) _c[ii++] = gdImageColorAllocate(_im, 0, 0, i);
-	for (int i = 0; i <= 255; i+= 4) _c[ii++] = gdImageColorAllocate(_im, 0, i, 255);
-	for (int i = 0; i <= 255; i+= 4) _c[ii++] = gdImageColorAllocate(_im, i, 255, 255 - i);
-	for (int i = 0; i <= 255; i+= 4) _c[ii++] = gdImageColorAllocate(_im, 255, 255 - i, 0);
-
-	_currentLine = 0;
-}
-
 void QGImage::_free() {
-	if (_c) delete [] _c;
-	_c = nullptr;
-
 	if (_imBuffer) gdFree(_imBuffer);
 	_imBuffer = nullptr;
 
@@ -404,7 +397,7 @@ void QGImage::_computeTitleHeight() {
 	if (_antenna.length()) _addSubTitleField(std::string("Antenna: ") + _antenna);
 
 	_subtitles.push_back(""); // Force new line TODO: check if last line not empty
-	if (_inputDevice.length()) _addSubTitleField(std::string("Input device: ") + _inputDevice);
+	if (_inputType.length()) _addSubTitleField(std::string("Input type: ") + _inputType);
 	_addSubTitleField(std::string("Base frequency: ") + std::to_string(_baseFreq) + std::string("\u202fHz"));
 	_addSubTitleField(std::string("Input sample rate: ") + std::to_string(_inputSampleRate) + std::string("\u202fS/s"));
 
@@ -604,7 +597,7 @@ void QGImage::_drawFreqScale() {
 		gdImageStringFT(nullptr, brect, 0, const_cast<char *>(_font.c_str()), _fontSize, 0, 0, 0, const_cast<char *>(s.str().c_str()));
 
 		// Cache key data as they will be overriden when rendering first string
-		int x = brect[0], y = brect[1], w = brect[2] - brect[0], h = brect[1] - brect[7];
+		int y = brect[1], w = brect[2] - brect[0], h = brect[1] - brect[7];
 
 		if (_orientation == Orientation::Horizontal) {
 			gdImageStringFT(_im, brect, white, const_cast<char *>(_font.c_str()), _fontSize, 0,
@@ -978,4 +971,40 @@ int QGImage::_db2Color(float v) {
 	if (v > _dBmax) v = _dBmax;
 
 	return _c[(int)trunc((_cd - 1) * (v - _dBmin) / _dBdelta)];
+}
+
+void QGImage::_pushFrame(bool intermediate, bool wait) {
+	int frameSize;
+	std::string frameName;
+
+	if (_imBuffer) gdFree(_imBuffer);
+
+	// _imBuffer is usually constant, but frameSize changes
+	// _imBuffer might change in case of realloc, so don't cache its value
+	_imBuffer = (char *)gdImagePngPtr(_im, &frameSize);
+
+	time_t t = std::chrono::duration_cast<std::chrono::seconds>(_started).count();
+	std::tm *tm = std::gmtime(&t);
+	char s[21];
+	std::strftime(s, sizeof(s), "%FT%TZ", tm);
+	frameName = std::string(s) + "_" + std::to_string(_baseFreq) + "Hz.png";
+
+	for (auto& cb: _cbs) cb(frameName, _imBuffer, frameSize, intermediate, wait);
+
+	if (!intermediate) _new();
+}
+
+std::string QGImage::_levelBar(float v) {
+	std::string c[] = {" ", "▏", "▎", "▍", "▌", "▋", "▊", "▉", "█"};
+	std::string s("");
+
+	double l; // Use double as modf not available on float on ubuntu 14.04/16.04
+	long d = lround(trunc(modf((v + 100) / 2, &l) * 100 / 12.5));
+
+	int i = 0;
+	for (; i < l; i++) s += "█";
+	s += c[d];
+	for (; i < 50; i++) s += " ";
+
+	return s;
 }

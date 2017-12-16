@@ -6,13 +6,10 @@
 
 QrssPiG *gPig = nullptr;
 
-void signalHandler(int signal) { if (gPig) gPig->stop(); }
+void signalHandler(int signal) { (void)signal; if (gPig) gPig->stop(); }
 
 int main(int argc, char *argv[]) {
 	std::cout << QRSSPIG_NAME << " v" << QRSSPIG_VERSION_MAJOR << "." << QRSSPIG_VERSION_MINOR << "." << QRSSPIG_VERSION_PATCH << std::endl;
-	signal(SIGINT, signalHandler);
-	signal(SIGTERM, signalHandler);
-	signal(SIGABRT, signalHandler);
 
 	try {
 		using namespace boost::program_options;
@@ -20,6 +17,8 @@ int main(int argc, char *argv[]) {
 		options_description desc{"Options"};
 		desc.add_options()
 		("help,h", "Help screen")
+		("listmodules,m", "List modules")
+		("listdevices,l", "List devices")
 		("configfile,c", value<std::string>(), "Config file")
 		("format,F", value<std::string>()->default_value("rtlsdr"), "Format, 'rtlsdr' or 'hackrf'")
 		("samplerate,s", value<int>()->default_value(6000), "Samplerate in S/s")
@@ -31,10 +30,24 @@ int main(int argc, char *argv[]) {
 		variables_map vm;
 		store(parse_command_line(argc, argv, desc), vm);
 
+		bool stop = false;
+
 		if (vm.count("help")) {
 			std::cout << desc << std::endl;
-			exit(0);
+			stop = true;
 		}
+
+		if (vm.count("listmodules")) {
+			QrssPiG::listModules();
+			stop = true;
+		}
+
+		if (vm.count("listdevices")) {
+			QrssPiG::listDevices();
+			stop = true;
+		}
+
+		if (stop) exit(0);
 
 		if (vm.count("configfile")) {
 			std::string configFile = vm["configfile"].as<std::string>();
@@ -78,6 +91,10 @@ int main(int argc, char *argv[]) {
 		std::cerr << ex.what() << std::endl;
 		exit(-1);
 	}
+
+	signal(SIGINT, signalHandler);
+	signal(SIGTERM, signalHandler);
+	signal(SIGABRT, signalHandler);
 
 	gPig->run();
 

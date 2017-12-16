@@ -3,12 +3,17 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -pedantic -Wextra")
 add_definitions(-std=c++11)
 
 # Look for optional packages
-#find_package(LibHackRF)
+find_package(LibAlsa)
+if (LIBALSA_FOUND)
+	include_directories(${LIBALSA_INCLUDE_DIRS})
+endif (LIBALSA_FOUND)
+
+find_package(LibHackRF)
 if (LIBHACKRF_FOUND)
 	include_directories(${LIBHACKRF_INCLUDE_DIRS})
 endif (LIBHACKRF_FOUND)
 
-#find_package(LibRtlSdr)
+find_package(LibRtlSdr)
 if (LIBRTLSDR_FOUND)
 	include_directories(${LIBRTLSDR_INCLUDE_DIRS})
 endif (LIBRTLSDR_FOUND)
@@ -36,7 +41,11 @@ if (LIBCURL_FOUND)
 	include_directories(${LIBCURL_INCLUDE_DIR})
 endif (LIBCURL_FOUND)
 
-list(APPEND QRSSPIG_SOURCES main.cpp QrssPiG.cpp QGInputDevice.cpp QGDownSampler.cpp QGFft.cpp QGImage.cpp QGUploader.cpp QGUploaderLocal.cpp)
+list(APPEND QRSSPIG_SOURCES main.cpp QrssPiG.cpp QGInputDevice.cpp QGInputStdIn.cpp QGProcessor.cpp QGImage.cpp QGUploader.cpp QGUploaderLocal.cpp)
+
+if (LIBALSA_FOUND)
+	list(APPEND QRSSPIG_SOURCES QGInputAlsa.cpp)
+endif (LIBALSA_FOUND)
 
 if (LIBHACKRF_FOUND)
 	list(APPEND QRSSPIG_SOURCES QGInputHackRF.cpp)
@@ -61,6 +70,11 @@ target_link_libraries(qrsspig boost_program_options)
 target_link_libraries(qrsspig yaml-cpp)
 target_link_libraries(qrsspig fftw3f)
 target_link_libraries(qrsspig gd)
+
+if (LIBALSA_FOUND)
+	target_link_libraries(qrsspig ${LIBALSA_LIBRARY})
+	set(HAVE_LIBALSA 1)
+endif (LIBALSA_FOUND)
 
 if (LIBHACKRF_FOUND)
 	target_link_libraries(qrsspig ${LIBHACKRF_LIBRARY})
@@ -91,19 +105,6 @@ if (LIBCURL_FOUND)
 	target_link_libraries(qrsspig ${LIBCURL_LIBRARY})
 	set(HAVE_LIBCURL 1)
 endif (LIBCURL_FOUND)
-
-add_executable (IQGen IQGen.cpp)
-target_link_libraries(IQGen boost_program_options)
-
-add_executable (TestDownSampler TestDownSampler.cpp QGDownSampler.cpp)
-if (LIBLIQUIDSDR_FOUND)
-	target_link_libraries(TestDownSampler ${LIBLIQUIDSDR_LIBRARY})
-	set(HAVE_LIBLIQUIDSDR 1)
-endif (LIBLIQUIDSDR_FOUND)
-if (LIBRTFILTER_FOUND)
-	target_link_libraries(TestDownSampler ${LIBRTFILTER_LIBRARY})
-	set(HAVE_LIBRTFILTER 1)
-endif (LIBRTFILTER_FOUND)
 
 # Generate and include Config.h
 configure_file ("Config.h.in" "${PROJECT_BINARY_DIR}/Config.h")

@@ -1,3 +1,11 @@
+v0.4.0:
+ - Optional signal level meter
+ - Native support for multiple input devices: stdin, alsa, rtlsdr
+ - SCP upload fix, defaulting to home dir without specified directory
+
+v0.3.0:
+ - Added ftp(s) upload capability
+
 v0.2.0:
  - Integrated downsampling using libliquid, optionally librtfilter can also be used
  - Layout improvements with header and smarter frequency and time label spacing
