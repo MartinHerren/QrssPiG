@@ -12,6 +12,7 @@ int main(int argc, char *argv[]) {
 	std::cout << QRSSPIG_NAME << " v" << QRSSPIG_VERSION_MAJOR << "." << QRSSPIG_VERSION_MINOR << "." << QRSSPIG_VERSION_PATCH << std::endl;
 
 	try {
+		std::string configfile;
 		using namespace boost::program_options;
 
 		options_description desc{"Options"};
@@ -19,7 +20,7 @@ int main(int argc, char *argv[]) {
 		("help,h", "Help screen")
 		("listmodules,m", "List modules")
 		("listdevices,l", "List devices")
-		("configfile,c", value<std::string>()->required(), "Config file");
+		("configfile,c", value<std::string>(&configfile)->required(), "Config file");
 
 		positional_options_description pd;
 		pd.add("configfile", 1);
@@ -49,18 +50,15 @@ int main(int argc, char *argv[]) {
 		// Check only now as otherwise -h -m -l options would require the config file option
 		vm.notify();
 
-		// configfile is required so check is not necessary
-		if (vm.count("configfile")) {
-			gPig = new QrssPiG(vm["configfile"].as<std::string>());
+		gPig = new QrssPiG(configfile);
 
-			signal(SIGINT, signalHandler);
-			signal(SIGTERM, signalHandler);
-			signal(SIGABRT, signalHandler);
+		signal(SIGINT, signalHandler);
+		signal(SIGTERM, signalHandler);
+		signal(SIGABRT, signalHandler);
 
-			gPig->run();
+		gPig->run();
 
-			delete gPig;
-		}
+		delete gPig;
 	} catch (const boost::program_options::required_option &ex) {
 		std::cerr << "Error: " << ex.what() << std::endl;
 		exit(-1);
