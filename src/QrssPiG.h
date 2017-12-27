@@ -16,7 +16,6 @@ public:
 	static void listModules();
 	static void listDevices();
 
-	QrssPiG(const std::string &format, int sampleRate, int N, const std::string &dir, const std::string &sshHost, const std::string &sshUser, int sshPort);
 	QrssPiG(const std::string &configFile);
 	~QrssPiG();
 
