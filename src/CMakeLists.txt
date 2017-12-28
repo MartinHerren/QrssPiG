@@ -2,7 +2,28 @@
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -pedantic -Wextra")
 add_definitions(-std=c++11)
 
-# Look for optional packages
+# Look for mandatory libraries
+find_package(LibBoostProgramOptions REQUIRED)
+if (LibBoostProgramOptions_FOUND)
+	include_directories(${LibBoostProgramOptions_INCLUDE_DIRS})
+endif (LibBoostProgramOptions_FOUND)
+
+find_package(LibYaml REQUIRED)
+if (LibYaml_FOUND)
+	include_directories(${LibYaml_INCLUDE_DIRS})
+endif (LibYaml_FOUND)
+
+find_package(LibFftw3 REQUIRED)
+if (LibFftw3_FOUND)
+	include_directories(${LibFftw3_INCLUDE_DIRS})
+endif (LibFftw3_FOUND)
+
+find_package(LibGd REQUIRED)
+if (LibGd_FOUND)
+	include_directories(${LibGd_INCLUDE_DIRS})
+endif (LibGd_FOUND)
+
+# Look for optional input module libraries
 find_package(LibAlsa)
 if (LIBALSA_FOUND)
 	include_directories(${LIBALSA_INCLUDE_DIRS})
@@ -18,6 +39,7 @@ if (LIBRTLSDR_FOUND)
 	include_directories(${LIBRTLSDR_INCLUDE_DIRS})
 endif (LIBRTLSDR_FOUND)
 
+# Look for optional processing libraries
 find_package(LibLiquidSDR)
 if (LIBLIQUIDSDR_FOUND)
 	include_directories(${LIBLIQUIDSDR_INCLUDE_DIR})
@@ -31,6 +53,7 @@ if (NOT LIBLIQUIDSDR_FOUND)
 	endif (LIBRTFILTER_FOUND)
 endif (NOT LIBLIQUIDSDR_FOUND)
 
+# Loop for optional upload libraries
 find_package(LibSSH)
 if (LIBSSH_FOUND)
 	include_directories(${LIBSSH_INCLUDE_DIR})
@@ -66,10 +89,22 @@ endif (LIBCURL_FOUND)
 add_executable (qrsspig ${QRSSPIG_SOURCES})
 
 target_link_libraries(qrsspig pthread)
-target_link_libraries(qrsspig boost_program_options)
-target_link_libraries(qrsspig yaml-cpp)
-target_link_libraries(qrsspig fftw3f)
-target_link_libraries(qrsspig gd)
+
+if (LibBoostProgramOptions_FOUND)
+	target_link_libraries(qrsspig ${LibBoostProgramOptions_LIBRARIES})
+endif (LibBoostProgramOptions_FOUND)
+
+if (LibYaml_FOUND)
+	target_link_libraries(qrsspig ${LibYaml_LIBRARIES})
+endif (LibYaml_FOUND)
+
+if (LibFftw3_FOUND)
+	target_link_libraries(qrsspig ${LibFftw3_LIBRARIES})
+endif (LibFftw3_FOUND)
+
+if (LibGd_FOUND)
+	target_link_libraries(qrsspig ${LibGd_LIBRARIES})
+endif (LibGd_FOUND)
 
 if (LIBALSA_FOUND)
 	target_link_libraries(qrsspig ${LIBALSA_LIBRARY})

@@ -1,7 +1,6 @@
 cmake_minimum_required (VERSION 2.6)
 
 project (qrsspig)
-project (IQGen)
 
 set (QRSSPIG_NAME QrssPiG)
 set (QRSSPIG_VERSION_MAJOR 0)
