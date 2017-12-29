@@ -24,7 +24,7 @@
 std::vector<std::string> QGInputDevice::listModules() {
     std::vector<std::string> modules;
 
-    modules.push_back("File");
+    modules.push_back("StdIn");
 #ifdef HAVE_LIBALSA
     modules.push_back("Alsa");
 #endif //HAVE_LIBALSA
