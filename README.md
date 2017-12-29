@@ -65,7 +65,6 @@ Additional functionalities are available through following libs:
 Clone the git repository from https://github.com/MartinHerren/QrssPiG.git
 
 or download the latest snapshot from https://github.com/MartinHerren/QrssPiG/archive/master.zip
-https://www.ricardo.ch/de/s/wavestation
 To have access to the latest developments you can use the dev branch instead of the master.
 
 #### Build:
@@ -98,7 +97,6 @@ You can combine the options -m and -l:
 ```
 $ qrsspig -ml
 ```
-https://www.ricardo.ch/de/s/wavestation
 To run QrssPiG, type:
 ```
 $ qrsspig -c configfile.yaml
