@@ -27,17 +27,6 @@ void QrssPiG::listDevices() {
 	}
 }
 
-QrssPiG::QrssPiG(const std::string &format, int sampleRate, int N, const std::string &dir, const std::string &sshHost, const std::string &sshUser, int sshPort) {
-	_inputDevice = QGInputDevice::CreateInputDevice(YAML::Load("{format: " + format + ", samplerate: " + std::to_string(sampleRate) + ", basefreq: 0}"));
-	_processor.reset(new QGProcessor(YAML::Load("{samplerate: " + std::to_string(sampleRate) + ", fft: " + std::to_string(N) + "}")));
-
-	if (sshHost.length()) {
-		_uploaders.push_back(QGUploader::CreateUploader(YAML::Load("{type: scp, host: " + sshHost + ", port: " + std::to_string(sshPort) + ", user: " + sshUser + ", dir: " + dir + "}")));
-	} else {
-		_uploaders.push_back(QGUploader::CreateUploader(YAML::Load("{type: local, dir: " + dir + "}")));
-	}
-}
-
 QrssPiG::QrssPiG(const std::string &configFile) {
 	YAML::Node config = YAML::LoadFile(configFile);
 

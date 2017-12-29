@@ -12,6 +12,7 @@ int main(int argc, char *argv[]) {
 	std::cout << QRSSPIG_NAME << " v" << QRSSPIG_VERSION_MAJOR << "." << QRSSPIG_VERSION_MINOR << "." << QRSSPIG_VERSION_PATCH << std::endl;
 
 	try {
+		std::string configfile;
 		using namespace boost::program_options;
 
 		options_description desc{"Options"};
@@ -19,16 +20,13 @@ int main(int argc, char *argv[]) {
 		("help,h", "Help screen")
 		("listmodules,m", "List modules")
 		("listdevices,l", "List devices")
-		("configfile,c", value<std::string>(), "Config file")
-		("format,F", value<std::string>()->default_value("rtlsdr"), "Format, 'rtlsdr' or 'hackrf'")
-		("samplerate,s", value<int>()->default_value(6000), "Samplerate in S/s")
-		("directory,d", value<std::string>()->default_value("./"), "Output directory")
-		("sshhost,o", value<std::string>()->default_value(""), "Ssh host")
-		("sshuser,u", value<std::string>()->default_value(""), "Ssh user")
-		("sshport,p", value<int>()->default_value(0), "Ssh port");
+		("configfile,c", value<std::string>(&configfile)->required(), "Config file");
+
+		positional_options_description pd;
+		pd.add("configfile", 1);
 
 		variables_map vm;
-		store(parse_command_line(argc, argv, desc), vm);
+		store(command_line_parser(argc, argv).options(desc).positional(pd).run(), vm);
 
 		bool stop = false;
 
@@ -49,56 +47,28 @@ int main(int argc, char *argv[]) {
 
 		if (stop) exit(0);
 
-		if (vm.count("configfile")) {
-			std::string configFile = vm["configfile"].as<std::string>();
+		// Check only now as otherwise -h -m -l options would require the config file option
+		vm.notify();
 
-			gPig = new QrssPiG(configFile);
-		} else {
-			std::string format = "rtlsdr";
-			int sampleRate = 6000;
-			std::string directory;
-			std::string sshHost;
-			std::string sshUser;
-			int sshPort = 22;
+		gPig = new QrssPiG(configfile);
 
-			if (vm.count("format")) {
-				std::string format = vm["format"].as<std::string>();
-			}
+		signal(SIGINT, signalHandler);
+		signal(SIGTERM, signalHandler);
+		signal(SIGABRT, signalHandler);
 
-			if (vm.count("samplerate")) {
-				sampleRate = vm["samplerate"].as<int>();
-			}
+		gPig->run();
 
-			if (vm.count("directory")) {
-				directory = vm["directory"].as<std::string>();
-			}
-
-			if (vm.count("sshhost")) {
-				sshHost = vm["sshhost"].as<std::string>();
-			}
-
-			if (vm.count("sshuser")) {
-				sshUser = vm["sshuser"].as<std::string>();
-			}
-
-			if (vm.count("sshport")) {
-				sshPort = vm["sshport"].as<int>();
-			}
-
-			gPig = new QrssPiG(format, sampleRate, 2048, directory, sshHost, sshUser, sshPort);
-		}
+		delete gPig;
+	} catch (const boost::program_options::required_option &ex) {
+		std::cerr << "Error: " << ex.what() << std::endl;
+		exit(-1);
 	} catch (const boost::program_options::error &ex) {
-		std::cerr << ex.what() << std::endl;
+		std::cerr << "Error: " << ex.what() << std::endl;
+		exit(-1);
+	} catch (const std::exception &ex) {
+		std::cerr << "Error: " << ex.what() << std::endl;
 		exit(-1);
 	}
-
-	signal(SIGINT, signalHandler);
-	signal(SIGTERM, signalHandler);
-	signal(SIGABRT, signalHandler);
-
-	gPig->run();
-
-	delete gPig;
 
 	return 0;
 }

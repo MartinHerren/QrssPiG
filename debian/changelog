@@ -3,6 +3,8 @@ qrsspig (0.4.0-1) dev; urgency=medium
   * Optional signal level meter
   * Native support for multiple input devices: stdin, alsa, rtlsdr
   * SCP upload fix, defaulting to home dir without specified directory
+  * Remove non-working config through cli instead of --configfile option
+  * Allow --configfile to be given as positional option
 
  -- Martin Herren <sputnik@on-the-web.ch>  Sat, 16 Dec 2017 22:52:06 +0100
 
