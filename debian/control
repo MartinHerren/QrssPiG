@@ -5,13 +5,15 @@ Maintainer: Martin Herren <sputnik@on-the-web.ch>
 Build-Depends: cmake,
                debhelper (>= 9),
                libboost-program-options-dev,
-               libgd-dev,
-               libssh-dev,
-               libcurl4-openssl-dev,
-               libfftw3-dev,
                libyaml-cpp-dev,
-               libfreetype6-dev,
-               libliquid-dev
+               libfftw3-dev,
+               libgd-dev,
+               libasound2-dev,
+               libhackrf-dev,
+               librtlsdr-dev,
+               libliquid-dev,
+               libssh-dev,
+               libcurl4-openssl-dev
 Standards-Version: 3.9.8
 Homepage: https://martinherren.github.io/QrssPiG
 Vcs-Git: https://github.com/MartinHerren/QrssPiG
