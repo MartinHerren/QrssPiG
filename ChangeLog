@@ -1,6 +1,6 @@
 v0.4.0:
+ - Native support for multiple input devices: stdin, alsa, rtlsdr and hackrf
  - Optional signal level meter
- - Native support for multiple input devices: stdin, alsa, rtlsdr
  - SCP upload fix, defaulting to home dir without specified directory
  - Remove non-working config through cli instead of --configfile option
  - Allow --configfile to be given as positional option
