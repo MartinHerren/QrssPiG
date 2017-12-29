@@ -48,8 +48,10 @@ QGInputRtlSdr::QGInputRtlSdr(const YAML::Node &config): QGInputDevice(config), _
 	_baseFreq = rtlsdr_get_center_freq(_device);
 	std::cout << "Effective frequency: " << _baseFreq << std::endl;
 
-	if (rtlsdr_set_freq_correction(_device, _ppm)) {
-		throw std::runtime_error("Failed setting ppm");
+	if (_ppm) {
+		if (rtlsdr_set_freq_correction(_device, _ppm)) {
+			throw std::runtime_error("Failed setting ppm");
+		}
 	}
 
 	// Set ppm to 0 to mark as 'consumed', so that output image will not correct it a second time
