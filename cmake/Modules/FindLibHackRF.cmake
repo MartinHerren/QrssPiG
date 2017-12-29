@@ -5,10 +5,10 @@
 
 include(LibFindMacros)
 
-find_path(LIBHACKRF_INCLUDE_DIR NAMES libhackrf/hackrf.h)
+find_path(LibHackRF_INCLUDE_DIR NAMES libhackrf/hackrf.h)
 
 # Search first where lib is installed from source, then system one
-find_library(LIBHACKRF_LIBRARY NAMES libhackrf hackrf PATHS /usr/local/lib /usr/lib NO_DEFAULT_PATH)
-find_library(LIBHACKRF_LIBRARY NAMES libhackrf hackrf)
+find_library(LibHackRF_LIBRARY NAMES libhackrf hackrf PATHS /usr/local/lib /usr/lib NO_DEFAULT_PATH)
+find_library(LibHackRF_LIBRARY NAMES libhackrf hackrf)
 
-libfind_process(LIBHACKRF)
+libfind_process(LibHackRF)
