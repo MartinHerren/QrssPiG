@@ -22,4 +22,4 @@ Package: qrsspig
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}, fonts-dejavu-core
 Description: QRSS grabber
-  QRSS grabber software
+ QRSS grabber software

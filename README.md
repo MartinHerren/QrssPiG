@@ -9,14 +9,14 @@ Haven't found a headless standalone grabber for my Pi. So I try to create my own
 If i find one working for my needs I might well using the existing one and stop this.
 
 ## Functionality
- - Headless standalone daemon
- - Able to process I/Q stream from an rtl-sdr, HackRF or other sdr devices
- - Optionally control the sdr device
- - Optionally process audio from stream or audio input
+ - Headless QRSS grabber
+ - Process I/Q stream from an rtl-sdr or HackRF device
+ - Process I/Q stream from a stereo audio input or an audio stream from a mono audio input. Currently only 16 bit audio supported
  - Generate pretty horizontal or vertical waterfall graphs
  - Upload them via scp or ftp, or just save locally. Or any combination of uploads and local saves
 
-## Install from Debian repository
+## Installation
+### Install from Debian repository
 There is a Debian Strech (Debian 9) repository with binaries for amd64 and armhf (Raspberry). To add the repository:
 Create a file /etc/apt/sources.list.d/hb9fxx.list containing
 ```
@@ -31,9 +31,7 @@ sudo aptitude update
 sudo aptitude install qrsspig
 ```
 
-You now can run qrsspig giving it a config file as shown below in the run section.
-
-## Install from SuSE repository
+### Install from SuSE repository
 Thanks to Martin Hauke there are SuSE binaries available. For this you'll need to add the hardware:sdr repository.
 e.g. for openSUSE Leap 42.3:
 ```
@@ -42,113 +40,142 @@ https://download.opensuse.org/repositories/hardware:/sdr/openSUSE_Leap_42.3/hard
 $ sudo zypper install QrssPiG
 ```
 
-## Build
-To build QrssPiG you need cmake
+### Build from source
+#### Dependencies
+To build QrssPiG you need cmake and a c++ compiler (g++ or clang++) with support for c++11.
 
-The build depends on following mandatory dev libs:
+To build the core of QrssPiG you need the following mandatory dev libs:
  - libboost-program-options-dev
  - libyaml-cpp-dev
  - libfftw3-dev
  - libgd-dev
- - libfreetype6-dev
+
+Without any additional libs QrssPiG is limited to read data from its standard input and save the output to the local filesystem.
 
 Additional functionalities are available through following libs:
+ - librtlsdr-dev: Read stream from rtlsdr device
+ - libhackrf-dev: Read stream from hackrf device
+ - libasound2-dev: Read stream from alsa audio device
  - libssh-dev: SCP upload of grabs to a server
  - libcurl4-openssl-dev: FTP upload of grabs to a server
  - libliquid-dev: Downsampling of input signal samplerate before processing
  - librtfilter-dev: Alternative for libliquid-dev
 
-To build:
+#### Get the sources
+Clone the git repository from https://github.com/MartinHerren/QrssPiG.git
+
+or download the latest snapshot from https://github.com/MartinHerren/QrssPiG/archive/master.zip
+To have access to the latest developments you can use the dev branch instead of the master.
+
+#### Build:
+Inside the QrssPiG directory:
 ```
 $ mkdir build
 $ cd build
 $ cmake ..
 $ make
+$ sudo make install
 ```
 
-## Run
-### Piping from audio device
-You need arecord to be installed. From your build directory
+## Running QrssPiG
+To get a short help about QrssPiG's usage, type
 ```
-arecord -q -D hw:1 -t raw -f S16_LE -r 48000 -c 1 --buffer-size=48000 | ./src/qrsspig -c qrss.yaml
+$ qrsspig -h
 ```
-arecord is used to record from the second audio input (audio usb dongle with mono input) as raw audio data without header in signed 16 bit little-endian format with 48kHz samplerate. Output is sent to standard out. 1 second buffer to prevent overflow.
-A receiver tuned to 10138500Hz must be recorded to the audio input. The frequency is choosen so that with a frequency accurate receiver qrss data should appear around 1.5kHz which will be in the middle of the plot.
-In the qrss.yaml config file you must set the sample rate to 6000 and the format to s16iq like in the following example:
+
+To get the list of input/upload modules QrssPiG has been compiled with, type
+```
+$ qrsspig -m
+```
+
+To list found input devices, type
+```
+$ qrsspig -l
+```
+
+You can combine the options -m and -l:
+```
+$ qrsspig -ml
+```
+To run QrssPiG, type:
+```
+$ qrsspig -c configfile.yaml
+```
+alternatively you can omit the '-c' and just give only the config file
+```
+$ qrsspig configfile.yaml
+```
+
+A simple template for a config file is contained in the git repository: qrsspig.yaml.template, some simple example are given in the next section. For a complete documentation of all options in the config file, refer to the wiki.
+
+## Example configs
+### Simple acquisition from a mono soundcard:
+This is a typical config for a RaspberryPi with a cheap external mono USB sound dongle (almost all the cheap ones only feature a mono input and a stereo output, sold as 7.1 output). This kind of config is even able to run on the simple first generation RaspberryPi 1 with a single core running at 700MHz and only 256MB of RAM. It can also run on a ReapberryPi Zero(W).
 ```
 input:
-  format: s16mono
+  type: alsa
+  device: hw:1
+  channel: mono
   samplerate: 48000
   basefreq: 10138500
 processing:
-  samplerate: 6000
-  fft: 16384
-  fftoverlap: 3
+  fft: 65536
+  fftoverlap: 1
 output:
   orientation: horizontal
   minutesperframe: 10
-  freqmin: 300
-  freqmax: 2700
-  dBmin: -30
-  dBmax: 0
+  freqmin: 1000
+  freqmax: 2000
+  dBmin: -50
+  dBmax: -20
 upload:
   type: local
+  dir: /tmp
 ```
-If your soundcard supports stereo input you must specify -c 2 instead of -c 1 for arecord and use s16left or s16right for format in the config file, depending on which channel of the stereo input your radio is connected.
 
-### Piping from rtl_sdr
-You need rtl_sdr installed. From your build directory
-```
-rtl_sdr -f 27999300 -s 240000 -g 60 - | ./src/qrsspig -c qrss.yaml
-```
-rtl_sdr is used as receiver and produces unsigned 8 bit I/Q data at a samplerate of 240kSample/s from 27999300Hz and send them to stdout.
-The frequency is choosen so that with a frequency accurate receiver qrss data should appear around 1.5kHz which will be in the middle of the plot.
-In the qrss.yaml config file you must set the sample rate to the input samplerate of 240000 and a processing samplerate of 6000 and the format to rtlsdr (or u8iq) like in the following example:
+### Simple acquisition from an rtlsdr dongle
+This is a typical config for a RaspberryPi with a cheap rtl-sdr dongle. This config is able to run on RaspberryPi 2/3.
 ```
 input:
-  format: rtlsdr
+  type: rtlsdr
   samplerate: 240000
   basefreq: 27999300
 processing:
-  samplerate: 6000
-  fft: 16384
-  fftoverlap: 3
+  fft: 262144
+  fftoverlap: 1
 output:
-  title: QrssPiG 10m QRSS Grabber
   orientation: horizontal
   minutesperframe: 10
-  freqmin: 300
-  freqmax: 2700
-  dBmin: -40
-  dBmax: -15
+  freqmin: 1000
+  freqmax: 2000
+  dBmin: -50
+  dBmax: -20
 upload:
   type: local
+  dir: /tmp
 ```
 
-### Piping from hackrf through sox for resampling
-You need a recent version of hackrf_transfer (first version couldn't stream to stdout) and sox installed. From your build directory
-```
-hackrf_transfer -f 10138500 -s 8000000 -b 1.75 -a 1 -g 60 -l 24 -r - | sox -t s8 -c 2 -r 8000000 - -t s8 -c 2 -r 6000 - | ./src/qrsspig -c qrss.yaml
-```
-hackrf_transfer is used as receiver and produces signed 8 bit I/Q data at a samplerate of 8MSample/s from 10138500Hz and send them to stdout.
-The frequency is choosen so that with a frequency accurate receiver qrss data should appear around 1.5kHz which will be in the middle of the plot.
-sox is used to resample the data from 8MSample/s to 6kSample/s. Internal downsampler doesn't work yet for hackrf_transfer.
-In the qrss.yaml config file you must set the sample rate to 6000 and the format to hackrf (or s8iq) like in the following example:
+### Simple acquisition from an HackRF
 ```
 input:
-  format: hackrf
-  samplerate: 6000
-  basefreq: 10138500
+  type: hackrf
+  samplerate: 8000000
+  basefreq: 27999300
+  amplifier: on
+  lnagain: 24
+  vgagain: 32
 processing:
-  fft: 16384
-  fftoverlap: 3
+  samplerate: 8000
+  fft: 8192
+  fftoverlap: 1
 output:
   orientation: horizontal
   minutesperframe: 10
-  freqmin: 300
-  freqmax: 2700
-  dBmin: -40
-  dBmax: -30
+  freqmin: 1000
+  freqmax: 2000
+  dBmin: -50
+  dBmax: -20
 upload:
   type: local
+  dir: /tmp
 ```
