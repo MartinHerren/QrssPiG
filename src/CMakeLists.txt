@@ -48,9 +48,9 @@ endif (LibLiquidSDR_FOUND)
 # Don't look for librtfilter if libliquid available
 if (NOT LibLiquidSDR_FOUND)
 	find_package(LibRTFilter)
-	if (LIBRTFilter_FOUND)
-		include_directories(${LIBRTFilter_INCLUDE_DIR})
-	endif (LIBRTFilter_FOUND)
+	if (LibRTFilter_FOUND)
+		include_directories(${LibRTFilter_INCLUDE_DIR})
+	endif (LibRTFilter_FOUND)
 endif (NOT LibLiquidSDR_FOUND)
 
 # Loop for optional upload libraries
@@ -126,10 +126,10 @@ if (LibLiquidSDR_FOUND)
 	set(HAVE_LIBLIQUIDSDR 1)
 endif (LibLiquidSDR_FOUND)
 
-if (LIBRTFilter_FOUND)
-	target_link_libraries(qrsspig ${LIBRTFilter_LIBRARIES})
+if (LibRTFilter_FOUND)
+	target_link_libraries(qrsspig ${LibRTFilter_LIBRARIES})
 	set(HAVE_LIBRTFILTER 1)
-endif (LIBRTFilter_FOUND)
+endif (LibRTFilter_FOUND)
 
 if (LibSSH_FOUND)
 	target_link_libraries(qrsspig ${LibSSH_LIBRARIES})
