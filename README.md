@@ -140,6 +140,7 @@ input:
   type: rtlsdr
   samplerate: 240000
   basefreq: 27999300
+  gain: 24
 processing:
   fft: 262144
   fftoverlap: 1

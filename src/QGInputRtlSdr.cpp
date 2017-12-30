@@ -22,8 +22,10 @@ std::vector<std::string> QGInputRtlSdr::listDevices() {
 
 QGInputRtlSdr::QGInputRtlSdr(const YAML::Node &config): QGInputDevice(config), _device(nullptr) {
 	_deviceIndex = 0;
+	float gain = 24.;
 
 	if (config["deviceindex"]) _deviceIndex = config["deviceindex"].as<int>();
+	if (config["gain"]) gain = config["gain"].as<float>();
 
 	std::cout << "Opening rtlsdr: " << rtlsdr_get_device_name(_deviceIndex) << std::endl;
 
@@ -42,7 +44,7 @@ QGInputRtlSdr::QGInputRtlSdr(const YAML::Node &config): QGInputDevice(config), _
 
 	if (rtlsdr_set_center_freq(_device, _baseFreq)) {
 		throw std::runtime_error("Failed setting frequency");
-	};
+	}
 
 	std::cout << "Requested frequency: " << _baseFreq << std::endl;
 	_baseFreq = rtlsdr_get_center_freq(_device);
@@ -60,6 +62,13 @@ QGInputRtlSdr::QGInputRtlSdr(const YAML::Node &config): QGInputDevice(config), _
 
 	// TODO: Check in cmake if function exists in installed librtlsdr version
 	//if (rtlsdr_set_tuner_bandwidth(_device, 350000)) throw std::runtime_error("Failed setting bandwith");
+
+	if (rtlsdr_set_tuner_gain(_device, _validGain(gain))) {
+		throw std::runtime_error("Failed setting gain");
+	}
+
+	std::cout << "Requested gain: " << gain << "dB" << std::endl;
+	std::cout << "Effective gain: " << (rtlsdr_get_tuner_gain(_device) / 10.) << "dB" << std::endl;
 }
 
 QGInputRtlSdr::~QGInputRtlSdr() {
@@ -96,6 +105,19 @@ void QGInputRtlSdr::_process(unsigned char *buf, uint32_t len) {
 	}
 
 	_bufferSize += len/2;
+}
+
+int QGInputRtlSdr::_validGain(float gain) {
+	int numGains = rtlsdr_get_tuner_gains(_device, nullptr);
+	std::unique_ptr<int[]> gains(new int[numGains]);
+	rtlsdr_get_tuner_gains(_device, gains.get());
+
+	// Get highest gain not higher than requested gain. Gains returned by api are in tenth of dB
+	for (int i = 1; i < numGains; i++) {
+		if ((gain * 10.) < gains[i]) return gains[i - 1];
+	}
+
+	return gains[numGains - 1];
 }
 
 void QGInputRtlSdr::async(unsigned char *buf, uint32_t len, void *ctx) {

@@ -19,6 +19,8 @@ private:
 
 	void _process(unsigned char *buf, uint32_t len);
 
+	int _validGain(float gain);
+
 public:
 	static void async(unsigned char *buf, uint32_t len, void *ctx);
 
