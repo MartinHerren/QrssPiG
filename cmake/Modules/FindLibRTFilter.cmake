@@ -5,10 +5,10 @@
 
 include(LibFindMacros)
 
-find_path(LIBRTFilter_INCLUDE_DIR NAMES rtfilter.h)
+find_path(LibRTFilter_INCLUDE_DIR NAMES rtfilter.h)
 
 # Search first where lib is installed from source, then system one
-find_library(LIBRTFilter_LIBRARY NAMES librtfilter rtfilter PATHS /usr/local/lib /usr/lib NO_DEFAULT_PATH)
-find_library(LIBRTFilter_LIBRARY NAMES librtfilter rtfilter)
+find_library(LibRTFilter_LIBRARY NAMES librtfilter rtfilter PATHS /usr/local/lib /usr/lib NO_DEFAULT_PATH)
+find_library(LibRTFilter_LIBRARY NAMES librtfilter rtfilter)
 
-libfind_process(LIBRTFilter)
+libfind_process(LibRTFilter)
