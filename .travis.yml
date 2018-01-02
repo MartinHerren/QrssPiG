@@ -10,6 +10,7 @@ compiler:
 addons:
   apt:
     packages:
+      - cmake3
       - libboost-program-options-dev
       - libyaml-cpp-dev
       - libfftw3-dev
