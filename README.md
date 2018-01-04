@@ -1,7 +1,7 @@
 # QrssPiG
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](http://www.gnu.org/licenses/gpl-3.0)
-[![Build Status](https://travis-ci.org/MartinHerren/QrssPiG.svg?branch=dev)](https://travis-ci.org/MartinHerren/QrssPiG)
+[![Build Status](https://travis-ci.org/MartinHerren/QrssPiG.svg?branch=master)](https://travis-ci.org/MartinHerren/QrssPiG)
 
 QrssPiG is short for QRSS (Raspberry)Pi Grabber.
 
@@ -15,8 +15,8 @@ Haven't found a headless standalone grabber for my Pi. So I try to create my own
  - Upload them via scp or ftp, or just save locally. Or any combination of uploads and local saves
 
 ## Installation
-### Install from Debian repository
-There is a Debian Strech (Debian 9) repository with binaries for amd64 and armhf (Raspberry). To add the repository:
+### Install from Debian 9 repository
+There is a Debian Stretch (Debian 9) repository with binaries for amd64 and armhf (Raspberry). To add the repository:
 Create a file /etc/apt/sources.list.d/hb9fxx.list containing
 ```
 deb https://debian.hb9fxx.ch/debian/ dev/
@@ -25,7 +25,7 @@ deb-src https://debian.hb9fxx.ch/debian/ dev/
 and run
 ```
 sudo aptitude install apt-transport-https
-wget https://debian.hb9fxx.ch/debian/key.asc -O - | sudo apt-key add
+wget https://debian.hb9fxx.ch/debian/key.asc -O - | sudo apt-key add -
 sudo aptitude update
 sudo aptitude install qrsspig
 ```
