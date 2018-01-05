@@ -5,6 +5,7 @@
 
 #cmakedefine HAVE_LIBALSA
 #cmakedefine HAVE_LIBHACKRF
+#cmakedefine HAVE_LIBHACKRF_DEVICE_LIST
 #cmakedefine HAVE_LIBRTLSDR
 #cmakedefine HAVE_LIBRTFILTER
 #cmakedefine HAVE_LIBLIQUIDSDR
