@@ -42,26 +42,26 @@ endif (LibRtlSdr_FOUND)
 # Look for optional processing libraries
 find_package(LibLiquidSDR)
 if (LibLiquidSDR_FOUND)
-	include_directories(${LibLiquidSDR_INCLUDE_DIR})
+	include_directories(${LibLiquidSDR_INCLUDE_DIRS})
 endif (LibLiquidSDR_FOUND)
 
 # Don't look for librtfilter if libliquid available
 if (NOT LibLiquidSDR_FOUND)
 	find_package(LibRTFilter)
 	if (LibRTFilter_FOUND)
-		include_directories(${LibRTFilter_INCLUDE_DIR})
+		include_directories(${LibRTFilter_INCLUDE_DIRS})
 	endif (LibRTFilter_FOUND)
 endif (NOT LibLiquidSDR_FOUND)
 
 # Loop for optional upload libraries
 find_package(LibSSH)
 if (LibSSH_FOUND)
-	include_directories(${LibSSH_INCLUDE_DIR})
+	include_directories(${LibSSH_INCLUDE_DIRS})
 endif (LibSSH_FOUND)
 
 find_package(LibCurl)
 if (LibCurl_FOUND)
-	include_directories(${LibCurl_INCLUDE_DIR})
+	include_directories(${LibCurl_INCLUDE_DIRS})
 endif (LibCurl_FOUND)
 
 list(APPEND QRSSPIG_SOURCES main.cpp QrssPiG.cpp QGInputDevice.cpp QGInputStdIn.cpp QGProcessor.cpp QGImage.cpp QGUploader.cpp QGUploaderLocal.cpp)
