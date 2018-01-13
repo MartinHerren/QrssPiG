@@ -50,6 +50,20 @@ QGImage::QGImage(const YAML::Node &config, unsigned int index) {
 		if (config["output"].IsMap()) output = config["output"];
 		else if (config["output"].IsSequence()) output = config["output"][index];
 
+		// File name
+		_fileName = "";
+		if (output["filename"]) _fileName = output["filename"].as<std::string>();
+
+		// File format, default to png
+		_format = Format::PNG;
+		if (output["format"]) {
+			std::string f = output["format"].as<std::string>();
+
+			if (f.compare("png") == 0) _format = Format::PNG;
+			else if (f.compare("jpg") == 0) _format = Format::JPG;
+			else throw std::runtime_error("QGImage::configure: output format unrecognized");
+		}
+
 		// Configure orientation
 		_orientation = Orientation::Horizontal;
 		if (output["orientation"]) {
@@ -184,7 +198,7 @@ QGImage::~QGImage() {
 	_free();
 }
 
-void QGImage::addCb(std::function<void(const std::string&, const char*, int, bool, bool)>cb) {
+void QGImage::addCb(std::function<void(const std::string&, const std::string&, const char*, int, bool, bool)>cb) {
 	_cbs.push_back(cb);
 }
 
@@ -976,20 +990,35 @@ int QGImage::_db2Color(float v) {
 void QGImage::_pushFrame(bool intermediate, bool wait) {
 	int frameSize;
 	std::string frameName;
+	std::string frameExt;
+
+	if (_fileName.length() > 0) {
+		frameName = _fileName;
+	} else {
+		time_t t = std::chrono::duration_cast<std::chrono::seconds>(_started).count();
+		std::tm *tm = std::gmtime(&t);
+		char s[21];
+		std::strftime(s, sizeof(s), "%FT%TZ", tm);
+		frameName = std::string(s) + "_" + std::to_string(_baseFreq) + "Hz";
+	}
+
 
 	if (_imBuffer) gdFree(_imBuffer);
 
 	// _imBuffer is usually constant, but frameSize changes
 	// _imBuffer might change in case of realloc, so don't cache its value
-	_imBuffer = (char *)gdImagePngPtr(_im, &frameSize);
+	switch (_format) {
+	case Format::PNG:
+		_imBuffer = (char *)gdImagePngPtr(_im, &frameSize);
+		frameExt = "png";
+		break;
+	case Format::JPG:
+		_imBuffer = (char *)gdImageJpegPtr(_im, &frameSize, -1);
+		frameExt = "jpg";
+		break;
+	}
 
-	time_t t = std::chrono::duration_cast<std::chrono::seconds>(_started).count();
-	std::tm *tm = std::gmtime(&t);
-	char s[21];
-	std::strftime(s, sizeof(s), "%FT%TZ", tm);
-	frameName = std::string(s) + "_" + std::to_string(_baseFreq) + "Hz.png";
-
-	for (auto& cb: _cbs) cb(frameName, _imBuffer, frameSize, intermediate, wait);
+	for (auto& cb: _cbs) cb(frameName, frameExt, _imBuffer, frameSize, intermediate, wait);
 
 	if (!intermediate) _new();
 }

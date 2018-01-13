@@ -44,7 +44,7 @@ QGUploader::QGUploader(const YAML::Node &config) {
 // Parent class handles copying of the data, creation of the thread and finally free the data
 // wait param can be set to true to block until pushed. Used on program exit
 
-void QGUploader::push(const std::string &fileName, const char *data, int dataSize, bool intermediate, bool wait) {
+void QGUploader::push(const std::string &fileName, const std::string &fileExt, const char *data, int dataSize, bool intermediate, bool wait) {
     if (intermediate && !_pushIntermediate) return;
 
     char *d = new char[dataSize];
@@ -54,9 +54,9 @@ void QGUploader::push(const std::string &fileName, const char *data, int dataSiz
     std::memcpy(d, data, dataSize);
 
     if (wait)
-        std::thread(std::bind(&QGUploader::_pushThread, this, fileName, d, dataSize)).join();
+        std::thread(std::bind(&QGUploader::_pushThread, this, fileName, fileExt, d, dataSize)).join();
     else
-        std::thread(std::bind(&QGUploader::_pushThread, this, fileName, d, dataSize)).detach();
+        std::thread(std::bind(&QGUploader::_pushThread, this, fileName, fileExt, d, dataSize)).detach();
 }
 
 std::unique_ptr<QGUploader> QGUploader::CreateUploader(const YAML::Node &config) {
@@ -81,11 +81,11 @@ std::unique_ptr<QGUploader> QGUploader::CreateUploader(const YAML::Node &config)
     }
 }
 
-void QGUploader::_pushThread(std::string fileName, const char *data, int dataSize) {
+void QGUploader::_pushThread(std::string fileName, const std::string &fileExt, const char *data, int dataSize) {
     std::string uri;
 
     try {
-        _pushThreadImpl(_fileName.length() > 0 ? _fileName : fileName, data, dataSize, uri);
+        _pushThreadImpl(std::string(_fileName.length() > 0 ? _fileName : fileName) + "." + fileExt, data, dataSize, uri);
         std::cout << "pushed " << uri << std::endl;
     } catch (const std::exception &e) {
         std::cout << "pushing " << uri << " failed: " << e.what() << std::endl;
