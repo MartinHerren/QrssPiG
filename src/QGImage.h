@@ -39,6 +39,8 @@ private:
 	int _db2Color(float v);
 
 	void _pushFrame(bool intermediate = false, bool wait = false);
+	void _formatFilename(std::string &str);
+	void _substitudeToken(std::string &str, char token, const std::string &sub);
 
 	std::string _levelBar(float v);
 
