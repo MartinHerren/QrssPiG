@@ -15,12 +15,12 @@ protected:
 public:
 	virtual ~QGUploader() {};
 
-	void push(const std::string &fileName, const char *data, int dataSize, bool intermediate = false, bool wait = false);
+	void push(const std::string &fileName, const std::string &fileExt, const char *data, int dataSize, bool intermediate = false, bool wait = false);
 
 	static std::unique_ptr<QGUploader> CreateUploader(const YAML::Node &config);
 
 private:
-	void _pushThread(std::string fileName, const char *data, int dataSize);
+	void _pushThread(std::string fileName, const std::string &fileExt, const char *data, int dataSize);
 
 	virtual void _pushThreadImpl(const std::string &fileName, const char *data, int dataSize, std::string &uri) = 0;
 

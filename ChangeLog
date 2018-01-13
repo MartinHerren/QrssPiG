@@ -1,3 +1,4 @@
+ - Add support for jpg images as alternative to png
 v0.4.0:
  - Native support for multiple input devices: stdin, alsa, rtlsdr and hackrf
  - Optional signal level meter
