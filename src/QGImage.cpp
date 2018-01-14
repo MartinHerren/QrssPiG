@@ -989,19 +989,14 @@ int QGImage::_db2Color(float v) {
 
 void QGImage::_pushFrame(bool intermediate, bool wait) {
 	int frameSize;
-	std::string frameName;
+	std::string frameName("%t_%fHz");
 	std::string frameExt;
 
 	if (_fileName.length() > 0) {
 		frameName = _fileName;
-	} else {
-		time_t t = std::chrono::duration_cast<std::chrono::seconds>(_started).count();
-		std::tm *tm = std::gmtime(&t);
-		char s[21];
-		std::strftime(s, sizeof(s), "%FT%TZ", tm);
-		frameName = std::string(s) + "_" + std::to_string(_baseFreq) + "Hz";
 	}
 
+	_formatFilename(frameName);
 
 	if (_imBuffer) gdFree(_imBuffer);
 
@@ -1021,6 +1016,34 @@ void QGImage::_pushFrame(bool intermediate, bool wait) {
 	for (auto& cb: _cbs) cb(frameName, frameExt, _imBuffer, frameSize, intermediate, wait);
 
 	if (!intermediate) _new();
+}
+
+void QGImage::_formatFilename(std::string &str) {
+	time_t t = std::chrono::duration_cast<std::chrono::seconds>(_started).count();
+	std::tm *tm = std::gmtime(&t);
+	char s[21];
+	std::strftime(s, sizeof(s), "%FT%TZ", tm);
+
+	size_t pos = 0;
+	while (std::string::npos != (pos = str.find("%", pos))) {
+		std::string sub;
+		switch (str[pos + 1]) {
+		case 'f':
+			sub = std::to_string(_baseFreq);
+			break;
+		case 't':
+			sub = std::string(s);
+			break;
+		case '%':
+			sub = "%";
+			break;
+		default:
+			sub = "";
+		}
+
+		str.replace(pos, 2, sub);
+		pos += sub.length();
+	}
 }
 
 std::string QGImage::_levelBar(float v) {
