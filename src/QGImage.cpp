@@ -1024,18 +1024,25 @@ void QGImage::_formatFilename(std::string &str) {
 	char s[21];
 	std::strftime(s, sizeof(s), "%FT%TZ", tm);
 
-	_substitudeToken(str, 'f', std::to_string(_baseFreq));
-	_substitudeToken(str, 't', std::string(s));
-}
-
-void QGImage::_substitudeToken(std::string &str, char token, const std::string &sub) {
-	std::string t("%%");
-	t[1] = token;
-
 	size_t pos = 0;
-	while (std::string::npos != (pos = str.find(t, pos))) {
+	while (std::string::npos != (pos = str.find("%", pos))) {
+		std::string sub;
+		switch (str[pos + 1]) {
+		case 'f':
+			sub = std::to_string(_baseFreq);
+			break;
+		case 't':
+			sub = std::string(s);
+			break;
+		case '%':
+			sub = "%";
+			break;
+		default:
+			sub = "";
+		}
+
 		str.replace(pos, 2, sub);
-		pos++;
+		pos += sub.length();
 	}
 }
 
