@@ -23,9 +23,27 @@ std::vector<std::string> QGInputRtlSdr::listDevices() {
 QGInputRtlSdr::QGInputRtlSdr(const YAML::Node &config): QGInputDevice(config), _device(nullptr) {
 	_deviceIndex = 0;
 	float gain = 24.;
+	DirectSampling directsampling = DirectSampling::OFF;
+
 
 	if (config["deviceindex"]) _deviceIndex = config["deviceindex"].as<int>();
 	if (config["gain"]) gain = config["gain"].as<float>();
+	if (config["directsampling"]) {
+		if (config["directsampling"].as<bool>()) {
+			if (config["directsamplingbranch"]) {
+				std::string b = config["directsamplingbranch"].as<std::string>();
+
+				if (b.compare("i-branch") == 0) directsampling = DirectSampling::I_BRANCH;
+				if (b.compare("q-branch") == 0) directsampling = DirectSampling::Q_BRANCH;
+				else throw std::runtime_error("YAML: directsamplingbranch value unrecognized");
+			} else {
+				// Defaulting to Q-Branch as it is the branch in rtlsdr v3 dongles
+				directsampling = DirectSampling::Q_BRANCH;
+			}
+		} else {
+			directsampling = DirectSampling::OFF;
+		}
+	}
 
 	std::cout << "Opening rtlsdr: " << rtlsdr_get_device_name(_deviceIndex) << std::endl;
 
@@ -35,6 +53,11 @@ QGInputRtlSdr::QGInputRtlSdr(const YAML::Node &config): QGInputDevice(config), _
 
 	if (rtlsdr_set_sample_rate(_device, _sampleRate)) {
 		throw std::runtime_error("Failed setting samplerate");
+	}
+
+	// Do it first, as it might influence rtlsdr_set_center_freq()'s inner working'
+	if (rtlsdr_set_direct_sampling(_device, (int)directsampling)) {
+		throw std::runtime_error("Failed setting directsampling");
 	}
 
 	// Save back effective rate and freq to be retrieved by core

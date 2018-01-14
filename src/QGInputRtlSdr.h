@@ -25,6 +25,7 @@ public:
 	static void async(unsigned char *buf, uint32_t len, void *ctx);
 
 private:
+	enum class DirectSampling { OFF = 0, I_BRANCH = 1, Q_BRANCH = 2 };
 	int _deviceIndex;
 
 	std::thread _t;
