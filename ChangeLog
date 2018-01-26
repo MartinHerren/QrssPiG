@@ -1,3 +1,4 @@
+ - Add disableepsv option to yaml file for ftp upload to disable EPSV
  - Support for rtlsdr direct sampling option
  - More flexible support for custom filenames, globally or per uploader
  - Add support for jpg images as alternative to png

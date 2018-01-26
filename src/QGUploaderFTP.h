@@ -19,6 +19,7 @@ private:
 
 	SSL _ssl;
 	bool _insecure;
+	bool _disableEpsv;
 	std::string _host;
 	int _port;
 	std::string _user;
