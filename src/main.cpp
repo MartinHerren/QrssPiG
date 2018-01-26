@@ -48,7 +48,6 @@ void daemonize() {
 	}
 
 	openlog("qrsspig", LOG_PID, LOG_USER);
-	syslog (LOG_INFO, "Started");
 }
 
 int main(int argc, char *argv[]) {
@@ -89,12 +88,11 @@ int main(int argc, char *argv[]) {
 			stop = true;
 		}
 
+		if (stop) exit(0);
+
 		if (vm.count("detach")) {
 			daemonize();
-			std::cout << "daemon" << std::endl;
 		}
-
-		if (stop) exit(0);
 
 		// Check only now as otherwise -h -m -l options would require the config file option
 		vm.notify();
@@ -109,12 +107,15 @@ int main(int argc, char *argv[]) {
 
 		delete gPig;
 	} catch (const boost::program_options::required_option &ex) {
+		syslog (LOG_ERR, ex.what());
 		std::cerr << "Error: " << ex.what() << std::endl;
 		exit(-1);
 	} catch (const boost::program_options::error &ex) {
+		syslog (LOG_ERR, ex.what());
 		std::cerr << "Error: " << ex.what() << std::endl;
 		exit(-1);
 	} catch (const std::exception &ex) {
+		syslog (LOG_ERR, ex.what());
 		std::cerr << "Error: " << ex.what() << std::endl;
 		exit(-1);
 	}
