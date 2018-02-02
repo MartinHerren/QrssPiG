@@ -107,15 +107,15 @@ int main(int argc, char *argv[]) {
 
 		delete gPig;
 	} catch (const boost::program_options::required_option &ex) {
-		syslog (LOG_ERR, ex.what());
+		syslog (LOG_ERR, "%s", ex.what());
 		std::cerr << "Error: " << ex.what() << std::endl;
 		exit(-1);
 	} catch (const boost::program_options::error &ex) {
-		syslog (LOG_ERR, ex.what());
+		syslog (LOG_ERR, "%s", ex.what());
 		std::cerr << "Error: " << ex.what() << std::endl;
 		exit(-1);
 	} catch (const std::exception &ex) {
-		syslog (LOG_ERR, ex.what());
+		syslog (LOG_ERR, "%s", ex.what());
 		std::cerr << "Error: " << ex.what() << std::endl;
 		exit(-1);
 	}
