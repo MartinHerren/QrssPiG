@@ -598,7 +598,7 @@ void QGImage::_drawFreqScale() {
 	int f0;
 
 	// Freq labels with long ticks
-	f0 = ((int)(_fMin / _freqK - 1) / _hertzPerFreqLabel) * _hertzPerFreqLabel - ((_baseFreqCorrected - _baseFreq) % _hertzPerFreqLabel);
+	f0 = (int)((_fMin / _freqK - 1) / _hertzPerFreqLabel) * _hertzPerFreqLabel - (_baseFreqCorrected % _hertzPerFreqLabel);
 
 	for (int f = f0; f <= _fMax / _freqK + 1; f += _hertzPerFreqLabel) { // + 1 to include high freq label
 		int p = f * _freqK; // Position of label
@@ -659,7 +659,7 @@ void QGImage::_drawFreqScale() {
 	}
 
 	// Small tick markers
-	f0 = ((int)(_fMin / _freqK - 1) / (_hertzPerFreqLabel / _freqLabelDivs)) * (_hertzPerFreqLabel / _freqLabelDivs) - ((_baseFreqCorrected - _baseFreq) % _hertzPerFreqLabel);
+	f0 = (int)((_fMin / _freqK - 1) / (_hertzPerFreqLabel / _freqLabelDivs)) * (_hertzPerFreqLabel / _freqLabelDivs) - (_baseFreqCorrected % (_hertzPerFreqLabel / _freqLabelDivs));
 
 	for (float f = f0; f <= _fMax / _freqK + 1; f += (float)_hertzPerFreqLabel / _freqLabelDivs) {
 		int p = f * _freqK; // Position of label
