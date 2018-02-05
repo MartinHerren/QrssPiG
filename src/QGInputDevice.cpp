@@ -57,13 +57,13 @@ std::vector<std::pair<std::string, std::vector<std::string>>> QGInputDevice::lis
 QGInputDevice::QGInputDevice(const YAML::Node &config) {
     _sampleRate = 48000;
     _baseFreq = 0;
-    _ppm = 0;
+    _ppm = 0.;
     _bufferlength = 1000;
     _debugBufferMonitor = false;
 
     if (config["samplerate"]) _sampleRate = config["samplerate"].as<unsigned int>();
     if (config["basefreq"]) _baseFreq = config["basefreq"].as<unsigned int>();
-    if (config["ppm"]) _ppm = config["ppm"].as<int>();
+    if (config["ppm"]) _ppm = config["ppm"].as<float>();
     if (config["bufferlength"]) _bufferlength = config["bufferlength"].as<int>();
 
     if (config["debug"]) {

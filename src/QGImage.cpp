@@ -21,7 +21,7 @@ QGImage::QGImage(const YAML::Node &config, unsigned int index) {
 		if (input["type"]) _inputType = input["type"].as<std::string>();
 		if (input["samplerate"]) _inputSampleRate = input["samplerate"].as<long int>();
 		if (input["basefreq"]) _baseFreqCorrected =_baseFreq = input["basefreq"].as<int>();
-		if (input["ppm"]) _baseFreqCorrected = _baseFreq + (_baseFreq * input["ppm"].as<int>()) / 1000000;
+		if (input["ppm"]) _baseFreqCorrected = _baseFreq + (_baseFreq * input["ppm"].as<float>()) / 1000000;
 	}
 
 	// TODO Default initialization of N and overlap already done in processor, take values from there

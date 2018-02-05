@@ -26,14 +26,14 @@ public:
 
 	unsigned int sampleRate() { return _sampleRate; };
 	unsigned int baseFreq() { return _baseFreq; };
-	int ppm() { return _ppm; };
+	float ppm() { return _ppm; };
 
 	static std::unique_ptr<QGInputDevice> CreateInputDevice(const YAML::Node &config);
 
 protected:
 	unsigned int _sampleRate;
 	unsigned int _baseFreq;
-	int _ppm;
+	float _ppm;
 	int _bufferlength;
 
 	unsigned int _bufferCapacity;

@@ -1,5 +1,6 @@
 #include "QGInputRtlSdr.h"
 
+#include <cmath>
 #include <iostream>
 #include <memory>
 #include <stdexcept>
@@ -73,15 +74,15 @@ QGInputRtlSdr::QGInputRtlSdr(const YAML::Node &config): QGInputDevice(config), _
 	_baseFreq = rtlsdr_get_center_freq(_device);
 	std::cout << "Effective frequency: " << _baseFreq << std::endl;
 
-	if (_ppm) {
-		if (rtlsdr_set_freq_correction(_device, _ppm)) {
+	if (_ppm != 0.) {
+		int ppmInt = trunc(_ppm);
+
+		if (rtlsdr_set_freq_correction(_device, ppmInt)) {
 			throw std::runtime_error("Failed setting ppm");
 		}
-	}
 
-	// Set ppm to 0 to mark as 'consumed', so that output image will not correct it a second time
-	// TODO substract from get_freq_correction ?
-	_ppm = 0;
+		_ppm -= ppmInt;
+	}
 
 	// TODO: Check in cmake if function exists in installed librtlsdr version
 	//if (rtlsdr_set_tuner_bandwidth(_device, 350000)) throw std::runtime_error("Failed setting bandwith");
