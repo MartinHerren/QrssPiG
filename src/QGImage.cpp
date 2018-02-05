@@ -913,7 +913,7 @@ void QGImage::_drawTimeScale() {
 		while (t0 < 0) t0 += _secondsPerTimeLabel;
 	}
 
-	for (int t = t0; t < _secondsPerFrame; t += _secondsPerTimeLabel) {
+	for (int t = t0; t <= _secondsPerFrame; t += _secondsPerTimeLabel) {
 		int l = t * _timeK; // Line number of label
 
 		std::chrono::milliseconds ms = _started + std::chrono::seconds(t);
@@ -960,7 +960,7 @@ void QGImage::_drawTimeScale() {
 		while (t0 < 0) t0 += _secondsPerTimeLabel / _timeLabelDivs;
 	}
 
-	for (float t = t0; t < _secondsPerFrame; t += (float)_secondsPerTimeLabel / _timeLabelDivs) {
+	for (float t = t0; t <= _secondsPerFrame; t += (float)_secondsPerTimeLabel / _timeLabelDivs) {
 		int l = t * _timeK; // Line number of label
 
 		if (_orientation == Orientation::Horizontal)
