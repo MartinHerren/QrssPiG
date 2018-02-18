@@ -1,3 +1,4 @@
+ - PPM parameter is now a float
  - Fix bug in processing resulting in multiple artefacts and mirror signals
  - Add disableepsv option to yaml file for ftp upload to disable EPSV
  - Add --detach (-d) option to detach process. Logging to syslog
