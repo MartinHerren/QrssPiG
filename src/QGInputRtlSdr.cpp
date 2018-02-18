@@ -1,5 +1,7 @@
 #include "QGInputRtlSdr.h"
 
+#include "Config.h"
+
 #include <cmath>
 #include <iostream>
 #include <memory>
@@ -7,6 +9,8 @@
 
 std::vector<std::string> QGInputRtlSdr::listDevices() {
 	std::vector<std::string> list;
+
+#ifdef HAVE_LIBRTLSDR_DEVICE_LIST
 	unsigned int c = rtlsdr_get_device_count();
 
 	for (unsigned int i = 0; i < c; i++) {
@@ -17,6 +21,9 @@ std::vector<std::string> QGInputRtlSdr::listDevices() {
 		const char *name = rtlsdr_get_device_name(i);
 		list.push_back(std::to_string(i) + "\t" + manufacturer.get() + " " + product.get() + " - " + name + " (serial: " + serial.get() + ")");
 	}
+#else
+	list.push_back("Device listing not supported by this librtlsdr version");
+#endif // HAVE_LIBRTLSDR_DEVICE_LIST
 
 	return list;
 }
