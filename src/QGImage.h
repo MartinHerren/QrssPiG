@@ -2,6 +2,7 @@
 
 #include <chrono>
 #include <complex>
+#include <functional>
 #include <iostream>
 #include <memory>
 #include <vector>

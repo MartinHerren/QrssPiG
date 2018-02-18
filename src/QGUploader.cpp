@@ -1,7 +1,9 @@
 #include "QGUploader.h"
 
 #include <cstring>
+#include <functional>
 #include <iostream>
+#include <syslog.h>
 #include <thread>
 
 #include "Config.h"
@@ -86,8 +88,10 @@ void QGUploader::_pushThread(std::string fileName, const std::string &fileExt, c
 
     try {
         _pushThreadImpl(std::string(_fileName.length() > 0 ? _fileName : fileName) + "." + fileExt, data, dataSize, uri);
+		syslog(LOG_ERR, "pushed %s", uri.c_str());
         std::cout << "pushed " << uri << std::endl;
     } catch (const std::exception &e) {
+		syslog(LOG_ERR, "pushing %s failed: %s", uri.c_str(), e.what());
         std::cout << "pushing " << uri << " failed: " << e.what() << std::endl;
     }
     // Delete data allocated above so specific implementations don't have to worry
