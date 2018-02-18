@@ -29,12 +29,13 @@ std::vector<std::string> QGInputRtlSdr::listDevices() {
 }
 
 QGInputRtlSdr::QGInputRtlSdr(const YAML::Node &config): QGInputDevice(config), _device(nullptr) {
-	_deviceIndex = 0;
+	int deviceIndex = 0;
 	float gain = 24.;
 	DirectSampling directsampling = DirectSampling::OFF;
+	unsigned int bandwidth = 0;
 
 
-	if (config["deviceindex"]) _deviceIndex = config["deviceindex"].as<int>();
+	if (config["deviceindex"]) deviceIndex = config["deviceindex"].as<int>();
 	if (config["gain"]) gain = config["gain"].as<float>();
 	if (config["directsampling"]) {
 		if (config["directsampling"].as<bool>()) {
@@ -52,10 +53,11 @@ QGInputRtlSdr::QGInputRtlSdr(const YAML::Node &config): QGInputDevice(config), _
 			directsampling = DirectSampling::OFF;
 		}
 	}
+	if (config["bandwidth"]) bandwidth = config["bandwidth"].as<unsigned int>();
 
-	std::cout << "Opening rtlsdr: " << rtlsdr_get_device_name(_deviceIndex) << std::endl;
+	std::cout << "Opening rtlsdr: " << rtlsdr_get_device_name(deviceIndex) << std::endl;
 
-	if (rtlsdr_open(&_device, _deviceIndex)) {
+	if (rtlsdr_open(&_device, deviceIndex)) {
 		throw std::runtime_error("Failed to open device");
 	}
 
@@ -91,8 +93,15 @@ QGInputRtlSdr::QGInputRtlSdr(const YAML::Node &config): QGInputDevice(config), _
 		_ppm -= ppmInt;
 	}
 
-	// TODO: Check in cmake if function exists in installed librtlsdr version
-	//if (rtlsdr_set_tuner_bandwidth(_device, 350000)) throw std::runtime_error("Failed setting bandwith");
+	if (bandwidth != 0) {
+#ifdef HAVE_LIBRTLSDR_TUNER_BANDWITH
+		if (rtlsdr_set_tuner_bandwidth(_device, bandwidth)) {
+			throw std::runtime_error("Failed setting tuner bandwith");
+		}
+#else
+		std::cout << "Warning:\ttuner bandwidth option not available for installed librtlsdr version" << std::endl;
+#endif // HAVE_LIBRTLSDR_TUNER_BANDWITH
+	}
 
 	if (rtlsdr_set_tuner_gain(_device, _validGain(gain))) {
 		throw std::runtime_error("Failed setting gain");

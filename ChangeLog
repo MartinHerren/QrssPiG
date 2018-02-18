@@ -1,3 +1,6 @@
+ - Add bandwidth option for rtl-sdr input device
+ - Several fixes to build and run on Debian 8 and Ubuntu 14.04, not all
+ options available on all input devices.
  - PPM parameter is now a float
  - Fix bug in processing resulting in multiple artefacts and mirror signals
  - Add disableepsv option to yaml file for ftp upload to disable EPSV
