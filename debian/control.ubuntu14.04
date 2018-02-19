@@ -11,11 +11,10 @@ Build-Depends: cmake,
                libasound2-dev,
                libhackrf-dev,
                librtlsdr-dev,
-               libliquid-dev,
                librtfilter-dev,
                libcurl4-openssl-dev,
                libssh-dev
-Standards-Version: 3.9.8
+Standards-Version: 3.9.5
 Homepage: https://martinherren.github.io/QrssPiG
 Vcs-Git: https://github.com/MartinHerren/QrssPiG
 
