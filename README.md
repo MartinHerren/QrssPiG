@@ -14,6 +14,9 @@ Haven't found a headless standalone grabber for my Pi. So I try to create my own
  - Generate pretty horizontal or vertical waterfall graphs
  - Upload them via scp or ftp, or just save locally. Or any combination of uploads and local saves
 
+## Sample Output
+<img src="https://www.dxzone.com/dx32901/qrsspig.jpg">
+
 ## Installation
 ### Install from Debian 9 repository
 There is a Debian Stretch (Debian 9) repository with binaries for amd64 and armhf (Raspberry). To add the repository:
