@@ -4,7 +4,6 @@
 #include <cmath>
 #include <iomanip>
 #include <stdexcept>
-#include <string>
 
 QGImage::QGImage(const YAML::Node &config, unsigned int index) {
 	_im = nullptr;
@@ -51,17 +50,27 @@ QGImage::QGImage(const YAML::Node &config, unsigned int index) {
 		else if (config["output"].IsSequence()) output = config["output"][index];
 
 		// File name
-		_fileName = "";
-		if (output["filename"]) _fileName = output["filename"].as<std::string>();
+		_fileNameTmpl = "%t_%fHz";
+		if (output["filename"]) _fileNameTmpl = output["filename"].as<std::string>();
 
 		// File format, default to png
 		_format = Format::PNG;
+		_fileNameExt = "png";
 		if (output["format"]) {
 			std::string f = output["format"].as<std::string>();
 
 			if (f.compare("png") == 0) _format = Format::PNG;
 			else if (f.compare("jpg") == 0) _format = Format::JPG;
 			else throw std::runtime_error("QGImage::configure: output format unrecognized");
+		}
+
+		switch (_format) {
+		case Format::PNG:
+			_fileNameExt = "png";
+			break;
+		case Format::JPG:
+			_fileNameExt = "jpg";
+			break;
 		}
 
 		// Configure orientation
@@ -198,7 +207,7 @@ QGImage::~QGImage() {
 	_free();
 }
 
-void QGImage::addCb(std::function<void(const std::string&, const std::string&, const char*, int, bool, bool)>cb) {
+void QGImage::addCb(std::function<void(const std::string&, const std::string&, long int, std::chrono::milliseconds, const char*, int, bool, bool)>cb) {
 	_cbs.push_back(cb);
 }
 
@@ -989,14 +998,6 @@ int QGImage::_db2Color(float v) {
 
 void QGImage::_pushFrame(bool intermediate, bool wait) {
 	int frameSize;
-	std::string frameName("%t_%fHz");
-	std::string frameExt;
-
-	if (_fileName.length() > 0) {
-		frameName = _fileName;
-	}
-
-	_formatFilename(frameName);
 
 	if (_imBuffer) gdFree(_imBuffer);
 
@@ -1005,45 +1006,15 @@ void QGImage::_pushFrame(bool intermediate, bool wait) {
 	switch (_format) {
 	case Format::PNG:
 		_imBuffer = (char *)gdImagePngPtr(_im, &frameSize);
-		frameExt = "png";
 		break;
 	case Format::JPG:
 		_imBuffer = (char *)gdImageJpegPtr(_im, &frameSize, -1);
-		frameExt = "jpg";
 		break;
 	}
 
-	for (auto& cb: _cbs) cb(frameName, frameExt, _imBuffer, frameSize, intermediate, wait);
+	for (auto& cb: _cbs) cb(_fileNameTmpl, _fileNameExt, _baseFreq, _started, _imBuffer, frameSize, intermediate, wait);
 
 	if (!intermediate) _new();
-}
-
-void QGImage::_formatFilename(std::string &str) {
-	time_t t = std::chrono::duration_cast<std::chrono::seconds>(_started).count();
-	std::tm *tm = std::gmtime(&t);
-	char s[21];
-	std::strftime(s, sizeof(s), "%FT%TZ", tm);
-
-	size_t pos = 0;
-	while (std::string::npos != (pos = str.find("%", pos))) {
-		std::string sub;
-		switch (str[pos + 1]) {
-		case 'f':
-			sub = std::to_string(_baseFreq);
-			break;
-		case 't':
-			sub = std::string(s);
-			break;
-		case '%':
-			sub = "%";
-			break;
-		default:
-			sub = "";
-		}
-
-		str.replace(pos, 2, sub);
-		pos += sub.length();
-	}
 }
 
 std::string QGImage::_levelBar(float v) {

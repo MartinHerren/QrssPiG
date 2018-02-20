@@ -5,6 +5,7 @@
 #include <functional>
 #include <iostream>
 #include <memory>
+#include <string>
 #include <vector>
 
 #include <gd.h>
@@ -15,7 +16,7 @@ public:
 	QGImage(const YAML::Node &config, unsigned int index);
 	~QGImage();
 
-	void addCb(std::function<void(const std::string&, const std::string&, const char*, int, bool, bool)>cb);
+	void addCb(std::function<void(const std::string&, const std::string&, long int, std::chrono::milliseconds, const char*, int, bool, bool)>cb);
 
 	void addLine(const std::complex<float> *fft);
 
@@ -40,7 +41,6 @@ private:
 	int _db2Color(float v);
 
 	void _pushFrame(bool intermediate = false, bool wait = false);
-	void _formatFilename(std::string &str);
 
 	std::string _levelBar(float v);
 
@@ -53,7 +53,8 @@ private:
 	long int _baseFreq;
 	long int _baseFreqCorrected;
 
-	std::string _fileName;
+	std::string _fileNameTmpl;
+	std::string _fileNameExt;
 	Format _format;
 
 	std::string _title;
@@ -129,5 +130,5 @@ private:
 	int _timeLabelWidth;
 	int _timeLabelHeight;
 
-	std::vector<std::function<void(const std::string&, const std::string&, const char*, int, bool, bool)>> _cbs;
+	std::vector<std::function<void(const std::string&, const std::string&, long int, std::chrono::milliseconds, const char*, int, bool, bool)>> _cbs;
 };
