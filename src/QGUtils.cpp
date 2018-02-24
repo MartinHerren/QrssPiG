@@ -8,8 +8,7 @@
 void QGUtils::formatFilename(const std::string &tmpl, std::string &str, long int freq, std::chrono::milliseconds frameStart) {
 	time_t t = std::chrono::duration_cast<std::chrono::seconds>(frameStart).count();
 	std::tm *tm = std::gmtime(&t);
-	char s[21];
-	std::strftime(s, sizeof(s), "%FT%TZ", tm);
+	char s[32];
 
 	str = tmpl;
 	size_t pos = 0;
@@ -19,7 +18,16 @@ void QGUtils::formatFilename(const std::string &tmpl, std::string &str, long int
 		case 'f':
 			sub = std::to_string(freq);
 			break;
+		case 'd':
+			std::strftime(s, sizeof(s), "%F", tm);
+			sub = std::string(s);
+			break;
 		case 't':
+			std::strftime(s, sizeof(s), "%T", tm);
+			sub = std::string(s);
+			break;
+		case 'I':
+			std::strftime(s, sizeof(s), "%FT%TZ", tm);
 			sub = std::string(s);
 			break;
 		case '%':
