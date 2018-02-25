@@ -4,7 +4,6 @@
 #include <cmath>
 #include <iomanip>
 #include <stdexcept>
-#include <string>
 
 QGImage::QGImage(const YAML::Node &config, unsigned int index) {
 	_im = nullptr;
@@ -21,7 +20,7 @@ QGImage::QGImage(const YAML::Node &config, unsigned int index) {
 		if (input["type"]) _inputType = input["type"].as<std::string>();
 		if (input["samplerate"]) _inputSampleRate = input["samplerate"].as<long int>();
 		if (input["basefreq"]) _baseFreqCorrected =_baseFreq = input["basefreq"].as<int>();
-		if (input["ppm"]) _baseFreqCorrected = _baseFreq + (_baseFreq * input["ppm"].as<int>()) / 1000000;
+		if (input["ppm"]) _baseFreqCorrected = _baseFreq + (_baseFreq * input["ppm"].as<float>()) / 1000000;
 	}
 
 	// TODO Default initialization of N and overlap already done in processor, take values from there
@@ -49,6 +48,30 @@ QGImage::QGImage(const YAML::Node &config, unsigned int index) {
 		// Get the correct output when having multiple outputs
 		if (config["output"].IsMap()) output = config["output"];
 		else if (config["output"].IsSequence()) output = config["output"][index];
+
+		// File name
+		_fileNameTmpl = "%t_%fHz";
+		if (output["filename"]) _fileNameTmpl = output["filename"].as<std::string>();
+
+		// File format, default to png
+		_format = Format::PNG;
+		_fileNameExt = "png";
+		if (output["format"]) {
+			std::string f = output["format"].as<std::string>();
+
+			if (f.compare("png") == 0) _format = Format::PNG;
+			else if (f.compare("jpg") == 0) _format = Format::JPG;
+			else throw std::runtime_error("QGImage::configure: output format unrecognized");
+		}
+
+		switch (_format) {
+		case Format::PNG:
+			_fileNameExt = "png";
+			break;
+		case Format::JPG:
+			_fileNameExt = "jpg";
+			break;
+		}
 
 		// Configure orientation
 		_orientation = Orientation::Horizontal;
@@ -184,7 +207,7 @@ QGImage::~QGImage() {
 	_free();
 }
 
-void QGImage::addCb(std::function<void(const std::string&, const char*, int, bool, bool)>cb) {
+void QGImage::addCb(std::function<void(const std::string&, const std::string&, long int, std::chrono::milliseconds, const char*, int, bool, bool)>cb) {
 	_cbs.push_back(cb);
 }
 
@@ -584,7 +607,7 @@ void QGImage::_drawFreqScale() {
 	int f0;
 
 	// Freq labels with long ticks
-	f0 = ((int)(_fMin / _freqK - 1) / _hertzPerFreqLabel) * _hertzPerFreqLabel - ((_baseFreqCorrected - _baseFreq) % _hertzPerFreqLabel);
+	f0 = (int)((_fMin / _freqK - 1) / _hertzPerFreqLabel) * _hertzPerFreqLabel - (_baseFreqCorrected % _hertzPerFreqLabel);
 
 	for (int f = f0; f <= _fMax / _freqK + 1; f += _hertzPerFreqLabel) { // + 1 to include high freq label
 		int p = f * _freqK; // Position of label
@@ -645,7 +668,7 @@ void QGImage::_drawFreqScale() {
 	}
 
 	// Small tick markers
-	f0 = ((int)(_fMin / _freqK - 1) / (_hertzPerFreqLabel / _freqLabelDivs)) * (_hertzPerFreqLabel / _freqLabelDivs) - ((_baseFreqCorrected - _baseFreq) % _hertzPerFreqLabel);
+	f0 = (int)((_fMin / _freqK - 1) / (_hertzPerFreqLabel / _freqLabelDivs)) * (_hertzPerFreqLabel / _freqLabelDivs) - (_baseFreqCorrected % (_hertzPerFreqLabel / _freqLabelDivs));
 
 	for (float f = f0; f <= _fMax / _freqK + 1; f += (float)_hertzPerFreqLabel / _freqLabelDivs) {
 		int p = f * _freqK; // Position of label
@@ -899,7 +922,7 @@ void QGImage::_drawTimeScale() {
 		while (t0 < 0) t0 += _secondsPerTimeLabel;
 	}
 
-	for (int t = t0; t < _secondsPerFrame; t += _secondsPerTimeLabel) {
+	for (int t = t0; t <= _secondsPerFrame; t += _secondsPerTimeLabel) {
 		int l = t * _timeK; // Line number of label
 
 		std::chrono::milliseconds ms = _started + std::chrono::seconds(t);
@@ -946,7 +969,7 @@ void QGImage::_drawTimeScale() {
 		while (t0 < 0) t0 += _secondsPerTimeLabel / _timeLabelDivs;
 	}
 
-	for (float t = t0; t < _secondsPerFrame; t += (float)_secondsPerTimeLabel / _timeLabelDivs) {
+	for (float t = t0; t <= _secondsPerFrame; t += (float)_secondsPerTimeLabel / _timeLabelDivs) {
 		int l = t * _timeK; // Line number of label
 
 		if (_orientation == Orientation::Horizontal)
@@ -975,21 +998,21 @@ int QGImage::_db2Color(float v) {
 
 void QGImage::_pushFrame(bool intermediate, bool wait) {
 	int frameSize;
-	std::string frameName;
 
 	if (_imBuffer) gdFree(_imBuffer);
 
 	// _imBuffer is usually constant, but frameSize changes
 	// _imBuffer might change in case of realloc, so don't cache its value
-	_imBuffer = (char *)gdImagePngPtr(_im, &frameSize);
+	switch (_format) {
+	case Format::PNG:
+		_imBuffer = (char *)gdImagePngPtr(_im, &frameSize);
+		break;
+	case Format::JPG:
+		_imBuffer = (char *)gdImageJpegPtr(_im, &frameSize, -1);
+		break;
+	}
 
-	time_t t = std::chrono::duration_cast<std::chrono::seconds>(_started).count();
-	std::tm *tm = std::gmtime(&t);
-	char s[21];
-	std::strftime(s, sizeof(s), "%FT%TZ", tm);
-	frameName = std::string(s) + "_" + std::to_string(_baseFreq) + "Hz.png";
-
-	for (auto& cb: _cbs) cb(frameName, _imBuffer, frameSize, intermediate, wait);
+	for (auto& cb: _cbs) cb(_fileNameTmpl, _fileNameExt, _baseFreq, _started, _imBuffer, frameSize, intermediate, wait);
 
 	if (!intermediate) _new();
 }

@@ -1,5 +1,9 @@
 #include <boost/program_options.hpp>
 #include <csignal>
+#include <stdexcept>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <syslog.h>
 
 #include "Config.h"
 #include "QrssPiG.h"
@@ -7,6 +11,44 @@
 QrssPiG *gPig = nullptr;
 
 void signalHandler(int signal) { (void)signal; if (gPig) gPig->stop(); }
+
+void daemonize() {
+	pid_t pid;
+
+	pid = fork();
+
+	if (pid < 0) {
+		throw std::runtime_error("Unable to detach: fork failed");
+	}
+
+	if (pid > 0) {
+		exit(EXIT_SUCCESS);
+	}
+
+	if (setsid() < 0) {
+		throw std::runtime_error("Unable to detach: setsid failed");
+	}
+
+	pid = fork();
+
+	if (pid < 0) {
+		throw std::runtime_error("Unable to detach: seconde fork failed");
+	}
+
+	if (pid > 0) {
+        exit(EXIT_SUCCESS);
+	}
+
+	umask(0);
+//	chdir("/"); // Don't change dir as a local config file given as parameter wont be found
+
+	int x;
+	for (x = sysconf(_SC_OPEN_MAX); x >= 0; x--) {
+		close(x);
+	}
+
+	openlog("qrsspig", LOG_PID, LOG_USER);
+}
 
 int main(int argc, char *argv[]) {
 	std::cout << QRSSPIG_NAME << " v" << QRSSPIG_VERSION_MAJOR << "." << QRSSPIG_VERSION_MINOR << "." << QRSSPIG_VERSION_PATCH << std::endl;
@@ -20,6 +62,7 @@ int main(int argc, char *argv[]) {
 		("help,h", "Help screen")
 		("listmodules,m", "List modules")
 		("listdevices,l", "List devices")
+		("detach,d", "Detach after start to run as a daemon")
 		("configfile,c", value<std::string>(&configfile)->required(), "Config file");
 
 		positional_options_description pd;
@@ -47,6 +90,10 @@ int main(int argc, char *argv[]) {
 
 		if (stop) exit(0);
 
+		if (vm.count("detach")) {
+			daemonize();
+		}
+
 		// Check only now as otherwise -h -m -l options would require the config file option
 		vm.notify();
 
@@ -60,12 +107,15 @@ int main(int argc, char *argv[]) {
 
 		delete gPig;
 	} catch (const boost::program_options::required_option &ex) {
+		syslog(LOG_ERR, "%s", ex.what());
 		std::cerr << "Error: " << ex.what() << std::endl;
 		exit(-1);
 	} catch (const boost::program_options::error &ex) {
+		syslog(LOG_ERR, "%s", ex.what());
 		std::cerr << "Error: " << ex.what() << std::endl;
 		exit(-1);
 	} catch (const std::exception &ex) {
+		syslog(LOG_ERR, "%s", ex.what());
 		std::cerr << "Error: " << ex.what() << std::endl;
 		exit(-1);
 	}

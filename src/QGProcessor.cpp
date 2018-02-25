@@ -111,7 +111,7 @@ void QGProcessor::addIQ(const std::complex<float> *iq) {
 	if (_rate != 1.0) {
 		_inputIndex += _resample(iq, _input.get() + _inputIndex);
 	} else {
-		std::memcpy(_input.get() + _inputIndex, iq, _chunkSize);
+		std::memcpy(_input.get() + _inputIndex, iq, _chunkSize * sizeof(std::complex<float>));
 		_inputIndex += _chunkSize;
 	}
 

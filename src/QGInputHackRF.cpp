@@ -1,11 +1,15 @@
 #include "QGInputHackRF.h"
 
+#include "Config.h"
+
 #include <chrono>
 #include <iostream>
 #include <stdexcept>
 
 std::vector<std::string> QGInputHackRF::listDevices() {
 	std::vector<std::string> list;
+
+#ifdef HAVE_LIBHACKRF_DEVICE_LIST
 	hackrf_device* device;
 	int r = hackrf_init();
 
@@ -31,6 +35,9 @@ std::vector<std::string> QGInputHackRF::listDevices() {
 	hackrf_device_list_free(l);
 
 	hackrf_exit();
+#else
+	list.push_back("Device listing not supported by this libhackrf version");
+#endif // HAVE_LIBHACKRF_DEVICE_LIST
 
 	return list;
 }
@@ -81,6 +88,7 @@ QGInputHackRF::QGInputHackRF(const YAML::Node &config): QGInputDevice(config), _
 		throw std::runtime_error(std::string("HackRF setting frequency failed: ") + std::to_string(r));
 	}
 
+#ifdef HAVE_LIBHACKRF_ANTENNA_ENABLE
 	r = hackrf_set_antenna_enable(_device, antennaPowerEnabled);
 
 	if (r != HACKRF_SUCCESS) {
@@ -88,6 +96,11 @@ QGInputHackRF::QGInputHackRF(const YAML::Node &config): QGInputDevice(config), _
 		hackrf_exit();
 		throw std::runtime_error(std::string("HackRF setting antenna power failed: ") + std::to_string(r));
 	}
+#else
+	if (antennaPowerEnabled != 0) {
+		std::cout << "Warning:\tantenna power option not available for installed libhackrf version" << std::endl;
+	}
+#endif // HAVE_LIBHACKRF_ANTENNA_ENABLE
 
 	r = hackrf_set_amp_enable(_device, ampEnabled);
 

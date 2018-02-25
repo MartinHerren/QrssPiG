@@ -22,6 +22,7 @@ private:
 public:
 	static void async(snd_async_handler_t *async);
 
+private:
 	enum class Channel { MONO, LEFT, RIGHT, IQ, INVIQ };
 
 	std::string _deviceName;

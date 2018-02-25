@@ -2,12 +2,16 @@
 
 #include <stdexcept>
 #include <string>
+#include <syslog.h>
 
 using std::placeholders::_1;
 using std::placeholders::_2;
 using std::placeholders::_3;
 using std::placeholders::_4;
 using std::placeholders::_5;
+using std::placeholders::_6;
+using std::placeholders::_7;
+using std::placeholders::_8;
 
 void QrssPiG::listModules() {
 	std::cout << "Available input modules:" << std::endl;
@@ -30,6 +34,7 @@ void QrssPiG::listDevices() {
 QrssPiG::QrssPiG(const std::string &configFile) {
 	YAML::Node config = YAML::LoadFile(configFile);
 
+	syslog (LOG_INFO, "Starting");
 std::cout << "Configuring input" << std::endl;
 	if (config["input"] && config["input"].Type() != YAML::NodeType::Map) throw std::runtime_error("YAML: input must be a map");
 	_inputDevice = QGInputDevice::CreateInputDevice(config["input"]);
@@ -73,13 +78,16 @@ QrssPiG::~QrssPiG() {
 void QrssPiG::run() {
 	_inputDevice->setCb(std::bind(&QGProcessor::addIQ, _processor, _1), _processor->chunkSize());
 	_processor->addCb(std::bind(&QGImage::addLine, _image, _1));
-	for (auto&& uploader: _uploaders) _image->addCb(std::bind(&QGUploader::push, uploader, _1, _2, _3, _4, _5));
+	for (auto&& uploader: _uploaders) _image->addCb(std::bind(&QGUploader::push, uploader, _1, _2, _3, _4, _5, _6, _7, _8));
 
+	syslog (LOG_INFO, "Started");
 	std::cout << "Run" << std::endl;
 	_inputDevice->run();
 }
 
 void QrssPiG::stop() {
+	syslog (LOG_INFO, "Stopping");
 	std::cout << "Stop" << std::endl;
 	_inputDevice->stop();
+	syslog (LOG_INFO, "Stopped");
 }

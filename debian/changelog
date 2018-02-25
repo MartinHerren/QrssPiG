@@ -1,4 +1,19 @@
-qrsspig (0.4.0-1) dev; urgency=medium
+qrsspig (0.5.0-1) UNRELEASED; urgency=medium
+
+  * Several fixes to build and run on Debian 8 and Ubuntu 14.04
+    not all options available on all input devices.
+  * PPM parameter is now a float
+  * Fix bug in processing resulting in multiple artefacts and mirror signals
+  * Add disableepsv option to yaml file for ftp upload to disable EPSV
+  * Add --detach (-d) option to detach process. Logging to syslog
+  * Support for rtlsdr direct sampling option on Q and I branch
+  * More flexible support for custom filenames with templates, globally
+    or per uploader
+  * Add support for jpg images as alternative to png
+
+ -- Martin Herren <sputnik@on-the-web.ch>  Sun, 25 Feb 2018 00:12:00 +0100
+
+qrsspig (0.4.0-1) UNRELEASED; urgency=medium
 
   * Native support for multiple input devices: stdin, alsa, rtlsdr and hackrf
   * Optional signal level meter
@@ -8,25 +23,25 @@ qrsspig (0.4.0-1) dev; urgency=medium
 
  -- Martin Herren <sputnik@on-the-web.ch>  Sat, 30 Dec 2017 10:50:06 +0100
 
-qrsspig (0.3.0-1) dev; urgency=medium
+qrsspig (0.3.0-1) UNRELEASED; urgency=medium
 
   * Added ftp(s) upload capability
 
  -- Martin Herren <sputnik@on-the-web.ch>  Wed, 18 Oct 2017 16:46:55 +0200
 
-qrsspig (0.2.0-1.2) dev; urgency=medium
+qrsspig (0.2.0-1.2) UNRELEASED; urgency=medium
 
   * Merge latest updates before 0.2.0, audio input variants
 
  -- Martin Herren <sputnik@on-the-web.ch>  Thu, 12 Oct 2017 22:28:30 +0200
 
-qrsspig (0.2.0-1.1) dev; urgency=medium
+qrsspig (0.2.0-1.1) UNRELEASED; urgency=medium
 
   * Target bin now qrsspig instead of QrssPiG
 
  -- Martin Herren <sputnik@on-the-web.ch>  Thu, 12 Oct 2017 15:25:48 +0200
 
-qrsspig (0.2.0-1) dev; urgency=medium
+qrsspig (0.2.0-1) UNRELEASED; urgency=medium
 
   * Integrated downsampling using libliquid, optionally librtfilter can also
     be used

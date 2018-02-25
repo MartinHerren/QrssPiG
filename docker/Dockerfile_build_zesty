@@ -1,0 +1,31 @@
+FROM ubuntu:17.04
+
+RUN apt-get update \
+  && apt-get install -y \
+    build-essential \
+    clang \
+    cmake \
+    devscripts \
+    dh-make
+
+RUN apt-get update \
+  && apt-get install -y \
+    libboost-program-options-dev \
+    libyaml-cpp-dev \
+    libfftw3-dev \
+    libgd-dev
+
+RUN apt-get update \
+  && apt-get install -y \
+    libliquid-dev
+
+RUN apt-get update \
+  && apt-get install -y \
+    libasound-dev \
+    libhackrf-dev \
+    librtlsdr-dev
+
+RUN apt-get update \
+  && apt-get install -y \
+    libcurl4-openssl-dev \
+    libssh-dev

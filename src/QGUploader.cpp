@@ -1,10 +1,13 @@
 #include "QGUploader.h"
+#include "Config.h"
 
 #include <cstring>
+#include <functional>
 #include <iostream>
+#include <syslog.h>
 #include <thread>
 
-#include "Config.h"
+#include "QGUtils.h"
 
 #include "QGUploaderLocal.h"
 
@@ -31,11 +34,11 @@ std::vector<std::string> QGUploader::listModules() {
 }
 
 QGUploader::QGUploader(const YAML::Node &config) {
-    _fileName = "";
+    _fileNameTmpl = "";
     _verbose = false;
     _pushIntermediate = false;
 
-    if (config["filename"]) _fileName = config["filename"].as<std::string>();
+    if (config["filename"]) _fileNameTmpl = config["filename"].as<std::string>();
     if (config["verbose"]) _verbose = config["verbose"].as<bool>();
     if (config["intermediate"]) _pushIntermediate = config["intermediate"].as<bool>();
 }
@@ -44,7 +47,7 @@ QGUploader::QGUploader(const YAML::Node &config) {
 // Parent class handles copying of the data, creation of the thread and finally free the data
 // wait param can be set to true to block until pushed. Used on program exit
 
-void QGUploader::push(const std::string &fileName, const char *data, int dataSize, bool intermediate, bool wait) {
+void QGUploader::push(const std::string &fileNameTmpl, const std::string &fileExt, long int freq, std::chrono::milliseconds frameStart, const char *data, int dataSize, bool intermediate, bool wait) {
     if (intermediate && !_pushIntermediate) return;
 
     char *d = new char[dataSize];
@@ -52,6 +55,10 @@ void QGUploader::push(const std::string &fileName, const char *data, int dataSiz
     if (!d) throw std::runtime_error("Out of memory");
 
     std::memcpy(d, data, dataSize);
+
+    std::string fileName;
+	QGUtils::formatFilename(_fileNameTmpl.length() > 0 ? _fileNameTmpl : fileNameTmpl, fileName, freq, frameStart);
+    fileName += "." + fileExt;
 
     if (wait)
         std::thread(std::bind(&QGUploader::_pushThread, this, fileName, d, dataSize)).join();
@@ -85,9 +92,11 @@ void QGUploader::_pushThread(std::string fileName, const char *data, int dataSiz
     std::string uri;
 
     try {
-        _pushThreadImpl(_fileName.length() > 0 ? _fileName : fileName, data, dataSize, uri);
+        _pushThreadImpl(fileName, data, dataSize, uri);
+		syslog(LOG_ERR, "pushed %s", uri.c_str());
         std::cout << "pushed " << uri << std::endl;
     } catch (const std::exception &e) {
+		syslog(LOG_ERR, "pushing %s failed: %s", uri.c_str(), e.what());
         std::cout << "pushing " << uri << " failed: " << e.what() << std::endl;
     }
     // Delete data allocated above so specific implementations don't have to worry

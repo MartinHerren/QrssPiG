@@ -1,3 +1,14 @@
+v0.5.0:
+ - Add bandwidth option for rtl-sdr input device
+ - Several fixes to build and run on Debian 8 and Ubuntu 14.04, not all
+ options available on all input devices.
+ - PPM parameter is now a float
+ - Fix bug in processing resulting in multiple artefacts and mirror signals
+ - Add disableepsv option to yaml file for ftp upload to disable EPSV
+ - Add --detach (-d) option to detach process. Logging to syslog
+ - Support for rtlsdr direct sampling option on Q and I branch
+ - More flexible support for custom filenames with templates, globally or per uploader
+ - Add support for jpg images as alternative to png
 v0.4.0:
  - Native support for multiple input devices: stdin, alsa, rtlsdr and hackrf
  - Optional signal level meter

@@ -38,6 +38,7 @@ QGUploaderFTP::QGUploaderFTP(const YAML::Node &config) : QGUploader(config) {
 	}
 
 	if (config["insecure"]) _insecure = config["insecure"].as<bool>();
+	if (config["disableepsv"]) _disableEpsv = config["disableepsv"].as<bool>();
 
 	if (config["host"]) _host = config["host"].as<std::string>();
 	if (config["port"]) _port = config["port"].as<int>();
@@ -79,6 +80,7 @@ void QGUploaderFTP::_pushThreadImpl(const std::string &fileName, const char *dat
 	if (_ssl == SSL::Explicit) curl_easy_setopt(curl, CURLOPT_USE_SSL, CURLUSESSL_ALL);
 	if (_insecure) curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L); // Needed to accept self-signed certs
 	// if () curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L); // TODO: Would be needed to accept certs with missmatching host name
+	if (_disableEpsv) curl_easy_setopt(curl, CURLOPT_FTP_USE_EPSV, 0L); // Needed to pass some routers/firewalls
 
 	curl_easy_setopt(curl, CURLOPT_UPLOAD, 1L);
 	// we want to use our own read function

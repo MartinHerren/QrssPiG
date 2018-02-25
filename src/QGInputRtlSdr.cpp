@@ -1,11 +1,16 @@
 #include "QGInputRtlSdr.h"
 
+#include "Config.h"
+
+#include <cmath>
 #include <iostream>
 #include <memory>
 #include <stdexcept>
 
 std::vector<std::string> QGInputRtlSdr::listDevices() {
 	std::vector<std::string> list;
+
+#ifdef HAVE_LIBRTLSDR_DEVICE_LIST
 	unsigned int c = rtlsdr_get_device_count();
 
 	for (unsigned int i = 0; i < c; i++) {
@@ -16,25 +21,53 @@ std::vector<std::string> QGInputRtlSdr::listDevices() {
 		const char *name = rtlsdr_get_device_name(i);
 		list.push_back(std::to_string(i) + "\t" + manufacturer.get() + " " + product.get() + " - " + name + " (serial: " + serial.get() + ")");
 	}
+#else
+	list.push_back("Device listing not supported by this librtlsdr version");
+#endif // HAVE_LIBRTLSDR_DEVICE_LIST
 
 	return list;
 }
 
 QGInputRtlSdr::QGInputRtlSdr(const YAML::Node &config): QGInputDevice(config), _device(nullptr) {
-	_deviceIndex = 0;
+	int deviceIndex = 0;
 	float gain = 24.;
+	DirectSampling directsampling = DirectSampling::OFF;
+	unsigned int bandwidth = 0;
 
-	if (config["deviceindex"]) _deviceIndex = config["deviceindex"].as<int>();
+
+	if (config["deviceindex"]) deviceIndex = config["deviceindex"].as<int>();
 	if (config["gain"]) gain = config["gain"].as<float>();
+	if (config["directsampling"]) {
+		if (config["directsampling"].as<bool>()) {
+			if (config["directsamplingbranch"]) {
+				std::string b = config["directsamplingbranch"].as<std::string>();
 
-	std::cout << "Opening rtlsdr: " << rtlsdr_get_device_name(_deviceIndex) << std::endl;
+				if (b.compare("i-branch") == 0) directsampling = DirectSampling::I_BRANCH;
+				if (b.compare("q-branch") == 0) directsampling = DirectSampling::Q_BRANCH;
+				else throw std::runtime_error("YAML: directsamplingbranch value unrecognized");
+			} else {
+				// Defaulting to Q-Branch as it is the branch in rtlsdr v3 dongles
+				directsampling = DirectSampling::Q_BRANCH;
+			}
+		} else {
+			directsampling = DirectSampling::OFF;
+		}
+	}
+	if (config["bandwidth"]) bandwidth = config["bandwidth"].as<unsigned int>();
 
-	if (rtlsdr_open(&_device, _deviceIndex)) {
+	std::cout << "Opening rtlsdr: " << rtlsdr_get_device_name(deviceIndex) << std::endl;
+
+	if (rtlsdr_open(&_device, deviceIndex)) {
 		throw std::runtime_error("Failed to open device");
 	}
 
 	if (rtlsdr_set_sample_rate(_device, _sampleRate)) {
 		throw std::runtime_error("Failed setting samplerate");
+	}
+
+	// Do it first, as it might influence rtlsdr_set_center_freq()'s inner working'
+	if (rtlsdr_set_direct_sampling(_device, (int)directsampling)) {
+		throw std::runtime_error("Failed setting directsampling");
 	}
 
 	// Save back effective rate and freq to be retrieved by core
@@ -50,18 +83,25 @@ QGInputRtlSdr::QGInputRtlSdr(const YAML::Node &config): QGInputDevice(config), _
 	_baseFreq = rtlsdr_get_center_freq(_device);
 	std::cout << "Effective frequency: " << _baseFreq << std::endl;
 
-	if (_ppm) {
-		if (rtlsdr_set_freq_correction(_device, _ppm)) {
+	if (_ppm != 0.) {
+		int ppmInt = trunc(_ppm);
+
+		if (rtlsdr_set_freq_correction(_device, ppmInt)) {
 			throw std::runtime_error("Failed setting ppm");
 		}
+
+		_ppm -= ppmInt;
 	}
 
-	// Set ppm to 0 to mark as 'consumed', so that output image will not correct it a second time
-	// TODO substract from get_freq_correction ?
-	_ppm = 0;
-
-	// TODO: Check in cmake if function exists in installed librtlsdr version
-	//if (rtlsdr_set_tuner_bandwidth(_device, 350000)) throw std::runtime_error("Failed setting bandwith");
+	if (bandwidth != 0) {
+#ifdef HAVE_LIBRTLSDR_TUNER_BANDWITH
+		if (rtlsdr_set_tuner_bandwidth(_device, bandwidth)) {
+			throw std::runtime_error("Failed setting tuner bandwith");
+		}
+#else
+		std::cout << "Warning:\ttuner bandwidth option not available for installed librtlsdr version" << std::endl;
+#endif // HAVE_LIBRTLSDR_TUNER_BANDWITH
+	}
 
 	if (rtlsdr_set_tuner_gain(_device, _validGain(gain))) {
 		throw std::runtime_error("Failed setting gain");

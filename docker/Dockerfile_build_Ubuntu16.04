@@ -1,3 +1,0 @@
-FROM ubuntu:16.04
-
-RUN apt-get update && apt-get install -y clang cmake libboost-program-options-dev libyaml-cpp-dev libfftw3-dev libgd-dev libfreetype6-dev librtfilter-dev libasound-dev libhackrf-dev librtlsdr-dev libssh-dev libcurl4-openssl-dev

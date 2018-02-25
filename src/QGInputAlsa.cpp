@@ -58,6 +58,7 @@ QGInputAlsa::QGInputAlsa(const YAML::Node &config): QGInputDevice(config), _devi
 		else if (c.compare("right") == 0) _channel = Channel::RIGHT;
 		else if (c.compare("iq") == 0) _channel = Channel::IQ;
 		else if (c.compare("inviq") == 0) _channel = Channel::INVIQ;
+		else throw std::runtime_error("YAML: channel value unrecognized");
 	}
 
 	switch (_channel) {
