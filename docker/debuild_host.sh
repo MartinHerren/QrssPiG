@@ -17,4 +17,4 @@ tar xf $tarfile
 cd $dir
 cp debian/control.$dist debian/control
 sed -i "s/UNRELEASED/$dist/g" debian/changelog
-debuild -S
+debuild
