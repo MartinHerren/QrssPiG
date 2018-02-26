@@ -18,12 +18,13 @@ Haven't found a headless standalone grabber for my Pi. So I try to create my own
 <img src="https://www.dxzone.com/dx32901/qrsspig.jpg">
 
 ## Installation
-### Install from Debian 9 repository
-There is a Debian Stretch (Debian 9) repository with binaries for amd64 and armhf (Raspberry). To add the repository:
-Create a file /etc/apt/sources.list.d/hb9fxx.list containing
+### Install from repository
+There is a repository with binaries for amd64 and armhf (Raspberry) for several Debian, Ubuntu and Linux Mint versions.
+
+To add the repository, create a file /etc/apt/sources.list.d/hb9fxx.list containing the following two lines. You must replace the 'stretch' keyword with your distribution. Supported distributions are 'jessie' (Debian 8), 'stretch' (Debian 9), 'buster' (upcoming Debian 10), 'trusty' (Ubuntu 14.04, Linux Mint 17), 'xenial' (Ubuntu 16.04, Linux Mint 18), 'artful' (Ubuntu 17.10) and 'bionic' (upcoming Ubuntu 18.04, Linux Mint 19). Don't forget the trailing '/'.
 ```
-deb https://debian.hb9fxx.ch/debian/ dev/
-deb-src https://debian.hb9fxx.ch/debian/ dev/
+deb https://debian.hb9fxx.ch/debian/ stretch/
+deb-src https://debian.hb9fxx.ch/debian/ stretch/
 ```
 and run
 ```
