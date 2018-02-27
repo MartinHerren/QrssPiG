@@ -50,7 +50,7 @@ QGImage::QGImage(const YAML::Node &config, unsigned int index) {
 		else if (config["output"].IsSequence()) output = config["output"][index];
 
 		// File name
-		_fileNameTmpl = "%t_%fHz";
+		_fileNameTmpl = "%I_%fHz";
 		if (output["filename"]) _fileNameTmpl = output["filename"].as<std::string>();
 
 		// File format, default to png

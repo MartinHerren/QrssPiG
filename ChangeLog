@@ -1,3 +1,4 @@
+ - Fix default filename format to be identical to v0.4.0 again
 v0.5.0:
  - Add bandwidth option for rtl-sdr input device
  - Several fixes to build and run on Debian 8 and Ubuntu 14.04, not all

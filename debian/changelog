@@ -1,3 +1,9 @@
+qrsspig (0.5.1-1) RELEASED; urgency=medium
+
+  * Fix default filename format to be identical to v0.4.0 again
+
+ -- Martin Herren <sputnik@on-the-web.ch>  Tue, 27 Feb 2018 19:09:00 +0100
+
 qrsspig (0.5.0-1) RELEASED; urgency=medium
 
   * Several fixes to build and run on Debian 8 and Ubuntu 14.04
