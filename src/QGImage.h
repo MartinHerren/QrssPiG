@@ -1,8 +1,9 @@
 #pragma once
 
+#include "QGOutput.h"
+
 #include <chrono>
 #include <complex>
-#include <functional>
 #include <iostream>
 #include <memory>
 #include <string>
@@ -11,12 +12,10 @@
 #include <gd.h>
 #include <yaml-cpp/yaml.h>
 
-class QGImage {
+class QGImage : public QGOutput {
 public:
 	QGImage(const YAML::Node &config, unsigned int index);
 	~QGImage();
-
-	void addCb(std::function<void(const std::string&, const std::string&, long int, std::chrono::milliseconds, const char*, int, bool, bool)>cb);
 
 	void addLine(const std::complex<float> *fft);
 
@@ -129,6 +128,4 @@ private:
 	int _dBLabelHeight;
 	int _timeLabelWidth;
 	int _timeLabelHeight;
-
-	std::vector<std::function<void(const std::string&, const std::string&, long int, std::chrono::milliseconds, const char*, int, bool, bool)>> _cbs;
 };

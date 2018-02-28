@@ -1,5 +1,6 @@
 #include "QrssPiG.h"
 
+#include <iostream>
 #include <stdexcept>
 #include <string>
 #include <syslog.h>
@@ -57,8 +58,8 @@ std::cout << "Configuring processing" << std::endl;
 
 std::cout << "Configuring output" << std::endl;
 	if (config["output"]) {
-		if (config["output"].Type() == YAML::NodeType::Map) _image.reset(new QGImage(config, 0));
-		// else if (config["output"].Type() == YAML::NodeType::Sequence) for (unsigned int i = 0; i < config["output"].size(); i++) _image.reset(new QGImage((config, i));
+		if (config["output"].Type() == YAML::NodeType::Map) _outputs.push_back(QGOutput::CreateOutput(config, 0)); //_image.reset(new QGImage(config, 0));
+		else if (config["output"].Type() == YAML::NodeType::Sequence) for (unsigned int i = 0; i < config["output"].size(); i++) _outputs.push_back(QGOutput::CreateOutput(config, i)); //for (unsigned int i = 0; i < config["output"].size(); i++) _image.reset(new QGImage((config, i));
 		else throw std::runtime_error("YAML: output must be a map or a sequence");
 	}
 
@@ -76,9 +77,16 @@ QrssPiG::~QrssPiG() {
 }
 
 void QrssPiG::run() {
+	// Connect input to processor
 	_inputDevice->setCb(std::bind(&QGProcessor::addIQ, _processor, _1), _processor->chunkSize());
-	_processor->addCb(std::bind(&QGImage::addLine, _image, _1));
-	for (auto&& uploader: _uploaders) _image->addCb(std::bind(&QGUploader::push, uploader, _1, _2, _3, _4, _5, _6, _7, _8));
+
+	// Connect processor to every output
+	for (auto&& output: _outputs) _processor->addCb(std::bind(&QGOutput::addLine, output, _1));
+
+	// Connect every output to every uploader
+	for (auto&& uploader: _uploaders)
+		for (auto&& output: _outputs)
+			output->addCb(std::bind(&QGUploader::push, uploader, _1, _2, _3, _4, _5, _6, _7, _8));
 
 	syslog (LOG_INFO, "Started");
 	std::cout << "Run" << std::endl;
