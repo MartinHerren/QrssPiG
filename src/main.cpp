@@ -1,5 +1,6 @@
 #include <boost/program_options.hpp>
 #include <csignal>
+#include <iostream>
 #include <stdexcept>
 #include <sys/types.h>
 #include <sys/stat.h>

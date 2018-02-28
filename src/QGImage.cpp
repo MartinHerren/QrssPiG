@@ -207,10 +207,6 @@ QGImage::~QGImage() {
 	_free();
 }
 
-void QGImage::addCb(std::function<void(const std::string&, const std::string&, long int, std::chrono::milliseconds, const char*, int, bool, bool)>cb) {
-	_cbs.push_back(cb);
-}
-
 void QGImage::addLine(const std::complex<float> *fft) {
 	if (_currentLine < 0) {
 		_currentLine++;
