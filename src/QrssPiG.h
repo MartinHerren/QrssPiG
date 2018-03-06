@@ -8,7 +8,7 @@
 
 #include "QGInputDevice.h"
 #include "QGProcessor.h"
-#include "QGImage.h"
+#include "QGOutput.h"
 #include "QGUploader.h"
 
 class QrssPiG {
@@ -25,6 +25,6 @@ public:
 private:
 	std::shared_ptr<QGInputDevice> _inputDevice;
 	std::shared_ptr<QGProcessor> _processor;
-	std::shared_ptr<QGImage> _image;
+	std::vector<std::shared_ptr<QGOutput>> _outputs;
 	std::vector<std::shared_ptr<QGUploader>> _uploaders;
 };
