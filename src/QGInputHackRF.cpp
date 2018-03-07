@@ -43,6 +43,7 @@ std::vector<std::string> QGInputHackRF::listDevices() {
 }
 
 QGInputHackRF::QGInputHackRF(const YAML::Node &config): QGInputDevice(config), _device(nullptr) {
+	_type = "HackRF";
 	unsigned char antennaPowerEnabled = 0;
 	unsigned char ampEnabled = 0;
 	unsigned int lnaGain = 16;

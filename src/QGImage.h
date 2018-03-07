@@ -14,10 +14,14 @@
 
 class QGImage : public QGOutput {
 public:
-	QGImage(const YAML::Node &config, unsigned int index);
+	QGImage(const YAML::Node &config, const QGProcessor& processor, int index);
 	~QGImage();
 
 	void addLine(const std::complex<float> *fft);
+
+	std::chrono::milliseconds frameStart() const { return _started; };
+	std::string fileNameTmpl() const { return _fileNameTmpl; };
+	std::string fileNameExt() const { return _fileNameExt; };
 
 private:
 	enum class Orientation { Horizontal, Vertical };
@@ -43,13 +47,7 @@ private:
 
 	std::string _levelBar(float v);
 
-	// Params given at constructor time, cannot be changed
-	int N;
-	int _overlap;
-
 	// Configuration
-	long int _sampleRate;
-	long int _baseFreq;
 	long int _baseFreqCorrected;
 
 	std::string _fileNameTmpl;
@@ -58,8 +56,6 @@ private:
 
 	std::string _title;
 	std::vector<std::string> _subtitles;
-	std::string _inputType;
-	long int _inputSampleRate;
 	std::string _callsign;
 	std::string _qth;
 	std::string _receiver;

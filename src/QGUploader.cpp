@@ -7,6 +7,7 @@
 #include <syslog.h>
 #include <thread>
 
+#include "QGImage.h"
 #include "QGUtils.h"
 
 #include "QGUploaderLocal.h"
@@ -33,39 +34,6 @@ std::vector<std::string> QGUploader::listModules() {
     return modules;
 }
 
-QGUploader::QGUploader(const YAML::Node &config) {
-    _fileNameTmpl = "";
-    _verbose = false;
-    _pushIntermediate = false;
-
-    if (config["filename"]) _fileNameTmpl = config["filename"].as<std::string>();
-    if (config["verbose"]) _verbose = config["verbose"].as<bool>();
-    if (config["intermediate"]) _pushIntermediate = config["intermediate"].as<bool>();
-}
-
-// Push is done in a thread on a copy of the data.
-// Parent class handles copying of the data, creation of the thread and finally free the data
-// wait param can be set to true to block until pushed. Used on program exit
-
-void QGUploader::push(const std::string &fileNameTmpl, const std::string &fileExt, long int freq, std::chrono::milliseconds frameStart, const char *data, int dataSize, bool intermediate, bool wait) {
-    if (intermediate && !_pushIntermediate) return;
-
-    char *d = new char[dataSize];
-
-    if (!d) throw std::runtime_error("Out of memory");
-
-    std::memcpy(d, data, dataSize);
-
-    std::string fileName;
-	QGUtils::formatFilename(_fileNameTmpl.length() > 0 ? _fileNameTmpl : fileNameTmpl, fileName, freq, frameStart);
-    fileName += "." + fileExt;
-
-    if (wait)
-        std::thread(std::bind(&QGUploader::_pushThread, this, fileName, d, dataSize)).join();
-    else
-        std::thread(std::bind(&QGUploader::_pushThread, this, fileName, d, dataSize)).detach();
-}
-
 std::unique_ptr<QGUploader> QGUploader::CreateUploader(const YAML::Node &config) {
     if (!config["type"]) throw std::runtime_error("YAML: uploader must have a type");
 
@@ -86,6 +54,39 @@ std::unique_ptr<QGUploader> QGUploader::CreateUploader(const YAML::Node &config)
     } else {
         throw std::runtime_error(std::string("QGUploader: unknown type ") + config["type"].as<std::string>());
     }
+}
+
+QGUploader::QGUploader(const YAML::Node &config) {
+    _fileNameTmpl = "";
+    _verbose = false;
+    _pushIntermediate = false;
+
+    if (config["filename"]) _fileNameTmpl = config["filename"].as<std::string>();
+    if (config["verbose"]) _verbose = config["verbose"].as<bool>();
+    if (config["intermediate"]) _pushIntermediate = config["intermediate"].as<bool>();
+}
+
+// Push is done in a thread on a copy of the data.
+// Parent class handles copying of the data, creation of the thread and finally free the data
+// wait param can be set to true to block until pushed. Used on program exit
+
+void QGUploader::push(const QGImage* image, const char *data, int dataSize, bool intermediate, bool wait) {
+    if (intermediate && !_pushIntermediate) return;
+
+    char *d = new char[dataSize];
+
+    if (!d) throw std::runtime_error("Out of memory");
+
+    std::memcpy(d, data, dataSize);
+
+    std::string fileName;
+	QGUtils::formatFilename(_fileNameTmpl.length() > 0 ? _fileNameTmpl : image->fileNameTmpl(), fileName, image->processor.inputDevice.baseFreq(), image->frameStart());
+    fileName += "." + image->fileNameExt();
+
+    if (wait)
+        std::thread(std::bind(&QGUploader::_pushThread, this, fileName, d, dataSize)).join();
+    else
+        std::thread(std::bind(&QGUploader::_pushThread, this, fileName, d, dataSize)).detach();
 }
 
 void QGUploader::_pushThread(std::string fileName, const char *data, int dataSize) {

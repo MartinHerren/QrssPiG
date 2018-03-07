@@ -29,6 +29,7 @@ std::vector<std::string> QGInputRtlSdr::listDevices() {
 }
 
 QGInputRtlSdr::QGInputRtlSdr(const YAML::Node &config): QGInputDevice(config), _device(nullptr) {
+	_type = "RtlSdr";
 	int deviceIndex = 0;
 	float gain = 24.;
 	DirectSampling directsampling = DirectSampling::OFF;
@@ -83,14 +84,14 @@ QGInputRtlSdr::QGInputRtlSdr(const YAML::Node &config): QGInputDevice(config), _
 	_baseFreq = rtlsdr_get_center_freq(_device);
 	std::cout << "Effective frequency: " << _baseFreq << std::endl;
 
-	if (_ppm != 0.) {
-		int ppmInt = trunc(_ppm);
+	if (_residualPpm != 0.) {
+		int ppmInt = trunc(_residualPpm);
 
 		if (rtlsdr_set_freq_correction(_device, ppmInt)) {
 			throw std::runtime_error("Failed setting ppm");
 		}
 
-		_ppm -= ppmInt;
+		_residualPpm -= ppmInt;
 	}
 
 	if (bandwidth != 0) {

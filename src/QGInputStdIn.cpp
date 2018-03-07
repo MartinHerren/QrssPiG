@@ -4,6 +4,7 @@
 #include <stdexcept>
 
 QGInputStdIn::QGInputStdIn(const YAML::Node &config): QGInputDevice(config) {
+	_type = "Stdin";
 	_format = Format::U8IQ;
 
 	if (config["format"]) {

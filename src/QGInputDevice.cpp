@@ -54,16 +54,46 @@ std::vector<std::pair<std::string, std::vector<std::string>>> QGInputDevice::lis
     return devices;
 }
 
+std::unique_ptr<QGInputDevice> QGInputDevice::CreateInputDevice(const YAML::Node &config) {
+    if (!config["type"] || (config["type"].as<std::string>().compare("stdin") == 0)) {
+        std::cout << "Input type stdin" << std::endl;
+        return std::unique_ptr<QGInputDevice>(new QGInputStdIn(config));
+    } else if (config["type"].as<std::string>().compare("alsa") == 0) {
+#ifdef HAVE_LIBALSA
+        std::cout << "Input type alsa" << std::endl;
+        return std::unique_ptr<QGInputDevice>(new QGInputAlsa(config));
+#else
+        throw std::runtime_error(std::string("QGInputDevice: alsa support not builtin into this build"));
+#endif //HAVE_LIBALSA
+    } else if (config["type"].as<std::string>().compare("hackrf") == 0) {
+#ifdef HAVE_LIBHACKRF
+        std::cout << "Input type hackrf" << std::endl;
+        return std::unique_ptr<QGInputDevice>(new QGInputHackRF(config));
+#else
+        throw std::runtime_error(std::string("QGInputDevice: hackrf support not builtin into this build"));
+#endif //HAVE_LIBHACKRF
+    } else if (config["type"].as<std::string>().compare("rtlsdr") == 0) {
+#ifdef HAVE_LIBRTLSDR
+        std::cout << "Input type rtlsdr" << std::endl;
+        return std::unique_ptr<QGInputDevice>(new QGInputRtlSdr(config));
+#else
+        throw std::runtime_error(std::string("QGInputDevice: rtlsdr support not uiltin into this build"));
+#endif //HAVE_LIBRTLSDR
+    } else {
+        throw std::runtime_error(std::string("QGInputDevice: unknown type ") + config["type"].as<std::string>());
+    }
+}
+
 QGInputDevice::QGInputDevice(const YAML::Node &config) {
     _sampleRate = 48000;
     _baseFreq = 0;
-    _ppm = 0.;
+    _residualPpm = 0.;
     _bufferlength = 1000;
     _debugBufferMonitor = false;
 
     if (config["samplerate"]) _sampleRate = config["samplerate"].as<unsigned int>();
     if (config["basefreq"]) _baseFreq = config["basefreq"].as<unsigned int>();
-    if (config["ppm"]) _ppm = config["ppm"].as<float>();
+    if (config["ppm"]) _residualPpm = config["ppm"].as<float>();
     if (config["bufferlength"]) _bufferlength = config["bufferlength"].as<int>();
 
     if (config["debug"]) {
@@ -125,36 +155,6 @@ void QGInputDevice::run() {
 void QGInputDevice::stop() {
     // Called from signal handler, only do signal handler safe stuff here !
     _running = false;
-}
-
-std::unique_ptr<QGInputDevice> QGInputDevice::CreateInputDevice(const YAML::Node &config) {
-    if (!config["type"] || (config["type"].as<std::string>().compare("stdin") == 0)) {
-        std::cout << "Input type stdin" << std::endl;
-        return std::unique_ptr<QGInputDevice>(new QGInputStdIn(config));
-    } else if (config["type"].as<std::string>().compare("alsa") == 0) {
-#ifdef HAVE_LIBALSA
-        std::cout << "Input type alsa" << std::endl;
-        return std::unique_ptr<QGInputDevice>(new QGInputAlsa(config));
-#else
-        throw std::runtime_error(std::string("QGInputDevice: alsa support not builtin into this build"));
-#endif //HAVE_LIBALSA
-    } else if (config["type"].as<std::string>().compare("hackrf") == 0) {
-#ifdef HAVE_LIBHACKRF
-        std::cout << "Input type hackrf" << std::endl;
-        return std::unique_ptr<QGInputDevice>(new QGInputHackRF(config));
-#else
-        throw std::runtime_error(std::string("QGInputDevice: hackrf support not builtin into this build"));
-#endif //HAVE_LIBHACKRF
-    } else if (config["type"].as<std::string>().compare("rtlsdr") == 0) {
-#ifdef HAVE_LIBRTLSDR
-        std::cout << "Input type rtlsdr" << std::endl;
-        return std::unique_ptr<QGInputDevice>(new QGInputRtlSdr(config));
-#else
-        throw std::runtime_error(std::string("QGInputDevice: rtlsdr support not uiltin into this build"));
-#endif //HAVE_LIBRTLSDR
-    } else {
-        throw std::runtime_error(std::string("QGInputDevice: unknown type ") + config["type"].as<std::string>());
-    }
 }
 
 void QGInputDevice::_bufferMonitor() {

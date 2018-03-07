@@ -46,6 +46,7 @@ std::vector<std::string> QGInputAlsa::listDevices() {
 }
 
 QGInputAlsa::QGInputAlsa(const YAML::Node &config): QGInputDevice(config), _device(nullptr), _async(nullptr) {
+	_type = "Alsa";
 	_deviceName = "hw:0,0";
 	_channel = Channel::LEFT;
 

@@ -10,6 +10,8 @@
 #include <fftw3.h>
 #include <yaml-cpp/yaml.h>
 
+#include "QGInputDevice.h"
+
 #ifdef HAVE_LIBLIQUIDSDR
 #include <liquid/liquid.h>
 #else
@@ -20,18 +22,20 @@
 
 class QGProcessor {
 public:
-	QGProcessor(const YAML::Node &config);
+	QGProcessor(const YAML::Node &config, const QGInputDevice& inputDevice);
 	~QGProcessor();
 
 	void addCb(std::function<void(const std::complex<float>*)>cb);
 
 	void addIQ(const std::complex<float> *iq);
 
-	unsigned int sampleRate() { return _sampleRate; };
-	unsigned int chunkSize() { return _chunkSize; };
-	int fftSize() { return _N; };
-	int fftOverlap() { return _overlap; };
-	float downsamplingRate() { return _rate; };
+	unsigned int sampleRate() const { return _sampleRate; };
+	unsigned int chunkSize() const { return _chunkSize; };
+	int fftSize() const { return _N; };
+	int fftOverlap() const { return _overlap; };
+	float downsamplingRate() const { return _rate; };
+
+	const QGInputDevice &inputDevice;
 
 private:
 	unsigned int _resample(const std::complex<float> *in, std::complex<float> *out);

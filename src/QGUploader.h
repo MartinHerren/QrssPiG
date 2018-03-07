@@ -6,9 +6,12 @@
 
 #include <yaml-cpp/yaml.h>
 
+class QGImage;
+
 class QGUploader {
 public:
 	static std::vector<std::string> listModules();
+	static std::unique_ptr<QGUploader> CreateUploader(const YAML::Node &config);
 
 protected:
 	QGUploader(const YAML::Node &config);
@@ -16,9 +19,7 @@ protected:
 public:
 	virtual ~QGUploader() {};
 
-	void push(const std::string &fileNameTmpl, const std::string &fileExt, long int freq, std::chrono::milliseconds frameStart, const char *data, int dataSize, bool intermediate = false, bool wait = false);
-
-	static std::unique_ptr<QGUploader> CreateUploader(const YAML::Node &config);
+	void push(const QGImage* image, const char *data, int dataSize, bool intermediate = false, bool wait = false);
 
 private:
 	void _pushThread(std::string fileName, const char *data, int dataSize);

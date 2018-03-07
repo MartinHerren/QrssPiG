@@ -13,6 +13,7 @@ class QGInputDevice {
 public:
 	static std::vector<std::string> listModules();
 	static std::vector<std::pair<std::string, std::vector<std::string>>> listDevices();
+	static std::unique_ptr<QGInputDevice> CreateInputDevice(const YAML::Node &config);
 
 protected:
 	QGInputDevice(const YAML::Node &config);
@@ -25,16 +26,16 @@ public:
 	void run();
 	void stop();
 
-	unsigned int sampleRate() { return _sampleRate; };
-	unsigned int baseFreq() { return _baseFreq; };
-	float ppm() { return _ppm; };
-
-	static std::unique_ptr<QGInputDevice> CreateInputDevice(const YAML::Node &config);
+	const std::string& type() const {return _type; };
+	unsigned int sampleRate() const { return _sampleRate; };
+	unsigned int baseFreq() const { return _baseFreq; };
+	float residualPpm() const { return _residualPpm; };
 
 protected:
+	std::string _type;
 	unsigned int _sampleRate;
 	unsigned int _baseFreq;
-	float _ppm;
+	float _residualPpm;
 	int _bufferlength;
 
 	unsigned int _bufferCapacity;

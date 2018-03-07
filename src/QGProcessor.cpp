@@ -12,51 +12,40 @@
 #endif // HAVE_LIBRTFILTER
 #endif // HAVE_LIBLIQUIDSDR
 
-QGProcessor::QGProcessor(const YAML::Node &config) {
-	unsigned int iSampleRate = 48000;
-
+QGProcessor::QGProcessor(const YAML::Node &config, const QGInputDevice& inputDevice) : inputDevice(inputDevice) {
 	_sampleRate = 0;
 	_chunkSize = 32;
 	_N = 2048;
 	_overlap = (3 * _N) / 4; // As it depends on N, default initialization will be redone later even when not given in config
 	_rate = 1.;
 
-	// input samplerate should already be set to default value by input device if it didn't exist
-	if (config["input"]) {
-		YAML::Node input = config["input"];
+	unsigned int inputSampleRate = inputDevice.sampleRate();
 
-		if (input["samplerate"]) iSampleRate = input["samplerate"].as<int>();
+	if (config["samplerate"]) _sampleRate = config["samplerate"].as<int>();
+	if (config["chunksize"]) _chunkSize = config["chunksize"].as<int>();
+	if (config["fft"]) _N = config["fft"].as<int>();
+	if (config["fftoverlap"]) {
+		int o = config["fftoverlap"].as<int>();
+		if ((o < 0) || (o >= _N)) throw std::runtime_error("YAML: overlap value out of range [0..N[");
+		_overlap = (o * _N) / (o + 1);
+	} else {
+		_overlap = (3 * _N) / 4;
 	}
 
-	if (config["processing"]) {
-		YAML::Node processing = config["processing"];
-
-		if (processing["samplerate"]) _sampleRate = processing["samplerate"].as<int>();
-		if (processing["chunksize"]) _chunkSize = processing["chunksize"].as<int>();
-		if (processing["fft"]) _N = processing["fft"].as<int>();
-		if (processing["fftoverlap"]) {
-			int o = processing["fftoverlap"].as<int>();
-			if ((o < 0) || (o >= _N)) throw std::runtime_error("YAML: overlap value out of range [0..N[");
-			_overlap = (o * _N) / (o + 1);
-		} else {
-			_overlap = (3 * _N) / 4;
-		}
-	}
-
-	if (_sampleRate && (iSampleRate != _sampleRate)) {
-		_rate = (float)iSampleRate / (float)_sampleRate;
+	if (_sampleRate && (inputSampleRate != _sampleRate)) {
+		_rate = (float)inputSampleRate / (float)_sampleRate;
 
 		// Only libliquid supports integer rates. Taking floor to get the next higher end samplerate otherwise
 #ifndef HAVE_LIBLIQUIDSDR
 		_rate = floor(_rate);
 #endif // HAVE_LIBLIQUIDSDR
 
-		// Patch config with real samplerate from resampler
-		_sampleRate = iSampleRate / _rate;
+		// Correct with real samplerate from resampler
+		_sampleRate = inputSampleRate / _rate;
 	}
 
 	if (_sampleRate == 0) {
-		_sampleRate = iSampleRate;
+		_sampleRate = inputSampleRate;
 	}
 
 	_inputIndex = 0;

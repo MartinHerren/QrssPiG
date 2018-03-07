@@ -5,7 +5,7 @@
 #include <iomanip>
 #include <stdexcept>
 
-QGImage::QGImage(const YAML::Node &config, unsigned int index) {
+QGImage::QGImage(const YAML::Node &config, const QGProcessor& processor, int index) : QGOutput(config, processor, index) {
 	_im = nullptr;
 	_imBuffer = nullptr;
 	_cd = 0;
@@ -13,181 +13,157 @@ QGImage::QGImage(const YAML::Node &config, unsigned int index) {
 	_runningSince = std::chrono::milliseconds(0);
 	_currentLine = 0;
 
-	// Input and Processing already parsed, so missing fields should have been already patched with default value
-	if (config["input"]) {
-		YAML::Node input = config["input"];
+	long int baseFreq = processor.inputDevice.baseFreq();
+	_baseFreqCorrected = baseFreq + (baseFreq * processor.inputDevice.residualPpm()) / 1000000;
 
-		if (input["type"]) _inputType = input["type"].as<std::string>();
-		if (input["samplerate"]) _inputSampleRate = input["samplerate"].as<long int>();
-		if (input["basefreq"]) _baseFreqCorrected =_baseFreq = input["basefreq"].as<int>();
-		if (input["ppm"]) _baseFreqCorrected = _baseFreq + (_baseFreq * input["ppm"].as<float>()) / 1000000;
-	}
-
-	// TODO Default initialization of N and overlap already done in processor, take values from there
-	N = 2048;
-	_overlap = (3 * N) / 4;
-	if (config["processing"]) {
-		YAML::Node processing = config["processing"];
-
-		if (processing["samplerate"]) _sampleRate = processing["samplerate"].as<int>();
-		if (processing["fft"]) N = processing["fft"].as<int>();
-		if (processing["fftoverlap"]) {
-			int o = processing["fftoverlap"].as<int>();
-			if ((o < 0) || (o >= N)) throw std::runtime_error("YAML: overlap value out of range [0..N[");
-			_overlap = (o * N) / (o + 1);
-		}
-	}
+	int N = processor.fftSize();
+	long int sampleRate = processor.sampleRate();
 
 	// Freq/time constants used for mapping freq/time to pixel
-	_freqK = (float)(N) / (_sampleRate); // pixels = freq * _freqK
-	_timeK = (float)(_sampleRate) / (N - _overlap); // pixels = seconds * _timeK
+	_freqK = (float)(N) / (sampleRate); // pixels = freq * _freqK
+	_timeK = (float)(sampleRate) / (N - processor.fftOverlap()); // pixels = seconds * _timeK
 
-	if (config["output"]) {
-		YAML::Node output;
+	// QGImage config
 
-		// Get the correct output when having multiple outputs
-		if (config["output"].IsMap()) output = config["output"];
-		else if (config["output"].IsSequence()) output = config["output"][index];
 
-		// File name
-		_fileNameTmpl = "%I_%fHz";
-		if (output["filename"]) _fileNameTmpl = output["filename"].as<std::string>();
+	// File name
+	_fileNameTmpl = "%I_%fHz";
+	if (config["filename"]) _fileNameTmpl = config["filename"].as<std::string>();
 
-		// File format, default to png
-		_format = Format::PNG;
+	// File format, default to png
+	_format = Format::PNG;
+	_fileNameExt = "png";
+	if (config["format"]) {
+		std::string f = config["format"].as<std::string>();
+
+		if (f.compare("png") == 0) _format = Format::PNG;
+		else if (f.compare("jpg") == 0) _format = Format::JPG;
+		else throw std::runtime_error("QGImage::QGImage: output format unrecognized");
+	}
+
+	switch (_format) {
+	case Format::PNG:
 		_fileNameExt = "png";
-		if (output["format"]) {
-			std::string f = output["format"].as<std::string>();
+		break;
+	case Format::JPG:
+		_fileNameExt = "jpg";
+		break;
+	}
 
-			if (f.compare("png") == 0) _format = Format::PNG;
-			else if (f.compare("jpg") == 0) _format = Format::JPG;
-			else throw std::runtime_error("QGImage::configure: output format unrecognized");
+	// Configure orientation
+	_orientation = Orientation::Horizontal;
+	if (config["orientation"]) {
+		std::string o = config["orientation"].as<std::string>();
+
+		if (o.compare("horizontal") == 0) _orientation = Orientation::Horizontal;
+		else if (o.compare("vertical") == 0) _orientation = Orientation::Vertical;
+		else throw std::runtime_error("QGImage::configure: output orientation unrecognized");
+	}
+
+	// Configure and calculate size
+	_secondsPerFrame = 10 * 60;
+	if (config["minutesperframe"]) _secondsPerFrame = config["minutesperframe"].as<int>() *  60;
+	if (config["secondsperframe"]) _secondsPerFrame = config["secondsperframe"].as<int>();
+	_size = _secondsPerFrame * _timeK;
+
+	// Configure font
+	_font = "dejavu/DejaVuSans.ttf";
+	if (config["font"]) _font = config["font"].as<std::string>();
+	_fontSize = 8;
+	if (config["fontsize"]) _fontSize = config["fontsize"].as<int>();
+
+	// Configure freq range, default value to full range of positive and negative
+	_fMin = -N / 2;
+	_fMax = N / 2;
+	if (config["freqmin"]) {
+		long int f = config["freqmin"].as<long int>();
+
+		if ((f >= -sampleRate / 2) && (f <= sampleRate / 2)) {
+			_fMin = (int)((f * N) / sampleRate);
+		} else if ((f - _baseFreqCorrected >= -sampleRate / 2) && (f - _baseFreqCorrected <= sampleRate / 2)) {
+			_fMin = (int)(((f - _baseFreqCorrected) * N) / sampleRate);
+		} else {
+			throw std::runtime_error("QGImage::configure: freqmin out of range");
 		}
+	}
+	if (config["freqmax"]) {
+		long int f = config["freqmax"].as<long int>();
 
-		switch (_format) {
-		case Format::PNG:
-			_fileNameExt = "png";
-			break;
-		case Format::JPG:
-			_fileNameExt = "jpg";
-			break;
+		if ((f >= -sampleRate / 2) && (f <= sampleRate / 2)) {
+			_fMax = (int)((f * N) / sampleRate);
+		} else if ((f - _baseFreqCorrected >= -sampleRate / 2) && (f - _baseFreqCorrected <= sampleRate / 2)) {
+			_fMax = (int)(((f - _baseFreqCorrected) * N) / sampleRate);
+		} else {
+			throw std::runtime_error("QGImage::configure: freqmax out of range");
 		}
+	}
+	if (_fMin >= _fMax) std::runtime_error("QGImage::configure: freqmin must be lower than freqmax");
+	_fDelta = _fMax - _fMin;
 
-		// Configure orientation
-		_orientation = Orientation::Horizontal;
-		if (output["orientation"]) {
-			std::string o = output["orientation"].as<std::string>();
+	// Configure db range
+	_dBmin = -30;
+	_dBmax = 0;
+	if (config["dBmin"]) _dBmin = config["dBmin"].as<int>();
+	if (config["dBmax"]) _dBmax = config["dBmax"].as<int>();
+	_dBdelta = _dBmax - _dBmin;
 
-			if (o.compare("horizontal") == 0) _orientation = Orientation::Horizontal;
-			else if (o.compare("vertical") == 0) _orientation = Orientation::Vertical;
-			else throw std::runtime_error("QGImage::configure: output orientation unrecognized");
-		}
+	// Optionally don't align frames
+	_alignFrame = true;
+	if (config["noalign"]) {
+		std::string s = config["noalign"].as<std::string>();
+		if ((s.compare("true") == 0) || (s.compare("yes") == 0)) _alignFrame = false;
+		else if ((s.compare("false") == 0) || (s.compare("no") == 0)) _alignFrame = true;
+		else throw std::runtime_error("QGImage::configure: illegal value for noalign");
+	}
 
-		// Configure and calculate size
-		_secondsPerFrame = 10 * 60;
-		if (output["minutesperframe"]) _secondsPerFrame = output["minutesperframe"].as<int>() *  60;
-		if (output["secondsperframe"]) _secondsPerFrame = output["secondsperframe"].as<int>();
-		_size = _secondsPerFrame * _timeK;
+	// Sync frames on time can be enabled/disabled, unless started given, where it is forced to disabled
+	_syncFrames = true;
+	if (config["sync"])  _syncFrames = config["sync"].as<bool>();
 
-		// Configure font
-		_font = "dejavu/DejaVuSans.ttf";
-		if (output["font"]) _font = output["font"].as<std::string>();
-		_fontSize = 8;
-		if (output["fontsize"]) _fontSize = output["fontsize"].as<int>();
+	// Configure start time
+	if (config["started"]) {
+		using namespace std::chrono;
 
-		// Configure freq range, default value to full range of positive and negative
-		_fMin = -N / 2;
-		_fMax = N / 2;
-		if (output["freqmin"]) {
-			long int f = output["freqmin"].as<long int>();
+		std::tm tm = {};
+		std::stringstream ss(config["started"].as<std::string>());
 
-			if ((f >= -_sampleRate / 2) && (f <= _sampleRate / 2)) {
-				_fMin = (int)((f * N) / _sampleRate);
-			} else if ((f - _baseFreqCorrected >= -_sampleRate / 2) && (f - _baseFreqCorrected <= _sampleRate / 2)) {
-				_fMin = (int)(((f - _baseFreqCorrected) * N) / _sampleRate);
-			} else {
-				throw std::runtime_error("QGImage::configure: freqmin out of range");
-			}
-		}
-		if (output["freqmax"]) {
-			long int f = output["freqmax"].as<long int>();
+		// Don't attempt to resync on frame start if start time given. Usually start time is only used when processing offline data.
+		_syncFrames = false;
 
-			if ((f >= -_sampleRate / 2) && (f <= _sampleRate / 2)) {
-				_fMax = (int)((f * N) / _sampleRate);
-			} else if ((f - _baseFreqCorrected >= -_sampleRate / 2) && (f - _baseFreqCorrected <= _sampleRate / 2)) {
-				_fMax = (int)(((f - _baseFreqCorrected) * N) / _sampleRate);
-			} else {
-				throw std::runtime_error("QGImage::configure: freqmax out of range");
-			}
-		}
-		if (_fMin >= _fMax) std::runtime_error("QGImage::configure: freqmin must be lower than freqmax");
-		_fDelta = _fMax - _fMin;
+		//ss >> std::get_time(&tm, "%Y-%m-%dT%H:%M:%SZ"); // std::get_time() not supported on Travis' Ubuntu 14.04 build system
+		std::string c; // to hold separators
+		ss >> std::setw(4) >> tm.tm_year >> std::setw(1) >> c >> std::setw(2) >> tm.tm_mon >> std::setw(1) >> c >> std::setw(2) >> tm.tm_mday >> std::setw(1) >> c
+			>> std::setw(2) >> tm.tm_hour >> std::setw(1) >> c >> std::setw(2) >> tm.tm_min >> std::setw(1) >> c >> std::setw(2) >> tm.tm_sec >> std::setw(1) >> c;
+		tm.tm_year -= 1900; // Fix to years since 1900s
+		tm.tm_mon -= 1; // Fix to 0-11 range
 
-		// Configure db range
-		_dBmin = -30;
-		_dBmax = 0;
-		if (output["dBmin"]) _dBmin = output["dBmin"].as<int>();
-		if (output["dBmax"]) _dBmax = output["dBmax"].as<int>();
-		_dBdelta = _dBmax - _dBmin;
+		// mktime takes time in local time. Should be taken in UTC, patched below
+		_started = duration_cast<milliseconds>(system_clock::from_time_t(std::mktime(&tm)).time_since_epoch());
 
-		// Optionally don't align frames
-		_alignFrame = true;
-		if (output["noalign"]) {
-			std::string s = output["noalign"].as<std::string>();
-			if ((s.compare("true") == 0) || (s.compare("yes") == 0)) _alignFrame = false;
-			else if ((s.compare("false") == 0) || (s.compare("no") == 0)) _alignFrame = true;
-			else throw std::runtime_error("QGImage::configure: illegal value for noalign");
-		}
+		// Calculate difference from UTC and local winter time to fix _started
+		time_t t0 = time(nullptr);
 
-		// Sync frames on time can be enabled/disabled, unless started given, where it is forced to disabled
-		_syncFrames = true;
-		if (output["sync"])  _syncFrames = output["sync"].as<bool>();
+		// Fix started time to be in UTC
+		_started += seconds(mktime(localtime(&t0)) - mktime(gmtime(&t0)));
+	}
 
-		// Configure start time
-		if (output["started"]) {
-			using namespace std::chrono;
+	_levelMeter = false;
+	if (config["levelmeter"]) _levelMeter = config["levelmeter"].as<bool>();
 
-			std::tm tm = {};
-			std::stringstream ss(output["started"].as<std::string>());
+	// Scope size and range arenot configurable yet
+	_scopeSize = 100;
+	_scopeRange = 100;
+	_dBK = (float)_scopeSize / _scopeRange;
 
-			// Don't attempt to resync on frame start if start time given. Usually start time is only used when processing offline data.
-			_syncFrames = false;
-
-			//ss >> std::get_time(&tm, "%Y-%m-%dT%H:%M:%SZ"); // std::get_time() not supported on Travis' Ubuntu 14.04 build system
-			std::string c; // to hold separators
-			ss >> std::setw(4) >> tm.tm_year >> std::setw(1) >> c >> std::setw(2) >> tm.tm_mon >> std::setw(1) >> c >> std::setw(2) >> tm.tm_mday >> std::setw(1) >> c
-				>> std::setw(2) >> tm.tm_hour >> std::setw(1) >> c >> std::setw(2) >> tm.tm_min >> std::setw(1) >> c >> std::setw(2) >> tm.tm_sec >> std::setw(1) >> c;
-			tm.tm_year -= 1900; // Fix to years since 1900s
-			tm.tm_mon -= 1; // Fix to 0-11 range
-
-			// mktime takes time in local time. Should be taken in UTC, patched below
-			_started = duration_cast<milliseconds>(system_clock::from_time_t(std::mktime(&tm)).time_since_epoch());
-
-			// Calculate difference from UTC and local winter time to fix _started
-			time_t t0 = time(nullptr);
-
-			// Fix started time to be in UTC
-			_started += seconds(mktime(localtime(&t0)) - mktime(gmtime(&t0)));
-		}
-
-		_levelMeter = false;
-		if (output["levelmeter"]) _levelMeter = output["levelmeter"].as<bool>();
-
-		// Scope size and range arenot configurable yet
-		_scopeSize = 100;
-		_scopeRange = 100;
-		_dBK = (float)_scopeSize / _scopeRange;
-
-		// Configure header zone
-		_title = "QrssPiG grab on " + std::to_string(_baseFreq) + "\u202fHz";
-		if (output["header"]) {
-			YAML::Node header = output["header"];
-			if (header["title"]) _title = header["title"].as<std::string>();
-			if (header["callsign"]) _callsign = header["callsign"].as<std::string>();
-			if (header["qth"]) _qth = header["qth"].as<std::string>();
-			if (header["receiver"]) _receiver = header["receiver"].as<std::string>();
-			if (header["antenna"]) _antenna = header["antenna"].as<std::string>();
-		}
+	// Configure header zone
+	_title = "QrssPiG grab on " + std::to_string(baseFreq) + "\u202fHz";
+	if (config["header"]) {
+		YAML::Node header = config["header"];
+		if (header["title"]) _title = header["title"].as<std::string>();
+		if (header["callsign"]) _callsign = header["callsign"].as<std::string>();
+		if (header["qth"]) _qth = header["qth"].as<std::string>();
+		if (header["receiver"]) _receiver = header["receiver"].as<std::string>();
+		if (header["antenna"]) _antenna = header["antenna"].as<std::string>();
 	}
 
 	// Not yet configurable values
@@ -218,6 +194,7 @@ void QGImage::addLine(const std::complex<float> *fft) {
 	// Draw a data line DC centered
 	float last;
 	float avg = 0;
+	int N = processor.fftSize();
 
 	for (int i = _fMin; i < _fMax; i++) {
 		// TODO: evaluate to do this in fft class once, for multi-image support
@@ -416,13 +393,13 @@ void QGImage::_computeTitleHeight() {
 	if (_antenna.length()) _addSubTitleField(std::string("Antenna: ") + _antenna);
 
 	_subtitles.push_back(""); // Force new line TODO: check if last line not empty
-	if (_inputType.length()) _addSubTitleField(std::string("Input type: ") + _inputType);
-	_addSubTitleField(std::string("Base frequency: ") + std::to_string(_baseFreq) + std::string("\u202fHz"));
-	_addSubTitleField(std::string("Input sample rate: ") + std::to_string(_inputSampleRate) + std::string("\u202fS/s"));
-
-	_addSubTitleField(std::string("Processing sample rate: ") + std::to_string(_sampleRate) + std::string("\u202fS/s"), true);
-	_addSubTitleField(std::string("FFT size: ") + std::to_string(N));
-	_addSubTitleField(std::string("FFT overlap: ") + std::to_string(_overlap));
+	std::string inputType = processor.inputDevice.type();
+	if (inputType.length()) _addSubTitleField(std::string("Input type: ") + inputType);
+	_addSubTitleField(std::string("Base frequency: ") + std::to_string(processor.inputDevice.baseFreq()) + std::string("\u202fHz"));
+	_addSubTitleField(std::string("Input sample rate: ") + std::to_string(processor.inputDevice.sampleRate()) + std::string("\u202fS/s"));
+	_addSubTitleField(std::string("Processing sample rate: ") + std::to_string(processor.sampleRate()) + std::string("\u202fS/s"), true);
+	_addSubTitleField(std::string("FFT size: ") + std::to_string(processor.fftSize()));
+	_addSubTitleField(std::string("FFT overlap: ") + std::to_string(processor.fftOverlap()));
 	_addSubTitleField(std::string("Time res: ") + std::to_string(1./_timeK) + std::string("\u202fs/px"));
 	_addSubTitleField(std::string("Freq res: ") + std::to_string(1./_freqK) + std::string("\u202fHz/px"));
 
@@ -1008,7 +985,7 @@ void QGImage::_pushFrame(bool intermediate, bool wait) {
 		break;
 	}
 
-	for (auto& cb: _cbs) cb(_fileNameTmpl, _fileNameExt, _baseFreq, _started, _imBuffer, frameSize, intermediate, wait);
+	for (auto& cb: _cbs) cb(this, _imBuffer, frameSize, intermediate, wait);
 
 	if (!intermediate) _new();
 }
