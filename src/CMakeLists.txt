@@ -81,6 +81,8 @@ if (LibRTFilter_FOUND)
 	set(HAVE_LIBRTFILTER 1)
 endif (LibRTFilter_FOUND)
 
+include_directories("${PROJECT_SOURCE_DIR}/src")
+
 # Generate and include Config.h
 configure_file ("Config.h.in" "${PROJECT_BINARY_DIR}/Config.h")
 include_directories("${PROJECT_BINARY_DIR}")
