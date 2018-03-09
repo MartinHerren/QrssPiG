@@ -1,4 +1,5 @@
 #include "QGInputDevice.h"
+#include "QGPlugin.h"
 
 #include <iostream>
 #include <stdexcept>
@@ -7,81 +8,27 @@
 
 #include "Config.h"
 
-#include "QGInputStdIn.h"
-
-#ifdef HAVE_LIBALSA
-#include "QGInputAlsa.h"
-#endif // HAVE_LIBALSA
-
-#ifdef HAVE_LIBHACKRF
-#include "QGInputHackRF.h"
-#endif // HAVE_LIBHACKRF
-
-#ifdef HAVE_LIBRTLSDR
-#include "QGInputRtlSdr.h"
-#endif // HAVE_LIBRTLSDR
-
 std::vector<std::string> QGInputDevice::listModules() {
-    std::vector<std::string> modules;
-
-    modules.push_back("StdIn");
-#ifdef HAVE_LIBALSA
-    modules.push_back("Alsa");
-#endif //HAVE_LIBALSA
-#ifdef HAVE_LIBHACKRF
-    modules.push_back("HackRF");
-#endif //HAVE_LIBHACKRF
-#ifdef HAVE_LIBRTLSDR
-    modules.push_back("RtlSdr");
-#endif //HAVE_LIBRTLSDR
-
-    return modules;
+    return (new QGPlugin<QGInputDevice>("input"))->list_plugins();
 }
 
 std::vector<std::pair<std::string, std::vector<std::string>>> QGInputDevice::listDevices() {
     std::vector<std::pair<std::string, std::vector<std::string>>> devices;
-
-#ifdef HAVE_LIBALSA
-    devices.push_back(std::make_pair("Alsa", QGInputAlsa::listDevices()));
-#endif //HAVE_LIBALSA
-#ifdef HAVE_LIBHACKRF
-    devices.push_back(std::make_pair("HackRF", QGInputHackRF::listDevices()));
-#endif //HAVE_LIBHACKRF
-#ifdef HAVE_LIBRTLSDR
-    devices.push_back(std::make_pair("RtlSdr", QGInputRtlSdr::listDevices()));
-#endif //HAVE_LIBRTLSDR
-
+    for (const auto&module: QGInputDevice::listModules()) {
+        QGPlugin<QGInputDevice> *p = new QGPlugin<QGInputDevice>("input");
+            if(p->has_list_devices(module)) {
+                std::vector<std::string> device_list = p->list_devices(module);
+                devices.push_back(std::make_pair(module, device_list));
+            }
+    }
     return devices;
 }
 
 std::unique_ptr<QGInputDevice> QGInputDevice::CreateInputDevice(const YAML::Node &config) {
-    if (!config["type"] || (config["type"].as<std::string>().compare("stdin") == 0)) {
-        std::cout << "Input type stdin" << std::endl;
-        return std::unique_ptr<QGInputDevice>(new QGInputStdIn(config));
-    } else if (config["type"].as<std::string>().compare("alsa") == 0) {
-#ifdef HAVE_LIBALSA
-        std::cout << "Input type alsa" << std::endl;
-        return std::unique_ptr<QGInputDevice>(new QGInputAlsa(config));
-#else
-        throw std::runtime_error(std::string("QGInputDevice: alsa support not builtin into this build"));
-#endif //HAVE_LIBALSA
-    } else if (config["type"].as<std::string>().compare("hackrf") == 0) {
-#ifdef HAVE_LIBHACKRF
-        std::cout << "Input type hackrf" << std::endl;
-        return std::unique_ptr<QGInputDevice>(new QGInputHackRF(config));
-#else
-        throw std::runtime_error(std::string("QGInputDevice: hackrf support not builtin into this build"));
-#endif //HAVE_LIBHACKRF
-    } else if (config["type"].as<std::string>().compare("rtlsdr") == 0) {
-#ifdef HAVE_LIBRTLSDR
-        std::cout << "Input type rtlsdr" << std::endl;
-        return std::unique_ptr<QGInputDevice>(new QGInputRtlSdr(config));
-#else
-        throw std::runtime_error(std::string("QGInputDevice: rtlsdr support not uiltin into this build"));
-#endif //HAVE_LIBRTLSDR
-    } else {
-        throw std::runtime_error(std::string("QGInputDevice: unknown type ") + config["type"].as<std::string>());
-    }
+    if (!config["type"]) throw std::runtime_error("YAML: input must have a type");
+    QGPlugin<QGInputDevice>* plugin = new QGPlugin<QGInputDevice>("upload");
+    QGInputDevice *obj = plugin->create(config);
+    return std::unique_ptr<QGInputDevice>(obj);
 }
 
 QGInputDevice::QGInputDevice(const YAML::Node &config) {
