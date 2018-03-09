@@ -5,6 +5,10 @@
 #include <iomanip>
 #include <stdexcept>
 
+extern "C" QGOutput* create_object(const YAML::Node &config, const QGProcessor& processor, unsigned int index) {
+        return new QGImage(config, processor, index);
+}
+
 QGImage::QGImage(const YAML::Node &config, const QGProcessor& processor, int index) : QGOutput(config, processor, index) {
 	_im = nullptr;
 	_imBuffer = nullptr;

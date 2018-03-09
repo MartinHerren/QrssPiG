@@ -3,6 +3,10 @@
 #include <iostream>
 #include <stdexcept>
 
+extern "C" QGUploader* create_object(const YAML::Node &config) {
+        return new QGUploaderSCP(config);
+}
+
 QGUploaderSCP::QGUploaderSCP(const YAML::Node &config) : QGUploader(config) {
 	_host = "localhost";
 	_port = 22;
