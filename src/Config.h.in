@@ -14,3 +14,5 @@
 #cmakedefine HAVE_LIBLIQUIDSDR
 #cmakedefine HAVE_LIBSSH
 #cmakedefine HAVE_LIBCURL
+
+#define INSTALL_PREFIX "@CMAKE_INSTALL_PREFIX@"
