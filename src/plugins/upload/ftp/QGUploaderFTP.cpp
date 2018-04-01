@@ -6,6 +6,10 @@
 
 #include <curl/curl.h>
 
+extern "C" QGUploader* create_object(const YAML::Node &config) {
+        return new QGUploaderFTP(config);
+}
+
 QGUploaderFTP::QGUploaderFTP(const YAML::Node &config) : QGUploader(config) {
 	_ssl = SSL::None;
 	_insecure = false;

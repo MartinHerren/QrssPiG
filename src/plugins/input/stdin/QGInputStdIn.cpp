@@ -3,6 +3,10 @@
 #include <iostream>
 #include <stdexcept>
 
+extern "C" QGInputDevice* create_object(const YAML::Node &config) {
+        return new QGInputStdIn(config);
+}
+
 QGInputStdIn::QGInputStdIn(const YAML::Node &config): QGInputDevice(config) {
 	_type = "Stdin";
 	_format = Format::U8IQ;

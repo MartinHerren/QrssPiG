@@ -6,6 +6,14 @@
 #include <iostream>
 #include <stdexcept>
 
+extern "C" QGInputDevice* create_object(const YAML::Node &config) {
+        return new QGInputHackRF(config);
+}
+
+extern "C" std::vector<std::string> list_devices() { 
+        return QGInputHackRF::listDevices();
+}
+
 std::vector<std::string> QGInputHackRF::listDevices() {
 	std::vector<std::string> list;
 

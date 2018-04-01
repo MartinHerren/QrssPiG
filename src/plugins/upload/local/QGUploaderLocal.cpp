@@ -4,6 +4,10 @@
 #include <iostream>
 #include <stdexcept>
 
+extern "C" QGUploader* create_object(const YAML::Node &config) {
+        return new QGUploaderLocal(config);
+}
+
 QGUploaderLocal::QGUploaderLocal(const YAML::Node &config) : QGUploader(config) {
 	_dir = "";
 

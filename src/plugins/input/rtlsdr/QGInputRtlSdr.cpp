@@ -7,6 +7,14 @@
 #include <memory>
 #include <stdexcept>
 
+extern "C" QGInputDevice* create_object(const YAML::Node &config) {
+        return new QGInputRtlSdr(config);
+}
+
+extern "C" std::vector<std::string> list_devices() { 
+        return QGInputRtlSdr::listDevices();
+}
+
 std::vector<std::string> QGInputRtlSdr::listDevices() {
 	std::vector<std::string> list;
 
