@@ -11,7 +11,9 @@ addons:
   apt:
     packages:
       - cmake3
+      - libboost-filesystem-dev
       - libboost-program-options-dev
+      - libboost-system-dev
       - libyaml-cpp-dev
       - libfftw3-dev
       - libgd2-noxpm-dev
