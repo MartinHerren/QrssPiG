@@ -52,46 +52,62 @@ private:
 template <class T>
 void* QGPlugin<T>::load_dl(std::string type) {
 	std::string path = type;
-	if(type.find("/") != 0) {
+
+	if (type.find("/") != 0) {
 		path = this->build_path(type);
 	}
+
 	void* handle = dlopen(path.c_str(), RTLD_LAZY);
-	if(!handle) {
+	if (!handle) {
 		throw std::runtime_error(std::string("QGPlugin: can't open ") + path);
 	}
+  
 	return handle;
 }
 
 template <class T>
 T* QGPlugin<T>::create(const YAML::Node &config, const QGProcessor& processor, unsigned int index) {
-	std::string type = config["type"].as<std::string>();
+	std::string type = "image"; // Default type if not specified for back-compatibility
+
+  if (config["type"]) {
+    type = config["type"].as<std::string>();
+  }
+
 	void*handle = this->load_dl(type);
 	T* (*create)(const YAML::Node &config, const QGProcessor& processor, unsigned int index);	
 	create = (T* (*)(const YAML::Node &config, const QGProcessor& processor, unsigned int index))dlsym(handle, "create_object");
-	if(!create) {
+
+	if (!create) {
 		throw std::runtime_error(std::string("QGPlugin: can't load create from ") + type);
 	}
 
 	T* obj = (T*)create(config, processor, index);
-	if(!obj) {
+
+	if (!obj) {
 		throw std::runtime_error(std::string("QGPlugin: can't create ") + type);
 	}
+
 	return obj;
 }
 
 template <class T>
 T* QGPlugin<T>::create(const YAML::Node &config) {
 	std::string type = config["type"].as<std::string>();
+
 	void*handle = this->load_dl(type);
 	T* (*create)(const YAML::Node &config);	
 	create = (T* (*)(const YAML::Node &config))dlsym(handle, "create_object");
-	if(!create) {
+
+	if (!create) {
 		throw std::runtime_error(std::string("QGPlugin: can't load create from ") + type);
 	}
+
 	T* obj = (T*)create(config);
-	if(!obj) {
+
+	if (!obj) {
 		throw std::runtime_error(std::string("QGPlugin: can't create ") + type);
 	}
+
 	return obj;
 }
 
